@@ -8,7 +8,6 @@ from aidbox_python_sdk.main import create_app as _create_app
 
 # Don't remove these imports
 from app.sdk import sdk_settings, sdk
-import app.subscriptions
 
 
 coloredlogs.install(level='DEBUG', fmt='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
