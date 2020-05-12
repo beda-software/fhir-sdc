@@ -1,0 +1,37 @@
+version: '3.1'
+services:
+  backend:
+    image: ${BUILD_IMAGE:-sdc-backend-test}
+    build: .
+    command: ${TEST_COMMAND}
+    env_file:
+    - env_tests
+    environment:
+      APP_FAST_START_MODE: ${APP_FAST_START_MODE}
+    depends_on:
+      - devbox
+    links:
+      - devbox
+    volumes:
+      - .:/app
+      - ./wait-for-it.sh:/usr/local/bin/wait-for-it.sh:cached
+  devbox:
+    image: "healthsamurai/devbox:0.5.0-SNAPSHOT"
+    command: ["wait-for-it.sh", "database:5432", "--strict", "--timeout=0", "--", "java", "-jar", "/aidbox.jar", "-m", "devbox.core"]
+    depends_on:
+      - devbox-db
+    links:
+      - "devbox-db:database"
+    env_file:
+      - env_tests
+    environment:
+      AIDBOX_LICENSE_ID: ${TESTS_AIDBOX_LICENSE_ID}
+      AIDBOX_LICENSE_KEY: ${TESTS_AIDBOX_LICENSE_KEY}
+    volumes:
+      - ./wait-for-it.sh:/usr/local/bin/wait-for-it.sh:cached
+  devbox-db:
+    image: "aidbox/db:11.4.0.2"
+    environment:
+      POSTGRES_USER:     postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB:       devbox

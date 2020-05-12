@@ -1,0 +1,14 @@
+replicaCount: 1
+image:
+  repository: aidbox/db
+  tag: 11.2.0
+  pullPolicy: IfNotPresent
+
+service:
+  port: 5432
+
+user: postgres
+database: sdc
+
+persistence:
+  size: 10Gi
