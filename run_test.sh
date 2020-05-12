@@ -14,7 +14,7 @@ if [ -z "${TESTS_AIDBOX_LICENSE_ID}" ]; then
     exit 1
 fi
 
-export TEST_COMMAND=" wait-for-it.sh devbox:8080 --strict --timeout=0 -- pytest --cov-report html --cov-report term:skip-covered --cov=main $@"
+export TEST_COMMAND=" wait-for-it.sh devbox:8080 --strict --timeout=0 -- pipenv run pytest --cov-report html --cov-report term:skip-covered --cov=main $@"
 
 docker-compose -f docker-compose.tests.yaml up --exit-code-from backend backend
 exit $?
