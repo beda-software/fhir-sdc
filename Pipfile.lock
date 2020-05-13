@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "a9179bd73e81bb7844366e74cd71a4095ec8c4980dd3ebee370631877cbc4dc8"
+            "sha256": "985d679e4c937b4693d2535225bae2a29618a05cab4d106a541b9b275aed520b"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -132,6 +132,11 @@
                 "sha256:34ae397aef03a0a17910452f1e8430d57fa59e2d67b20e9b637218e8f7dd22b3"
             ],
             "version": "==4.1.0"
+        },
+        "fhir-py": {
+            "editable": true,
+            "git": "https://github.com/beda-software/fhir-py.git",
+            "ref": "2fde75c4002b9fde33e33846c929aa0a1d2bea89"
         },
         "fhirpath-py": {
             "git": "https://github.com/beda-software/fhirpath-py.git",
@@ -277,6 +282,20 @@
             ],
             "index": "pypi",
             "version": "==2.8.0"
+        },
+        "pytz": {
+            "hashes": [
+                "sha256:a494d53b6d39c3c6e44c3bec237336e14305e4f29bbf800b599253057fbb79ed",
+                "sha256:c35965d010ce31b23eeb663ed3cc8c906275d6be1a34393a1d73a41febf4a048"
+            ],
+            "version": "==2020.1"
+        },
+        "requests": {
+            "hashes": [
+                "sha256:43999036bfa82904b6af1d99e4882b560e5e2c68e5c4b0aa03b655f3d7d73fee",
+                "sha256:b3f43d496c6daba4493e7c431722aeb7dbc6288f52a6e04e7b6023b0247817e6"
+            ],
+            "version": "==2.23.0"
         },
         "sentry-sdk": {
             "hashes": [

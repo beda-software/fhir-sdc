@@ -2,7 +2,7 @@ import logging
 
 from aiohttp import ClientSession, web
 from fhirpathpy import evaluate as fhirpath
-from fhirpy.utils import get_by_path
+from fhirpy.base.utils import get_by_path
 from funcy import is_list, is_mapping, re_all
 
 from app.sdk import sdk
@@ -21,8 +21,8 @@ async def extract_questionnaire(operation, request):
     resp = []
     for mapper in questionnaire["mapping"]:
         resp.append(
-            await sdk.client._do_request(
-                "post", f"Mapping/{mapper.id}/$apply", data=questionnaire_response
+            await sdk.client.resource("Mapping", id=mapper.id).execute(
+                "$apply", data=questionnaire_response
             )
         )
 
@@ -51,7 +51,7 @@ async def populate_questionnaire_aidbox(operation, request):
             raw_bundle = contained[source_query["localRef"]]
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
-                env[bundle.id] = await sdk.client._do_request("post", "/", data=bundle)
+                env[bundle.id] = await sdk.client.execute("/", data=bundle)
 
     root = {
         "resourceType": "QuestionnaireResponse",
