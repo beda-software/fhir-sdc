@@ -80,13 +80,13 @@ meta_resources = {
             "type": {"resourceType": "Entity", "id": "canonical"},
             "path": ["item", "reuseQuestionnaire"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-?????#reuseQuestionnaire",
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-27132#reuseQuestionnaire",
         },
         "Questionnaire.item.linkIdPrefix": {
             "type": {"resourceType": "Entity", "id": "canonical"},
             "path": ["item", "linkIdPrefix"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-?????#linkIdPrefix",
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-27132#linkIdPrefix",
         },
     },
 }
