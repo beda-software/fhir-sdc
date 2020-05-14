@@ -10,26 +10,19 @@ async def test_assemble_standalone(sdk, safe_db):
         sdk,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
             "item": [
                 {
-                    "type": "group",
-                    "linkId": "names",
+                    "type": "string",
+                    "linkId": "firstName",
                     "itemContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.name",
                     },
-                    "item": [
-                        {
-                            "repeats": True,
-                            "type": "string",
-                            "linkId": "firstName",
-                            "initialExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "given.first()",
-                            },
-                        },
-                    ],
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "given.first()",
+                    },
                 },
             ],
         },
@@ -39,26 +32,19 @@ async def test_assemble_standalone(sdk, safe_db):
         sdk,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
             "item": [
                 {
-                    "type": "group",
-                    "linkId": "names",
+                    "type": "string",
+                    "linkId": "familyName",
                     "itemContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.name",
                     },
-                    "item": [
-                        {
-                            "repeats": True,
-                            "type": "string",
-                            "linkId": "familyName",
-                            "initialExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "family",
-                            },
-                        },
-                    ],
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "family",
+                    },
                 },
             ],
         },
@@ -97,24 +83,17 @@ async def test_assemble_standalone(sdk, safe_db):
                 "linkId": "givenNameGroup",
                 "item": [
                     {
-                        "type": "group",
-                        "linkId": "names",
+                        "type": "string",
+                        "linkId": "firstName",
                         "itemContext": {
                             "language": "text/fhirpath",
                             "expression": "%LaunchPatient.name",
                         },
-                        "item": [
-                            {
-                                "repeats": True,
-                                "type": "string",
-                                "linkId": "firstName",
-                                "initialExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "given.first()",
-                                },
-                            },
-                        ],
-                    }
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "given.first()",
+                        },
+                    },
                 ],
             },
             {
@@ -122,24 +101,17 @@ async def test_assemble_standalone(sdk, safe_db):
                 "linkId": "familyNameGroup",
                 "item": [
                     {
-                        "type": "group",
-                        "linkId": "names",
+                        "type": "string",
+                        "linkId": "familyName",
                         "itemContext": {
                             "language": "text/fhirpath",
                             "expression": "%LaunchPatient.name",
                         },
-                        "item": [
-                            {
-                                "repeats": True,
-                                "type": "string",
-                                "linkId": "familyName",
-                                "initialExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "family",
-                                },
-                            },
-                        ],
-                    }
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "family",
+                        },
+                    },
                 ],
             },
         ],
