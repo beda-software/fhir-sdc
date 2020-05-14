@@ -7,6 +7,8 @@ from funcy.types import is_mapping
 
 from app.sdk import sdk
 
+from .utils import prepare_bundle
+
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
     "contained": lambda i: i["id"],
@@ -33,6 +35,16 @@ async def assemble(operation, request):
 async def assemble_questionnaire(questionnaire, root_elements):
     if is_mapping(questionnaire) and "item" in questionnaire:
         for item in questionnaire.item:
+            if "reuseQuestionnaire" in item:
+                prefix = item.linkIdPrefix
+                sub = await sdk.client.resources("Questionnaire").get(
+                    id=item.reuseQuestionnaire
+                )
+                sub = prepare_bundle(sub, {"prefix": prefix})
+                sub = await assemble_questionnaire(sub, root_elements)
+                del item["reuseQuestionnaire"]
+                del item["linkIdPrefix"]
+                item.item = sub.item
             if "subQuestionnaire" in item:
                 sub = await sdk.client.resources("Questionnaire").get(
                     id=item.subQuestionnaire
@@ -48,9 +60,6 @@ async def assemble_questionnaire(questionnaire, root_elements):
                 dict.update(item, propogate)
                 item.item = sub.item
                 del item["subQuestionnaire"]
-            if "item" in item:
-                item.item = [
-                    await assemble_questionnaire(i, root_elements) for i in item.item
-                ]
+            await assemble_questionnaire(item, root_elements)
 
     return questionnaire

@@ -76,5 +76,17 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
         },
+        "Questionnaire.item.reuseQuestionnaire": {
+            "type": {"resourceType": "Entity", "id": "canonical"},
+            "path": ["item", "reuseQuestionnaire"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-?????#reuseQuestionnaire",
+        },
+        "Questionnaire.item.linkIdPrefix": {
+            "type": {"resourceType": "Entity", "id": "canonical"},
+            "path": ["item", "linkIdPrefix"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-?????#linkIdPrefix",
+        },
     },
 }
