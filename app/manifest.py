@@ -58,5 +58,11 @@ meta_resources = {
             "extensionUrl": "http://beda.software/fhir-extensions/questionnaire-mapper",
             "isCollection": True,
         },
+        "Questionnaire.item.subQuestionnaire": {
+            "type": {"resourceType": "Entity", "id": "canonical"},
+            "path": ["item", "subQuestionnaire"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356",
+        },
     },
 }
