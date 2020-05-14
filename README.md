@@ -1,4 +1,20 @@
-# sdc Backend
+# SDC spec implementation as Aidbox application
+
+The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/2019May/index.html  
+
+## WIP Features:  
+
+- FHIRPath-based population http://hl7.org/fhir/uv/sdc/2019May/populate.html#fhirpath-based-population
+- Assemble operation https://jira.hl7.org/browse/FHIR-22356
+- JUTE-based extraction
+
+## Further plans:
+- Support FHIR resource format https://docs.aidbox.app/basic-concepts/aidbox-and-fhir-formats
+- JUTE-based population
+- Observation-based population
+- Observation-based extraction
+- Definition-based extraction
+
 
 ## Tests
 To run tests locally, copy `.env.tpl` to `.env` and specify `TESTS_AIDBOX_LICENSE_ID` and `TESTS_AIDBOX_LICENSE_KEY`.  
