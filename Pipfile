@@ -11,6 +11,11 @@ service-factory = ">=0.1.5"
 black = "==19.10b0"
 pre-commit = "*"
 isort = "*"
+autoflake = "*"
+importmagic = "*"
+epc = "*"
+pep8 = "*"
+flake8 = "*"
 
 [packages]
 python-dateutil = "==2.8.0"

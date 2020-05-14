@@ -1,46 +1,29 @@
-import logging
-
-from aiohttp import ClientSession, web
+from aiohttp import web
 from fhirpathpy import evaluate as fhirpath
-from fhirpy.base.utils import get_by_path
-from funcy import is_list, is_mapping, re_all
+from funcy import is_list
 
 from app.sdk import sdk
 
+from .utils import get_type, parameter_to_env, prepare_bundle
 
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"], public=True)
-async def extract_questionnaire(operation, request):
-    questionnaire_response = sdk.client.resource(
-        "QuestionnaireResponse", **request["resource"]
-    )
-    questionnaire = (
-        await sdk.client.resources("Questionnaire")
-        .search(id=request["route-params"]["id"])
-        .get()
-    )
-    resp = []
-    for mapper in questionnaire["mapping"]:
-        resp.append(
-            await sdk.client.resource("Mapping", id=mapper.id).execute(
-                "$apply", data=questionnaire_response
-            )
-        )
 
-    return web.json_response(resp)
+@sdk.operation(["POST"], ["Questionnaire", "$populate"])
+async def populate_questionnaire(operation, request):
+    env = parameter_to_env(request["resource"])
+    questionnaire = sdk.client.resource("Questionnaire", **env["questionnaire"])
+
+    return await populate(questionnaire, env)
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
-async def populate_questionnaire_aidbox(operation, request):
-    resource = request["resource"]
-    env = {}
-    for param in resource["parameter"]:
-        if "resource" in param:
-            env[param["name"]] = param["resource"]
-
+async def populate_questionnaire_instance(operation, request):
     questionnaire = await sdk.client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
     )
+    return await populate(questionnaire, parameter_to_env(request["resource"]))
 
+
+async def populate(questionnaire, env):
     contained = {
         f"{item.resourceType}#{item.id}": item
         for item in questionnaire.get("contained", [])
@@ -55,7 +38,7 @@ async def populate_questionnaire_aidbox(operation, request):
 
     root = {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": request["route-params"]["id"],
+        "questionnaire": questionnaire.id,
         "item": [],
     }
     for item in questionnaire["item"]:
@@ -118,54 +101,3 @@ def handle_item(item, env, context):
             root["item"].append(handle_item(i, env, context))
 
     return root
-
-
-def get_type(item):
-    type = item["type"]
-    if type == "choice":
-        option_type = get_by_path(item, ["answerOption", 0, "value"])
-        if option_type:
-            type = next(iter(option_type.keys()))
-        else:
-            type = "Coding"
-    elif type == "text":
-        type = "string"
-    elif type == "attachment":
-        type = "Attachment"
-    elif type == "email":
-        type = "string"
-    elif type == "phone":
-        type = "string"
-
-    return type
-
-
-def walk_dict(d, transform):
-    for k, v in d.items():
-        if is_list(v):
-            d[k] = [walk_dict(vi, transform) for vi in v]
-        elif is_mapping(v):
-            d[k] = walk_dict(v, transform)
-        else:
-            d[k] = transform(v)
-    return d
-
-
-def prepare_bundle(raw_bundle, env):
-    def pp(i):
-        if not isinstance(i, str):
-            return i
-        exprs = re_all(r"(?P<var>{{[\S\s]+}})", i)
-        vs = {}
-        for exp in exprs:
-            data = fhirpath({}, exp["var"][2:-2], env)
-            if len(data) > 0:
-                vs[exp["var"]] = data[0]
-
-        res = i
-        for k, v in vs.items():
-            res = res.replace(k, v)
-
-        return res
-
-    return walk_dict(raw_bundle, pp)
