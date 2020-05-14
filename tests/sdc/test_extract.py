@@ -1,4 +1,4 @@
-async def test_extract(sdk, extract, safe_db):
+async def test_extract(sdk, safe_db):
     m = sdk.client.resource(
         "Mapping",
         **{
@@ -42,7 +42,7 @@ async def test_extract(sdk, extract, safe_db):
         }
     )
 
-    extraction = await extract(q.id, qr)
+    extraction = await q.execute("$extract", data=qr)
 
     assert len(extraction) == 1
 

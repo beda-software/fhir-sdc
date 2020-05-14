@@ -1,4 +1,13 @@
-async def test_initial_expression_populate(sdk, populate, safe_db):
+def create_parameters(**payload):
+    return {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": name, "resource": resource} for name, resource in payload.items()
+        ],
+    }
+
+
+async def test_initial_expression_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
@@ -22,7 +31,9 @@ async def test_initial_expression_populate(sdk, populate, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
 
-    p = await populate(q.id, LaunchPatient=launch_patient)
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -36,7 +47,7 @@ async def test_initial_expression_populate(sdk, populate, safe_db):
     }
 
 
-async def test_item_context_with_repeats_populate(sdk, populate, safe_db):
+async def test_item_context_with_repeats_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
@@ -79,7 +90,9 @@ async def test_item_context_with_repeats_populate(sdk, populate, safe_db):
         ],
     }
 
-    p = await populate(q.id, LaunchPatient=launch_patient)
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "item": [
@@ -102,7 +115,7 @@ async def test_item_context_with_repeats_populate(sdk, populate, safe_db):
     }
 
 
-async def test_item_context_without_repeats_populate(sdk, populate, safe_db):
+async def test_item_context_without_repeats_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
@@ -173,7 +186,9 @@ async def test_item_context_without_repeats_populate(sdk, populate, safe_db):
         ],
     }
 
-    p = await populate(q.id, LaunchPatient=launch_patient)
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "item": [
@@ -211,7 +226,7 @@ async def test_item_context_without_repeats_populate(sdk, populate, safe_db):
     }
 
 
-async def test_source_queries_populate(sdk, populate, safe_db):
+async def test_source_queries_populate(sdk, safe_db):
     p = sdk.client.resource("Patient")
     await p.save()
 
@@ -264,7 +279,7 @@ async def test_source_queries_populate(sdk, populate, safe_db):
 
     await q.save()
 
-    p = await populate(q.id, LaunchPatient=p)
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -278,7 +293,7 @@ async def test_source_queries_populate(sdk, populate, safe_db):
     }
 
 
-async def test_multiple_answers_populate(sdk, populate, safe_db):
+async def test_multiple_answers_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
@@ -345,7 +360,7 @@ async def test_multiple_answers_populate(sdk, populate, safe_db):
         ],
     }
 
-    p = await populate(q.id, Diet=diet)
+    p = await q.execute("$populate", data=create_parameters(Diet=diet))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
