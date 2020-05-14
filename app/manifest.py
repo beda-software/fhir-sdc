@@ -38,6 +38,12 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
         },
+        "Questionnaire.itemContext": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["itemContext"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+        },
         "Questionnaire.item.itemContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["item", "itemContext"],
@@ -62,7 +68,13 @@ meta_resources = {
             "type": {"resourceType": "Entity", "id": "canonical"},
             "path": ["item", "subQuestionnaire"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356",
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#subQuestionnaire",
+        },
+        "Questionnaire.assembledFrom": {
+            "type": {"resourceType": "Entity", "id": "canonical"},
+            "path": ["assembledFrom"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
         },
     },
 }
