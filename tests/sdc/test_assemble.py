@@ -5,7 +5,7 @@ async def create_questionnaire(sdk, questionnaire):
     return q
 
 
-async def test_assemble_sub_questionanire(sdk, safe_db):
+async def test_assemble_sub_questionnaire(sdk, safe_db):
     get_given_name = await create_questionnaire(
         sdk,
         {
@@ -53,20 +53,27 @@ async def test_assemble_sub_questionanire(sdk, safe_db):
     q = await create_questionnaire(
         sdk,
         {
-            "status": "actice",
+            "status": "active",
+            "resourceType": "Questionnaire",
             "item": [
                 {
-                    "type": "display",
-                    "linkId": "givenNameGroup",
-                    "text": "Sub questionnaire is not supported",
-                    "subQuestionnaire": get_given_name.id,
-                },
-                {
-                    "type": "display",
-                    "linkId": "familyNameGroup",
-                    "text": "Sub questionnaire is not supported",
-                    "subQuestionnaire": get_family_name.id,
-                },
+                    "linkId": "demographics",
+                    "type": "group",
+                    "item": [
+                        {
+                            "type": "display",
+                            "linkId": "givenNameGroup",
+                            "text": "Sub questionnaire is not supported",
+                            "subQuestionnaire": get_given_name.id,
+                        },
+                        {
+                            "type": "display",
+                            "linkId": "familyNameGroup",
+                            "text": "Sub questionnaire is not supported",
+                            "subQuestionnaire": get_family_name.id,
+                        },
+                    ],
+                }
             ],
         },
     )
@@ -75,51 +82,48 @@ async def test_assemble_sub_questionanire(sdk, safe_db):
 
     del assembled["meta"]
 
-    assert assembled == {}
-    {
+    assert assembled == {
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
-        "status": "actice",
+        "status": "active",
         "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
         "item": [
             {
-                "type": "string",
-                "linkId": "firstName",
+                "linkId": "demographics",
+                "type": "group",
                 "itemContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.name",
                 },
-                "initialExpression": {
-                    "language": "text/fhirpath",
-                    "expression": "given.first()",
-                },
-            },
-            {
-                "type": "string",
-                "linkId": "familyName",
-                "itemContext": {
-                    "language": "text/fhirpath",
-                    "expression": "%LaunchPatient.name",
-                },
-                "initialExpression": {
-                    "language": "text/fhirpath",
-                    "expression": "family",
-                },
-            },
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "firstName",
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "given.first()",
+                        },
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "familyName",
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "family",
+                        },
+                    },
+                ],
+            }
         ],
     }
 
 
-async def test_assemble_reuse_questionanire(sdk, safe_db):
+async def test_assemble_reuse_questionnaire(sdk, safe_db):
     address = await create_questionnaire(
         sdk,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
-            "itemContext": {
-                "language": "text/fhirpath",
-                "expression": "%LaunchPatient.address",
-            },
             "fragmentRequiredContext": [{"name": "prefix", "type": "string"}],
             "item": [
                 {
@@ -162,13 +166,21 @@ async def test_assemble_reuse_questionanire(sdk, safe_db):
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
-                    "item": [{
-                        "linkId": "patient-address-display",
-                        "type": "display",
-                        "text": "Sub questionanire is not supported",
-                        "varaible": [{"name": "prefix", "language": 'text/fhirpath', "expression": "'patient-address-'"}],
-                        "subQuestionnaire": address.id,
-                    }],
+                    "item": [
+                        {
+                            "linkId": "patient-address-display",
+                            "type": "display",
+                            "text": "Sub questionanire is not supported",
+                            "varaible": [
+                                {
+                                    "name": "prefix",
+                                    "language": "text/fhirpath",
+                                    "expression": "'patient-address-'",
+                                }
+                            ],
+                            "subQuestionnaire": address.id,
+                        }
+                    ],
                 },
                 {
                     "type": "group",
@@ -186,13 +198,21 @@ async def test_assemble_reuse_questionanire(sdk, safe_db):
                                 "language": "text/fhirpath",
                                 "expression": "address",
                             },
-                            "item": [{
-                                "linkId": "patient-contact-address-display",
-                                "type": "display",
-                                "text": "Sub questionanire is not supported",
-                                "varaible": [{"name": "prefix", "language": 'text/fhirpath', "expression": "'patient-contact-address-'"}],
-                                "subQuestionnaire": address.id,
-                            }],
+                            "item": [
+                                {
+                                    "linkId": "patient-contact-address-display",
+                                    "type": "display",
+                                    "text": "Sub questionanire is not supported",
+                                    "varaible": [
+                                        {
+                                            "name": "prefix",
+                                            "language": "text/fhirpath",
+                                            "expression": "'patient-contact-address-'",
+                                        }
+                                    ],
+                                    "subQuestionnaire": address.id,
+                                }
+                            ],
                         }
                     ],
                 },
@@ -204,8 +224,7 @@ async def test_assemble_reuse_questionanire(sdk, safe_db):
 
     del assembled["meta"]
 
-    assert assembled == {}
-    {
+    assert assembled == {
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "actice",

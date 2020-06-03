@@ -55,6 +55,13 @@ def prepare_bundle(raw_bundle, env):
     return walk_dict(raw_bundle, pp)
 
 
+def prepare_varaibles(item):
+    varaibles = {}
+    for var in item.get("varaible", []):
+        varaibles[var["name"]] = fhirpath({}, var["expression"])
+    return varaibles
+
+
 def parameter_to_env(resource):
     env = {}
     for param in resource["parameter"]:
