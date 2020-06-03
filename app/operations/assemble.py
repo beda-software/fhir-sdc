@@ -33,33 +33,32 @@ async def assemble(operation, request):
 
 
 async def assemble_questionnaire(questionnaire, root_elements):
-    if is_mapping(questionnaire) and "item" in questionnaire:
-        for item in questionnaire.item:
-            if "reuseQuestionnaire" in item:
-                prefix = item.linkIdPrefix
-                sub = await sdk.client.resources("Questionnaire").get(
-                    id=item.reuseQuestionnaire
-                )
-                sub = prepare_bundle(sub, {"prefix": prefix})
-                sub = await assemble_questionnaire(sub, root_elements)
-                del item["reuseQuestionnaire"]
-                del item["linkIdPrefix"]
-                item.item = sub.item
-            if "subQuestionnaire" in item:
-                sub = await sdk.client.resources("Questionnaire").get(
-                    id=item.subQuestionnaire
-                )
-                propogate = project(dict(sub), PROPOGATE_ELEMENTS)
-                root = project(dict(sub), WHITELISTED_ROOT_ELEMENTS.keys())
-                for key, value in root.items():
-                    uniqness = WHITELISTED_ROOT_ELEMENTS[key]
-                    current = root_elements.get(key, [])
-                    new = concat(current, value)
-                    root_elements[key] = distinct(new, uniqness)
-                sub = await assemble_questionnaire(sub, root_elements)
-                dict.update(item, propogate)
-                item.item = sub.item
-                del item["subQuestionnaire"]
-            await assemble_questionnaire(item, root_elements)
-
+    # if is_mapping(questionnaire) and "item" in questionnaire:
+    #     for item in questionnaire.item:
+    #         if "reuseQuestionnaire" in item:
+    #             prefix = item.linkIdPrefix
+    #             sub = await sdk.client.resources("Questionnaire").get(
+    #                 id=item.reuseQuestionnaire
+    #             )
+    #             sub = prepare_bundle(sub, {"prefix": prefix})
+    #             sub = await assemble_questionnaire(sub, root_elements)
+    #             del item["reuseQuestionnaire"]
+    #             del item["linkIdPrefix"]
+    #             item.item = sub.item
+    #         if "subQuestionnaire" in item:
+    #             sub = await sdk.client.resources("Questionnaire").get(
+    #                 id=item.subQuestionnaire
+    #             )
+    #             propogate = project(dict(sub), PROPOGATE_ELEMENTS)
+    #             root = project(dict(sub), WHITELISTED_ROOT_ELEMENTS.keys())
+    #             for key, value in root.items():
+    #                 uniqness = WHITELISTED_ROOT_ELEMENTS[key]
+    #                 current = root_elements.get(key, [])
+    #                 new = concat(current, value)
+    #                 root_elements[key] = distinct(new, uniqness)
+    #             sub = await assemble_questionnaire(sub, root_elements)
+    #             dict.update(item, propogate)
+    #             item.item = sub.item
+    #             del item["subQuestionnaire"]
+    #         await assemble_questionnaire(item, root_elements)
     return questionnaire

@@ -26,6 +26,7 @@ sentry-sdk = "==0.14.3"
 aiocontextvars = "==0.2.2"
 coloredlogs = "==10.0"
 aidbox-python-sdk = {git = "https://github.com/Aidbox/aidbox-python-sdk.git",ref = "870aab71198e5795587c5714cdec05e0200a02b8"}
+aidboxpy = "*"
 fhirpath-py = {git = "https://github.com/beda-software/fhirpath-py.git",ref = "ea8193536dcb02e1bf9fd26023d3a57ed2df964d"}
 pytest-aiohttp = "==0.3.0"
 pytest-cov = "==2.8.1"

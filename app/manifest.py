@@ -8,7 +8,6 @@ meta_resources = {
             "isCollection": True,
         },
         "Questionnaire.launchContext": {
-            # 'type': {'resourceType': 'Entity',  'id': 'string'},
             "path": ["launchContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
@@ -76,17 +75,36 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
         },
-        "Questionnaire.item.reuseQuestionnaire": {
-            "type": {"resourceType": "Entity", "id": "canonical"},
-            "path": ["item", "reuseQuestionnaire"],
+        "Questionnaire.fragmentRequiredContext": {
+            "path": ["fragmentRequiredContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-27132#reuseQuestionnaire",
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-fragmentRequiredContext",
+            "isCollection": True,
         },
-        "Questionnaire.item.linkIdPrefix": {
-            "type": {"resourceType": "Entity", "id": "canonical"},
-            "path": ["item", "linkIdPrefix"],
+        "Questionnaire.fragmentRequiredContext.name": {
+            "type": {"resourceType": "Entity", "id": "id"},
+            "path": ["fragmentRequiredContext", "name"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-27132#linkIdPrefix",
+            "extensionUrl": "name",
         },
+        "Questionnaire.fragmentRequiredContext.type": {
+            "type": {"resourceType": "Entity", "id": "code"},
+            "path": ["fragmentRequiredContext", "type"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "type",
+        },
+        "Questionnaire.fragmentRequiredContext.description": {
+            "type": {"resourceType": "Entity", "id": "string"},
+            "path": ["fragmentRequiredContext", "description"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "description",
+        },
+        "Questionnaire.item.varaible": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["item", "varaible"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/StructureDefinition/variable",
+            "isCollection": True,
+        }
     },
 }
