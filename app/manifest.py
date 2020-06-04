@@ -75,27 +75,27 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
         },
-        "Questionnaire.fragmentRequiredContext": {
-            "path": ["fragmentRequiredContext"],
+        "Questionnaire.assembleContext": {
+            "path": ["assembleContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-fragmentRequiredContext",
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
             "isCollection": True,
         },
-        "Questionnaire.fragmentRequiredContext.name": {
+        "Questionnaire.assembleContext.name": {
             "type": {"resourceType": "Entity", "id": "id"},
-            "path": ["fragmentRequiredContext", "name"],
+            "path": ["assembleContext", "name"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "name",
         },
-        "Questionnaire.fragmentRequiredContext.type": {
+        "Questionnaire.assembleContext.type": {
             "type": {"resourceType": "Entity", "id": "code"},
-            "path": ["fragmentRequiredContext", "type"],
+            "path": ["assembleContext", "type"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "type",
         },
-        "Questionnaire.fragmentRequiredContext.description": {
+        "Questionnaire.assembleContext.description": {
             "type": {"resourceType": "Entity", "id": "string"},
-            "path": ["fragmentRequiredContext", "description"],
+            "path": ["assembleContext", "description"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "description",
         },

@@ -124,7 +124,7 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
-            "fragmentRequiredContext": [{"name": "prefix", "type": "string"}],
+            "assembleContext": [{"name": "prefix", "type": "string"}],
             "item": [
                 {
                     "linkId": "{{%prefix}}line-1",
