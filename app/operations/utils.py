@@ -1,5 +1,6 @@
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.utils import get_by_path
+from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
@@ -67,4 +68,7 @@ def parameter_to_env(resource):
     for param in resource["parameter"]:
         if "resource" in param:
             env[param["name"]] = param["resource"]
+        else:
+            value = param["value"]
+            env[param["name"]] = value[first(value.keys())]
     return env
