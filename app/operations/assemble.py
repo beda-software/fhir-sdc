@@ -11,6 +11,7 @@ from .utils import prepare_bundle, prepare_varaibles
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
+    "mapping": lambda i: i["id"],
     "contained": lambda i: i["id"],
     "sourceQueries": lambda i: i.get("id", i["localRef"]),
     "cqf-library": lambda i: i["expression"],
