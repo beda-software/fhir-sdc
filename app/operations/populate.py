@@ -80,6 +80,8 @@ def handle_item(item, env, context):
                 root["answer"] = [{"value": {type: d}} for d in data]
             else:
                 root["answer"] = [{"value": {type: data[0]}}]
+    elif "initial" in item:
+        root["answer"] = item["initial"]
 
     if (
         item["type"] == "group"
