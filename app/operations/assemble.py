@@ -26,7 +26,9 @@ async def assemble(operation, request):
         id=request["route-params"]["id"]
     )
     root_elements = project(dict(questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
-    await assemble_questionnaire(questionnaire, questionnaire["item"], root_elements)
+    questionnaire["item"] = await assemble_questionnaire(
+        questionnaire, questionnaire["item"], root_elements
+    )
     dict.update(questionnaire, root_elements)
     questionnaire.assembledFrom = questionnaire["id"]
     del questionnaire["id"]
@@ -50,7 +52,6 @@ async def load_sub_questionanire(root_elements, parent_item, item):
             current = root_elements.get(key, [])
             new = concat(current, value)
             root_elements[key] = distinct(new, uniqness)
-
         return sub["item"]
 
     return item
@@ -63,6 +64,7 @@ async def assemble_questionnaire(parent, questionnaire_items, root_elements):
             load_sub_questionanire(root_elements, parent, i) for i in with_sub_items
         )
         with_sub_items = list(flatten(await asyncio.gather(*with_sub_items_futures)))
+
     resp = []
     for i in with_sub_items:
         if "item" in i:
