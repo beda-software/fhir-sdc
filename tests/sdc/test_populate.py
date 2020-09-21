@@ -1,10 +1,4 @@
-def create_parameters(**payload):
-    return {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": name, "resource": resource} for name, resource in payload.items()
-        ],
-    }
+import utils
 
 
 async def test_initial_expression_populate(sdk, safe_db):
@@ -32,7 +26,7 @@ async def test_initial_expression_populate(sdk, safe_db):
     launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=utils.create_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -91,7 +85,7 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=utils.create_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -187,7 +181,7 @@ async def test_item_context_without_repeats_populate(sdk, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=utils.create_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -279,7 +273,7 @@ async def test_source_queries_populate(sdk, safe_db):
 
     await q.save()
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
+    p = await q.execute("$populate", data=utils.create_parameters(LaunchPatient=p))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -360,7 +354,7 @@ async def test_multiple_answers_populate(sdk, safe_db):
         ],
     }
 
-    p = await q.execute("$populate", data=create_parameters(Diet=diet))
+    p = await q.execute("$populate", data=utils.create_parameters(Diet=diet))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
