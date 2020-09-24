@@ -21,6 +21,8 @@ def get_type(item):
         type = "string"
     elif type == "phone":
         type = "string"
+    elif type == 'display':
+        type = "string"
 
     return type
 
