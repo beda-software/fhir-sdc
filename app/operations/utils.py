@@ -72,5 +72,7 @@ def parameter_to_env(resource):
             env[param["name"]] = param["resource"]
         else:
             value = param["value"]
-            env[param["name"]] = value[first(value.keys())]
+            polimorphic_key = first(value.keys())
+            if polimorphic_key:
+                env[param["name"]] = value[polimorphic_key]
     return env
