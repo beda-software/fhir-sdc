@@ -11,8 +11,8 @@ from .utils import get_type, parameter_to_env, prepare_bundle
 async def populate_questionnaire(operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = sdk.client.resource("Questionnaire", **env["questionnaire"])
-
-    return await populate(questionnaire, env)
+    populated_resource = await populate(questionnaire, env)
+    return web.json_response(populated_resource)
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
@@ -20,7 +20,8 @@ async def populate_questionnaire_instance(operation, request):
     questionnaire = await sdk.client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
     )
-    return await populate(questionnaire, parameter_to_env(request["resource"]))
+    populated_resource = await populate(questionnaire, parameter_to_env(request["resource"]))
+    return web.json_response(populated_resource)
 
 
 async def populate(questionnaire, env):
@@ -44,7 +45,7 @@ async def populate(questionnaire, env):
     for item in questionnaire["item"]:
         root["item"].append(handle_item(item, env, {}))
 
-    return web.json_response(root)
+    return root
 
 
 def handle_item(item, env, context):
@@ -71,7 +72,7 @@ def handle_item(item, env, context):
                 ),
                 env,
             )
-            answers.append({"value": {item["type"]: data[0]}})
+            answers.append({"value": {type: data[0]}})
     elif "initialExpression" in item:
         data = fhirpath(context, item["initialExpression"]["expression"], env)
         if data and len(data):
