@@ -31,7 +31,6 @@ async def assemble(operation, request):
     )
     dict.update(questionnaire, root_elements)
     questionnaire.assembledFrom = questionnaire["id"]
-    del questionnaire["id"]
     return web.json_response(questionnaire, dumps=lambda a: json.dumps(a, default=list))
 
 
