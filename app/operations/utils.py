@@ -5,7 +5,7 @@ from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
 
-def get_type(item):
+def get_type(item, data):
     type = item["type"]
     if type == "choice":
         option_type = get_by_path(item, ["answerOption", 0, "value"])
@@ -13,6 +13,8 @@ def get_type(item):
             type = next(iter(option_type.keys()))
         else:
             type = "Coding"
+        if isinstance(data[0], str):
+            return 'string'
     elif type == "text":
         type = "string"
     elif type == "attachment":

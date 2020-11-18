@@ -64,7 +64,6 @@ def handle_item(item, env, context):
         answers = []
         root["answer"] = answers
         for index, _item in enumerate(context):
-            type = get_type(item)
             data = fhirpath(
                 context,
                 "%context[{}].{}".format(
@@ -72,11 +71,13 @@ def handle_item(item, env, context):
                 ),
                 env,
             )
-            answers.append({"value": {type: data[0]}})
+            if data and len(data):
+                type = get_type(item, data)
+                answers.append({"value": {type: data[0]}})
     elif "initialExpression" in item:
         data = fhirpath(context, item["initialExpression"]["expression"], env)
         if data and len(data):
-            type = get_type(item)
+            type = get_type(item, data)
             if item.get("repeats") is True:
                 root["answer"] = [{"value": {type: d}} for d in data]
             else:
