@@ -1,10 +1,4 @@
-def create_parameters(**payload):
-    return {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": name, "resource": resource} for name, resource in payload.items()
-        ],
-    }
+from tests.utils import create_parameters
 
 
 async def test_initial_expression_populate(sdk, safe_db):
@@ -38,6 +32,43 @@ async def test_initial_expression_populate(sdk, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
+        "item": [
+            {
+                "linkId": "patientId",
+                "answer": [{"value": {"string": launch_patient["id"]}}],
+            }
+        ],
+    }
+
+
+async def test_initial_expression_populate_using_list_endpoint(sdk, safe_db):
+    q = {
+        "id": "virtual-id",
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+        "item": [
+            {
+                "type": "string",
+                "linkId": "patientId",
+                "initialExpression": {
+                    "language": "text/fhirpath",
+                    "expression": "%LaunchPatient.id",
+                },
+            },
+        ],
+    }
+
+    launch_patient = {"resourceType": "Patient", "id": "patient-id"}
+
+    p = await sdk.client.execute(
+        "Questionnaire/$populate", data=create_parameters(
+            Questionnaire=q, LaunchPatient=launch_patient)
+    )
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q["id"],
         "item": [
             {
                 "linkId": "patientId",

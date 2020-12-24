@@ -10,7 +10,15 @@ from .utils import get_type, parameter_to_env, prepare_bundle
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
 async def populate_questionnaire(operation, request):
     env = parameter_to_env(request["resource"])
-    questionnaire = sdk.client.resource("Questionnaire", **env["questionnaire"])
+    questionnaire_data = env.get("questionnaire") or env.get("Questionnaire")
+    if not questionnaire_data:
+        # TODO: return OperationOutcome
+        return web.json_response({
+            "error": "bad_request",
+            "error_description": "`Questionnaire` parameter is required"
+        }, status=422)
+
+    questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
     populated_resource = await populate(questionnaire, env)
     return web.json_response(populated_resource)
 
