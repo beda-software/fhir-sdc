@@ -27,7 +27,7 @@ spec:
           containers:
           - name: {{ .Chart.Name }}-backup
 
-            image: registry.bro.engineering/sdc/backup:master
+            image: registry.beda.software/sdc/backup:master
 
             imagePullPolicy: Always
             volumeMounts:
@@ -78,7 +78,7 @@ spec:
       containers:
       - name: {{ .Chart.Name }}-backup
 
-        image: registry.bro.engineering/sdc/backup:master
+        image: registry.beda.software/sdc/backup:master
 
         imagePullPolicy: Always
         volumeMounts:

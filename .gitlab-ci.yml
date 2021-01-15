@@ -55,7 +55,7 @@ release:
 
 deploy:
   stage: deploy
-  image: registry.bro.engineering/ansible_deploy/helm_deploy:3
+  image: registry.beda.software/ansible_deploy/helm_deploy:3
   script:
     - cd ./chart
     - ./deploy.sh $CI_COMMIT_SHA
