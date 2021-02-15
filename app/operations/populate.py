@@ -1,10 +1,10 @@
 from aiohttp import web
+from app.sdk import sdk
 from fhirpathpy import evaluate as fhirpath
 from funcy import is_list
 
-from app.sdk import sdk
-
-from .utils import get_type, parameter_to_env, prepare_bundle
+from .utils import (get_type, load_source_queries, parameter_to_env,
+                    prepare_bundle)
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
@@ -13,10 +13,13 @@ async def populate_questionnaire(operation, request):
     questionnaire_data = env.get("questionnaire") or env.get("Questionnaire")
     if not questionnaire_data:
         # TODO: return OperationOutcome
-        return web.json_response({
-            "error": "bad_request",
-            "error_description": "`Questionnaire` parameter is required"
-        }, status=422)
+        return web.json_response(
+            {
+                "error": "bad_request",
+                "error_description": "`Questionnaire` parameter is required",
+            },
+            status=422,
+        )
 
     questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
     populated_resource = await populate(questionnaire, env)
@@ -28,22 +31,14 @@ async def populate_questionnaire_instance(operation, request):
     questionnaire = await sdk.client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
     )
-    populated_resource = await populate(questionnaire, parameter_to_env(request["resource"]))
+    populated_resource = await populate(
+        questionnaire, parameter_to_env(request["resource"])
+    )
     return web.json_response(populated_resource)
 
 
 async def populate(questionnaire, env):
-    contained = {
-        f"{item.resourceType}#{item.id}": item
-        for item in questionnaire.get("contained", [])
-    }
-
-    for source_query in questionnaire.get("sourceQueries", []):
-        if "localRef" in source_query:
-            raw_bundle = contained[source_query["localRef"]]
-            if raw_bundle:
-                bundle = prepare_bundle(raw_bundle, env)
-                env[bundle.id] = await sdk.client.execute("/", data=bundle)
+    await load_source_queries(sdk, questionnaire, env)
 
     root = {
         "resourceType": "QuestionnaireResponse",

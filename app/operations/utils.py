@@ -14,7 +14,7 @@ def get_type(item, data):
         else:
             type = "Coding"
         if isinstance(data[0], str):
-            return 'string'
+            return "string"
     elif type == "text":
         type = "string"
     elif type == "attachment":
@@ -23,7 +23,7 @@ def get_type(item, data):
         type = "string"
     elif type == "phone":
         type = "string"
-    elif type == 'display':
+    elif type == "display":
         type = "string"
 
     return type
@@ -78,3 +78,17 @@ def parameter_to_env(resource):
             if polimorphic_key:
                 env[param["name"]] = value[polimorphic_key]
     return env
+
+
+async def load_source_queries(sdk, questionnaire, env):
+    contained = {
+        f"{item['resourceType']}#{item['id']}": item
+        for item in questionnaire.get("contained", [])
+    }
+
+    for source_query in questionnaire.get("sourceQueries", []):
+        if "localRef" in source_query:
+            raw_bundle = contained[source_query["localRef"]]
+            if raw_bundle:
+                bundle = prepare_bundle(raw_bundle, env)
+                env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
