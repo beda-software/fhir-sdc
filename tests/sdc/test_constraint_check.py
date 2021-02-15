@@ -19,7 +19,7 @@ async def test_email_uniquest(sdk, safe_db):
                         {
                             "request": {
                                 "method": "GET",
-                                "url": "Patient?_elements=telecom",
+                                "url": "/Patient?_elements=telecom",
                             },
                         },
                     ],
@@ -37,7 +37,7 @@ async def test_email_uniquest(sdk, safe_db):
                             "human": "Email already exists",
                             "expression": {
                                 "language": "text/fhirpath",
-                                "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email).value contains QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
+                                "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
                             },
                         }
                     ],
@@ -56,7 +56,10 @@ async def test_email_uniquest(sdk, safe_db):
         "QuestionnaireResponse",
         status="final",
         item=[
-            {"linkId": "email", "answer": [{"value": {"string": "p2@beda.software"}}]}
+            {
+                "linkId": "email-uniq",
+                "answer": [{"value": {"string": "p2@beda.software"}}],
+            }
         ],
     )
     await valid.save()
@@ -65,7 +68,10 @@ async def test_email_uniquest(sdk, safe_db):
         "QuestionnaireResponse",
         status="final",
         item=[
-            {"linkId": "email", "answer": [{"value": {"string": "p1@beda.software"}}]}
+            {
+                "linkId": "email-uniq",
+                "answer": [{"value": {"string": "p1@beda.software"}}],
+            }
         ],
     )
     await invalid.save()
@@ -100,7 +106,7 @@ async def test_email_uniquest_optimized(sdk, safe_db):
                         {
                             "request": {
                                 "method": "GET",
-                                "url": "Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string}}",
+                                "url": "/Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string}}",
                             },
                         },
                     ],
@@ -118,7 +124,7 @@ async def test_email_uniquest_optimized(sdk, safe_db):
                             "human": "Email already exists",
                             "expression": {
                                 "language": "text/fhirpath",
-                                "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email).value contains QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
+                                "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
                             },
                         }
                     ],
@@ -137,7 +143,10 @@ async def test_email_uniquest_optimized(sdk, safe_db):
         "QuestionnaireResponse",
         status="final",
         item=[
-            {"linkId": "email", "answer": [{"value": {"string": "p2@beda.software"}}]}
+            {
+                "linkId": "email-uniq",
+                "answer": [{"value": {"string": "p2@beda.software"}}],
+            }
         ],
     )
     await valid.save()
@@ -146,7 +155,10 @@ async def test_email_uniquest_optimized(sdk, safe_db):
         "QuestionnaireResponse",
         status="final",
         item=[
-            {"linkId": "email", "answer": [{"value": {"string": "p1@beda.software"}}]}
+            {
+                "linkId": "email-uniq",
+                "answer": [{"value": {"string": "p1@beda.software"}}],
+            }
         ],
     )
     await invalid.save()
