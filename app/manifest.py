@@ -99,9 +99,9 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "description",
         },
-        "Questionnaire.item.varaible": {
+        "Questionnaire.item.variable": {
             "type": {"resourceType": "Entity", "id": "Expression"},
-            "path": ["item", "varaible"],
+            "path": ["item", "variable"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/StructureDefinition/variable",
             "isCollection": True,
