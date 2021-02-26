@@ -44,7 +44,7 @@ def prepare_bundle(raw_bundle, env):
     def pp(i):
         if not isinstance(i, str):
             return i
-        exprs = re_all(r"(?P<var>{{[\S\s]+}})", i)
+        exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
         vs = {}
         for exp in exprs:
             data = fhirpath({}, exp["var"][2:-2], env)
