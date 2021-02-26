@@ -50,6 +50,8 @@ def prepare_bundle(raw_bundle, env):
             data = fhirpath({}, exp["var"][2:-2], env)
             if len(data) > 0:
                 vs[exp["var"]] = data[0]
+            else:
+                vs[exp["var"]] = ""
 
         res = i
         for k, v in vs.items():
