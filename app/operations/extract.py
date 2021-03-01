@@ -10,9 +10,7 @@ async def extract_questionnaire(operation, request):
     resource = request["resource"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = sdk.client.resource(
-            "QuestionnaireResponse", **request["resource"]
-        )
+        questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
         questionnaire = (
             await sdk.client.resources("Questionnaire")
             .search(id=questionnaire_response["questionnaire"])
@@ -61,7 +59,7 @@ async def extract_questionnaire(operation, request):
         {
             "error": "bad_request",
             "error_description": "Either `QuestionnaireResponse` resource or Parameters containing "
-                                 "QuestionnaireResponse and Questionnaire are required",
+            "QuestionnaireResponse and Questionnaire are required",
         },
         status=422,
     )
@@ -70,17 +68,13 @@ async def extract_questionnaire(operation, request):
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
 async def extract_questionnaire_instance(operation, request):
     questionnaire = (
-        await sdk.client.resources("Questionnaire")
-        .search(id=request["route-params"]["id"])
-        .get()
+        await sdk.client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
     )
 
     resource = request["resource"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = sdk.client.resource(
-            "QuestionnaireResponse", **request["resource"]
-        )
+        questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
         return await extract(questionnaire, questionnaire_response)
 
     elif resource["resourceType"] == "Parameters":
@@ -109,7 +103,7 @@ async def extract_questionnaire_instance(operation, request):
         {
             "error": "bad_request",
             "error_description": "Either `QuestionnaireResponse` resource or Parameters containing "
-                                 "QuestionnaireResponse are required",
+            "QuestionnaireResponse are required",
         },
         status=422,
     )
@@ -119,9 +113,7 @@ async def extract(questionnaire, context):
     resp = []
     for mapper in questionnaire.get("mapping", []):
         resp.append(
-            await sdk.client.resource("Mapping", id=mapper.id).execute(
-                "$apply", data=context
-            )
+            await sdk.client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
         )
 
     return web.json_response(resp)

@@ -19,16 +19,9 @@ class OperationOutcome(web.HTTPError):
                     "resourceType": "OperationOutcome",
                     # "status": 400,
                     "issue": [
-                        {
-                            "severity": "error",
-                            "code": "invalid",
-                            "diagnostics": reason or "Error",
-                        }
+                        {"severity": "error", "code": "invalid", "diagnostics": reason or "Error",}
                     ],
-                    "text": {
-                        "status": "generated",
-                        "div": reason or "Something went wrong",
-                    },
+                    "text": {"status": "generated", "div": reason or "Something went wrong",},
                 }
             ),
             content_type="application/json",
