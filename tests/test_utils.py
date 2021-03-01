@@ -1,7 +1,20 @@
 from app.operations.utils import prepare_bundle
 
 
-def test_default_var_is_empty():
+def test_prepare_bundle_force():
+    bundle_entry = {
+        "request": {
+            "method": "GET",
+            "url": "/QuestionnaireResponse?subject={{%CurrentAppointmentId}}",
+        }
+    }
+
+    assert prepare_bundle(bundle_entry, {}, force=True) == {
+        "request": {"method": "GET", "url": "/QuestionnaireResponse?subject="}
+    }
+
+
+def test_prepare_bundle_default():
     bundle_entry = {
         "request": {
             "method": "GET",
@@ -10,7 +23,10 @@ def test_default_var_is_empty():
     }
 
     assert prepare_bundle(bundle_entry, {}) == {
-        "request": {"method": "GET", "url": "/QuestionnaireResponse?subject="}
+        "request": {
+            "method": "GET",
+            "url": "/QuestionnaireResponse?subject={{%CurrentAppointmentId}}",
+        }
     }
 
 
