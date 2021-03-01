@@ -37,7 +37,7 @@ async def assemble(operation, request):
 
 async def load_sub_questionanire(root_elements, parent_item, item):
     if "subQuestionnaire" in item:
-        sub = await sdk.client.resources("Questionnaire").get(id=item.subQuestionnaire)
+        sub = await sdk.client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
         varaibles = prepare_varaibles(item)
 
