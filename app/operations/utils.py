@@ -40,26 +40,27 @@ def walk_dict(d, transform):
     return d
 
 
-def prepare_bundle(raw_bundle, env):
-    def pp(i):
-        if not isinstance(i, str):
-            return i
-        exprs = re_all(r"(?P<var>{{[\S\s]+}})", i)
-        vs = {}
-        for exp in exprs:
-            data = fhirpath({}, exp["var"][2:-2], env)
-            if len(data) > 0:
-                vs[exp["var"]] = data[0]
-            else:
-                vs[exp["var"]] = ""
+def pp(i, env, force):
+    if not isinstance(i, str):
+        return i
+    exprs = re_all(r"(?P<var>{{[\S\s]+}})", i)
+    vs = {}
+    for exp in exprs:
+        data = fhirpath({}, exp["var"][2:-2], env)
+        if len(data) > 0:
+            vs[exp["var"]] = data[0]
+        elif force:
+            vs[exp["var"]] = ""
 
-        res = i
-        for k, v in vs.items():
-            res = res.replace(k, v)
+    res = i
+    for k, v in vs.items():
+        res = res.replace(k, v)
 
-        return res
+    return res
 
-    return walk_dict(raw_bundle, pp)
+
+def prepare_bundle(raw_bundle, env, force=False):
+    return walk_dict(raw_bundle, lambda i: pp(i, env, force))
 
 
 def prepare_varaibles(item):
@@ -84,13 +85,12 @@ def parameter_to_env(resource):
 
 async def load_source_queries(sdk, questionnaire, env):
     contained = {
-        f"{item['resourceType']}#{item['id']}": item
-        for item in questionnaire.get("contained", [])
+        f"{item['resourceType']}#{item['id']}": item for item in questionnaire.get("contained", [])
     }
 
     for source_query in questionnaire.get("sourceQueries", []):
         if "localRef" in source_query:
             raw_bundle = contained[source_query["localRef"]]
             if raw_bundle:
-                bundle = prepare_bundle(raw_bundle, env)
+                bundle = prepare_bundle(raw_bundle, env, force=True)
                 env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
