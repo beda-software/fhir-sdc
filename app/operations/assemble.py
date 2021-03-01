@@ -7,7 +7,7 @@ from funcy.seqs import concat, distinct, flatten
 
 from app.sdk import sdk
 
-from .utils import prepare_bundle, prepare_varaibles
+from .utils import prepare_bundle, prepare_variables
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -39,9 +39,9 @@ async def load_sub_questionanire(root_elements, parent_item, item):
     if "subQuestionnaire" in item:
         sub = await sdk.client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
-        varaibles = prepare_varaibles(item)
+        variables = prepare_variables(item)
 
-        sub = prepare_bundle(sub, varaibles)
+        sub = prepare_bundle(sub, variables)
 
         propogate = project(dict(sub), PROPOGATE_ELEMENTS)
         dict.update(parent_item, propogate)

@@ -171,7 +171,7 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
                             "linkId": "patient-address-display",
                             "type": "display",
                             "text": "Sub questionanire is not supported",
-                            "varaible": [
+                            "variable": [
                                 {
                                     "name": "prefix",
                                     "language": "text/fhirpath",
@@ -203,7 +203,7 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
                                     "linkId": "patient-contact-address-display",
                                     "type": "display",
                                     "text": "Sub questionanire is not supported",
-                                    "varaible": [
+                                    "variable": [
                                         {
                                             "name": "prefix",
                                             "language": "text/fhirpath",

@@ -43,7 +43,7 @@ def walk_dict(d, transform):
 def pp(i, env, force):
     if not isinstance(i, str):
         return i
-    exprs = re_all(r"(?P<var>{{[\S\s]+}})", i)
+    exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
     vs = {}
     for exp in exprs:
         data = fhirpath({}, exp["var"][2:-2], env)
@@ -51,7 +51,6 @@ def pp(i, env, force):
             vs[exp["var"]] = data[0]
         elif force:
             vs[exp["var"]] = ""
-
     res = i
     for k, v in vs.items():
         res = res.replace(k, v)
@@ -63,11 +62,11 @@ def prepare_bundle(raw_bundle, env, force=False):
     return walk_dict(raw_bundle, lambda i: pp(i, env, force))
 
 
-def prepare_varaibles(item):
-    varaibles = {}
-    for var in item.get("varaible", []):
-        varaibles[var["name"]] = fhirpath({}, var["expression"])
-    return varaibles
+def prepare_variables(item):
+    variables = {}
+    for var in item.get("variable", []):
+        variables[var["name"]] = fhirpath({}, var["expression"])
+    return variables
 
 
 def parameter_to_env(resource):
