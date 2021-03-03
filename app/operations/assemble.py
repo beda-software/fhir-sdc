@@ -41,6 +41,7 @@ async def load_sub_questionanire(root_elements, parent_item, item):
 
         variables = prepare_variables(item)
 
+        # use resolve prefix and validate assembleContext insted of prepare_bundle call
         sub = prepare_bundle(sub, variables)
 
         propogate = project(dict(sub), PROPOGATE_ELEMENTS)
