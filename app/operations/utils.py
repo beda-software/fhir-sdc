@@ -38,11 +38,25 @@ def walk_dict(d, transform):
         elif is_mapping(v):
             d[k] = walk_dict(v, transform)
         else:
-            d[k] = transform(v)
+            d[k] = transform(v, k)
     return d
 
 
-def pp(i, env):
+def update_link_id_or_question(variables):
+    def _update_link_id_or_question(value, key):
+        if key in ["linkId", "question"]:
+            return resolve_string_template(value, variables)
+        else:
+            return value
+    
+    return _update_link_id_or_question
+
+
+def prepare_link_ids(questionnaire, variables):
+    return walk_dict(questionnaire, update_link_id_or_question(variables))
+
+
+def resolve_string_template(i, env):
     if not isinstance(i, str):
         return i
     exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
@@ -59,7 +73,7 @@ def pp(i, env):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(raw_bundle, lambda i: pp(i, env))
+    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env))
 
 
 def prepare_variables(item):
@@ -93,33 +107,3 @@ async def load_source_queries(sdk, questionnaire, env):
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
-
-
-def update_link_ids(d, variables=None):
-    variables = variables or {}
-    for k, v in d.items():
-        if is_list(v):
-            d[k] = [update_link_ids(vi, variables) for vi in v]
-        elif is_mapping(v):
-            d[k] = update_link_ids(v, variables)
-        else:
-            # TODO it seems that it smells bed
-            if k in ["linkId", "question"]:
-                d[k] = update_link_id(v, variables)
-    return d
-
-
-def update_link_id(item, variables):
-    if not isinstance(item, str):
-        return item
-    exprs = re_all(r"(?P<var>{{[\S\s]+?}})", item)
-    vs = {}
-    for exp in exprs:
-        data = fhirpath({}, exp["var"][2:-2], variables)
-        if len(data) > 0:
-            vs[exp["var"]] = data[0]
-    res = item
-    for k, v in vs.items():
-        res = res.replace(k, v)
-
-    return res

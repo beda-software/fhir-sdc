@@ -8,7 +8,7 @@ from funcy.seqs import concat, distinct, flatten
 
 from app.sdk import sdk
 
-from .utils import prepare_variables, update_link_ids
+from .utils import prepare_variables, prepare_link_ids
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -41,8 +41,8 @@ async def load_sub_questionanire(root_elements, parent_item, item):
         sub = await sdk.client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
         variables = prepare_variables(item)
-        validate_assemble_context(sub, variables)
-        sub = update_link_ids(sub, variables)
+        if validate_assemble_context(sub, variables):
+            sub = prepare_link_ids(sub, variables)
 
         propogate = project(dict(sub), PROPOGATE_ELEMENTS)
         dict.update(parent_item, propogate)
@@ -74,11 +74,14 @@ async def assemble_questionnaire(parent, questionnaire_items, root_elements):
     return resp
 
 
-def validate_assemble_context(d, variables: dict):
-    if "assembleContext" not in d:
-        return
+def validate_assemble_context(questionnaire, variables: dict):
+    if "assembleContext" not in questionnaire:
+        return False
     
-    assemble_var_names = [item["name"] for item in d["assembleContext"]]
+    assemble_var_names = [item["name"] for item in questionnaire["assembleContext"]]
     for v in assemble_var_names:
         if v not in variables.keys():
+            # TODO: accumulate all errors
             raise OperationOutcome("assembleContext variable {} not defined".format(v))
+
+    return True
