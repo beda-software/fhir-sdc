@@ -25,6 +25,8 @@ def get_type(item, data):
         type = "string"
     elif type == "display":
         type = "string"
+    elif type == "reference":
+        type = "Reference"
 
     return type
 
