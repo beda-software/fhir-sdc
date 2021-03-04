@@ -7,7 +7,7 @@ from funcy.seqs import concat, distinct, flatten
 
 from app.sdk import sdk
 
-from .utils import prepare_bundle, prepare_variables
+from .utils import prepare_variables, update_link_ids
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -40,9 +40,7 @@ async def load_sub_questionanire(root_elements, parent_item, item):
         sub = await sdk.client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
         variables = prepare_variables(item)
-
-        # use resolve prefix and validate assembleContext insted of prepare_bundle call
-        sub = prepare_bundle(sub, variables)
+        sub = update_link_ids(sub, variables)
 
         propogate = project(dict(sub), PROPOGATE_ELEMENTS)
         dict.update(parent_item, propogate)

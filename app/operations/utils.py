@@ -95,3 +95,33 @@ async def load_source_queries(sdk, questionnaire, env):
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env, force=True)
                 env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
+
+
+def update_link_ids(d, variables=None):
+    variables = variables or {}
+    for k, v in d.items():
+        if is_list(v):
+            d[k] = [update_link_ids(vi, variables) for vi in v]
+        elif is_mapping(v):
+            d[k] = update_link_ids(v, variables)
+        else:
+            # TODO it seems that it smells bed
+            if k in ["linkId", "question"]:
+                d[k] = update_link_id(v, variables)
+    return d
+
+
+def update_link_id(item, variables):
+    if not isinstance(item, str):
+        return item
+    exprs = re_all(r"(?P<var>{{[\S\s]+?}})", item)
+    vs = {}
+    for exp in exprs:
+        data = fhirpath({}, exp["var"][2:-2], variables)
+        if len(data) > 0:
+            vs[exp["var"]] = data[0]
+    res = item
+    for k, v in vs.items():
+        res = res.replace(k, v)
+
+    return res

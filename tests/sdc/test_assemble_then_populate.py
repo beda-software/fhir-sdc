@@ -1,3 +1,4 @@
+from app.operations.utils import update_link_ids
 from tests.utils import create_parameters
 
 
@@ -74,7 +75,7 @@ async def test_assemble_then_populate(sdk, safe_db):
     q = await create_questionnaire(
         sdk,
         {
-            "status": "actice",
+            "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
             "item": [
                 {
@@ -148,7 +149,7 @@ async def test_assemble_then_populate(sdk, safe_db):
     assert assembled == {
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
-        "status": "actice",
+        "status": "active",
         "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
         "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
         "contained": [
