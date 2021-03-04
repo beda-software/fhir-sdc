@@ -1,3 +1,7 @@
+from tests.sdc.test_assemble_then_populate import create_address_questionnaire
+import pytest
+from fhirpy.base.exceptions import OperationOutcome
+
 async def create_questionnaire(sdk, questionnaire):
     q = sdk.client.resource("Questionnaire", **questionnaire)
     await q.save()
@@ -309,3 +313,42 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
             },
         ],
     }
+
+
+async def test_validate_assemble_context(sdk):
+    address = await create_address_questionnaire(sdk)
+
+    q = await create_questionnaire(
+        sdk,
+        {
+            "status": "active",
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "patient-address",
+                    "itemContext": {
+                        "language": "text/fhirpath",
+                        "expression": "%LaunchPatient.address",
+                    },
+                    "item": [
+                        {
+                            "linkId": "patient-address-display",
+                            "type": "display",
+                            "text": "Sub questionanire is not supported",
+                            "variable": [
+                                {
+                                    "name": "prefix-not-in-assemble-context",
+                                    "language": "text/fhirpath",
+                                    "expression": "'patient-address-'",
+                                }
+                            ],
+                            "subQuestionnaire": address.id,
+                        }
+                    ],
+                },
+            ],
+        },
+    )
+    with pytest.raises(OperationOutcome):
+        await q.execute("$assemble", method="get")

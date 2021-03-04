@@ -1,4 +1,3 @@
-from app.operations.utils import update_link_ids
 from tests.utils import create_parameters
 
 
@@ -8,9 +7,8 @@ async def create_questionnaire(sdk, questionnaire):
     assert q.id is not None
     return q
 
-
-async def test_assemble_then_populate(sdk, safe_db):
-    address = await create_questionnaire(
+async def create_address_questionnaire(sdk):
+    return await create_questionnaire(
         sdk,
         {
             "status": "active",
@@ -37,6 +35,10 @@ async def test_assemble_then_populate(sdk, safe_db):
             ],
         },
     )
+
+
+async def test_assemble_then_populate(sdk, safe_db):
+    address = await create_address_questionnaire(sdk)
 
     appointment = await create_questionnaire(
         sdk,

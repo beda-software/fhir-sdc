@@ -2,6 +2,7 @@ import asyncio
 import json
 
 from aiohttp import web
+from fhirpy.base.exceptions import OperationOutcome
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
@@ -40,6 +41,7 @@ async def load_sub_questionanire(root_elements, parent_item, item):
         sub = await sdk.client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
         variables = prepare_variables(item)
+        validate_assemble_context(sub, variables)
         sub = update_link_ids(sub, variables)
 
         propogate = project(dict(sub), PROPOGATE_ELEMENTS)
@@ -70,3 +72,13 @@ async def assemble_questionnaire(parent, questionnaire_items, root_elements):
             i["item"] = await assemble_questionnaire(i, i["item"], root_elements)
         resp.append(i)
     return resp
+
+
+def validate_assemble_context(d, variables: dict):
+    if "assembleContext" not in d:
+        return
+    
+    assemble_var_names = [item["name"] for item in d["assembleContext"]]
+    for v in assemble_var_names:
+        if v not in variables.keys():
+            raise OperationOutcome("assembleContext variable {} not defined".format(v))
