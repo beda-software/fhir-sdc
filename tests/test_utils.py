@@ -1,19 +1,6 @@
 from app.operations.utils import prepare_bundle
 
 
-def test_prepare_bundle_force():
-    bundle_entry = {
-        "request": {
-            "method": "GET",
-            "url": "/QuestionnaireResponse?subject={{%CurrentAppointmentId}}",
-        }
-    }
-
-    assert prepare_bundle(bundle_entry, {}, force=True) == {
-        "request": {"method": "GET", "url": "/QuestionnaireResponse?subject="}
-    }
-
-
 def test_prepare_bundle_default():
     bundle_entry = {
         "request": {

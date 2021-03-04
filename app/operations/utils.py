@@ -42,7 +42,7 @@ def walk_dict(d, transform):
     return d
 
 
-def pp(i, env, force):
+def pp(i, env):
     if not isinstance(i, str):
         return i
     exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
@@ -51,8 +51,6 @@ def pp(i, env, force):
         data = fhirpath({}, exp["var"][2:-2], env)
         if len(data) > 0:
             vs[exp["var"]] = data[0]
-        elif force:
-            vs[exp["var"]] = ""
     res = i
     for k, v in vs.items():
         res = res.replace(k, v)
@@ -60,8 +58,8 @@ def pp(i, env, force):
     return res
 
 
-def prepare_bundle(raw_bundle, env, force=False):
-    return walk_dict(raw_bundle, lambda i: pp(i, env, force))
+def prepare_bundle(raw_bundle, env):
+    return walk_dict(raw_bundle, lambda i: pp(i, env))
 
 
 def prepare_variables(item):
@@ -93,7 +91,7 @@ async def load_source_queries(sdk, questionnaire, env):
         if "localRef" in source_query:
             raw_bundle = contained[source_query["localRef"]]
             if raw_bundle:
-                bundle = prepare_bundle(raw_bundle, env, force=True)
+                bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
 
 
