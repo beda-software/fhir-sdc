@@ -7,11 +7,11 @@ from fhirpathpy import evaluate as fhirpath
 from .utils import load_source_queries, parameter_to_env
 
 
-class OperationOutcome(web.HTTPError):
+class ConstraintCheckOperationOutcome(web.HTTPError):
     # TODO: use from aidbox-python-sdk
     status_code = 400
 
-    def __init__(self, *, reason):
+    def __init__(self, *, validation_errors):
         web.HTTPError.__init__(
             self,
             text=json.dumps(
@@ -19,9 +19,14 @@ class OperationOutcome(web.HTTPError):
                     "resourceType": "OperationOutcome",
                     # "status": 400,
                     "issue": [
-                        {"severity": "error", "code": "invalid", "diagnostics": reason or "Error",}
+                        # TODO: check how to proper map Constraint to OperationOutcome issue
+                        {
+                            "severity": e["severity"],
+                            "code": e["key"],
+                            "diagnostics": e["human"],
+                        }
+                        for e in validation_errors
                     ],
-                    "text": {"status": "generated", "div": reason or "Something went wrong",},
                 }
             ),
             content_type="application/json",
@@ -37,7 +42,7 @@ async def constraint_check_operation(operation, request):
     errors = []
     await constraint_check(errors, questionnaire, env)
     if len(errors) > 0:
-        raise OperationOutcome(reason="constraint check failure")
+        raise ConstraintCheckOperationOutcome(errors)
     return web.json_response(questionnaire_response)
 
 
@@ -52,7 +57,8 @@ async def constraint_check(errors, questionnaire_item, env):
         logging.debug("env %s", env)
 
         if result == [True]:
-            errors.append(constraint["human"])
+            # TODO: calculate error location path
+            errors.append(constraint)
 
     for item in questionnaire_item.get("item", []):
         await constraint_check(errors, item, env)
