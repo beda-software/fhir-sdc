@@ -1,7 +1,7 @@
 from app.operations.utils import prepare_bundle
 
 
-def test_prepare_bundle_default():
+def test_prepare_bundle():
     bundle_entry = {
         "request": {
             "method": "GET",
@@ -12,7 +12,7 @@ def test_prepare_bundle_default():
     assert prepare_bundle(bundle_entry, {}) == {
         "request": {
             "method": "GET",
-            "url": "/QuestionnaireResponse?subject={{%CurrentAppointmentId}}",
+            "url": "/QuestionnaireResponse?subject=",
         }
     }
 
