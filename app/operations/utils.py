@@ -65,6 +65,8 @@ def resolve_string_template(i, env):
         data = fhirpath({}, exp["var"][2:-2], env)
         if len(data) > 0:
             vs[exp["var"]] = data[0]
+        else:
+            vs[exp["var"]] = ""
     res = i
     for k, v in vs.items():
         res = res.replace(k, v)
