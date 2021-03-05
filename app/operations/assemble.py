@@ -8,7 +8,7 @@ from funcy.seqs import concat, distinct, flatten
 
 from app.sdk import sdk
 
-from .utils import prepare_variables, prepare_link_ids
+from .utils import prepare_link_ids, prepare_variables, validate_context
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -77,11 +77,7 @@ async def assemble_questionnaire(parent, questionnaire_items, root_elements):
 def validate_assemble_context(questionnaire, variables: dict):
     if "assembleContext" not in questionnaire:
         return False
-    
-    assemble_var_names = [item["name"] for item in questionnaire["assembleContext"]]
-    for v in assemble_var_names:
-        if v not in variables.keys():
-            # TODO: accumulate all errors
-            raise OperationOutcome("assembleContext variable {} not defined".format(v))
+
+    validate_context(questionnaire["assembleContext"], variables)
 
     return True

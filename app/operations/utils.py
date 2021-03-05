@@ -1,4 +1,5 @@
 from fhirpathpy import evaluate as fhirpath
+from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from funcy.seqs import first
 from funcy.strings import re_all
@@ -48,7 +49,7 @@ def update_link_id_or_question(variables):
             return resolve_string_template(value, variables)
         else:
             return value
-    
+
     return _update_link_id_or_question
 
 
@@ -109,3 +110,12 @@ async def load_source_queries(sdk, questionnaire, env):
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
+
+
+def validate_context(context_definition, env):
+    # TODO: accumulate all errors
+    all_vars = env.keys()
+    for item in context_definition:
+        name = item["name"]
+        if name not in all_vars:
+            raise OperationOutcome("Context variable {} not defined".format(name))

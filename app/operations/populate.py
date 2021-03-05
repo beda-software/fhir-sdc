@@ -4,7 +4,7 @@ from funcy import is_list
 
 from app.sdk import sdk
 
-from .utils import get_type, load_source_queries, parameter_to_env
+from .utils import get_type, load_source_queries, parameter_to_env, validate_context
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
@@ -34,6 +34,8 @@ async def populate_questionnaire_instance(operation, request):
 
 
 async def populate(questionnaire, env):
+
+    validate_context(questionnaire["launchContext"], env)
 
     await load_source_queries(sdk, questionnaire, env)
 

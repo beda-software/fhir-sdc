@@ -17,7 +17,7 @@ async def test_initial_expression_populate(sdk, safe_db):
                     },
                 },
             ],
-        }
+        },
     )
     await q.save()
 
@@ -25,19 +25,12 @@ async def test_initial_expression_populate(sdk, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
 
-    p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
-    )
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
-        "item": [
-            {
-                "linkId": "patientId",
-                "answer": [{"value": {"string": launch_patient["id"]}}],
-            }
-        ],
+        "item": [{"linkId": "patientId", "answer": [{"value": {"string": launch_patient["id"]}}],}],
     }
 
 
@@ -62,19 +55,14 @@ async def test_initial_expression_populate_using_list_endpoint(sdk, safe_db):
     launch_patient = {"resourceType": "Patient", "id": "patient-id"}
 
     p = await sdk.client.execute(
-        "Questionnaire/$populate", data=create_parameters(
-            Questionnaire=q, LaunchPatient=launch_patient)
+        "Questionnaire/$populate",
+        data=create_parameters(Questionnaire=q, LaunchPatient=launch_patient),
     )
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q["id"],
-        "item": [
-            {
-                "linkId": "patientId",
-                "answer": [{"value": {"string": launch_patient["id"]}}],
-            }
-        ],
+        "item": [{"linkId": "patientId", "answer": [{"value": {"string": launch_patient["id"]}}],}],
     }
 
 
@@ -105,7 +93,7 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
                     ],
                 },
             ],
-        }
+        },
     )
     await q.save()
 
@@ -114,16 +102,10 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     launch_patient = {
         "resourceType": "Patient",
         "id": "patienit-id",
-        "name": [
-            {"given": ["Peter"]},
-            {"given": ["Pit"]},
-            {"given": ["Little Pitty"]},
-        ],
+        "name": [{"given": ["Peter"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]},],
     }
 
-    p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
-    )
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
 
     assert p == {
         "item": [
@@ -201,7 +183,7 @@ async def test_item_context_without_repeats_populate(sdk, safe_db):
                     ],
                 }
             ],
-        }
+        },
     )
     await q.save()
 
@@ -217,9 +199,7 @@ async def test_item_context_without_repeats_populate(sdk, safe_db):
         ],
     }
 
-    p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
-    )
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
 
     assert p == {
         "item": [
@@ -236,9 +216,7 @@ async def test_item_context_without_repeats_populate(sdk, safe_db):
                         "text": "Line 1",
                     },
                     {
-                        "answer": [
-                            {"value": {"string": "near metro station " "museum"}}
-                        ],
+                        "answer": [{"value": {"string": "near metro station " "museum"}}],
                         "linkId": "line-2",
                         "text": "Line 2",
                     },
@@ -267,7 +245,7 @@ async def test_source_queries_populate(sdk, safe_db):
             "status": "booked",
             "start": "2020-01-01T00:00",
             "participant": [{"status": "accepted", "actor": p}],
-        }
+        },
     )
     await a.save()
 
@@ -290,10 +268,7 @@ async def test_source_queries_populate(sdk, safe_db):
                     ],
                 }
             ],
-            "launchContext": [
-                {"name": "LaunchPatient", "type": "Patient",},
-                {"name": "PrePopQuery", "type": "Bundle",},
-            ],
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
             "sourceQueries": [{"localRef": "Bundle#PrePopQuery"},],
             "item": [
                 {
@@ -305,7 +280,7 @@ async def test_source_queries_populate(sdk, safe_db):
                     },
                 },
             ],
-        }
+        },
     )
 
     await q.save()
@@ -315,12 +290,7 @@ async def test_source_queries_populate(sdk, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
-        "item": [
-            {
-                "linkId": "last-appointment",
-                "answer": [{"value": {"string": a["start"]}}],
-            }
-        ],
+        "item": [{"linkId": "last-appointment", "answer": [{"value": {"string": a["start"]}}],}],
     }
 
 
@@ -341,7 +311,7 @@ async def test_multiple_answers_populate(sdk, safe_db):
                     },
                 },
             ],
-        }
+        },
     )
     await q.save()
 
@@ -355,12 +325,7 @@ async def test_multiple_answers_populate(sdk, safe_db):
                     "resourceType": "NutritionOrder",
                     "oralDiet": {
                         "type": {
-                            "coding": [
-                                {
-                                    "system": "http://snomed.info/sct",
-                                    "code": "160671006",
-                                },
-                            ]
+                            "coding": [{"system": "http://snomed.info/sct", "code": "160671006",},]
                         },
                     },
                 },
@@ -368,9 +333,7 @@ async def test_multiple_answers_populate(sdk, safe_db):
             {
                 "resource": {
                     "resourceType": "NutritionOrder",
-                    "oralDiet": {
-                        "type": {"coding": [{"system": "UNKNOWN", "code": "ABC",},]},
-                    },
+                    "oralDiet": {"type": {"coding": [{"system": "UNKNOWN", "code": "ABC",},]},},
                 },
             },
             {
@@ -378,12 +341,7 @@ async def test_multiple_answers_populate(sdk, safe_db):
                     "resourceType": "NutritionOrder",
                     "oralDiet": {
                         "type": {
-                            "coding": [
-                                {
-                                    "system": "http://snomed.info/sct",
-                                    "code": "302320003",
-                                },
-                            ]
+                            "coding": [{"system": "http://snomed.info/sct", "code": "302320003",},]
                         },
                     },
                 },
@@ -402,18 +360,12 @@ async def test_multiple_answers_populate(sdk, safe_db):
                 "answer": [
                     {
                         "value": {
-                            "Coding": {
-                                "system": "http://snomed.info/sct",
-                                "code": "160671006",
-                            }
+                            "Coding": {"system": "http://snomed.info/sct", "code": "160671006",}
                         }
                     },
                     {
                         "value": {
-                            "Coding": {
-                                "system": "http://snomed.info/sct",
-                                "code": "302320003",
-                            }
+                            "Coding": {"system": "http://snomed.info/sct", "code": "302320003",}
                         }
                     },
                 ],

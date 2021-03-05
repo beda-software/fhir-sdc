@@ -2,7 +2,7 @@ from aiohttp import web
 
 from app.sdk import sdk
 
-from .utils import parameter_to_env
+from .utils import parameter_to_env, validate_context
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
@@ -50,6 +50,8 @@ async def extract_questionnaire(operation, request):
         questionnaire_response = sdk.client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
+        if "launchContext" in questionnaire:
+            validate_context(questionnaire["launchContext"], env)
         return await extract(
             questionnaire, {"QuestionnaireResponse": questionnaire_response, **env}
         )
@@ -95,6 +97,8 @@ async def extract_questionnaire_instance(operation, request):
         questionnaire_response = sdk.client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
+        if "launchContext" in questionnaire:
+            validate_context(questionnaire["launchContext"], env)
         return await extract(
             questionnaire, {"QuestionnaireResponse": questionnaire_response, **env}
         )
