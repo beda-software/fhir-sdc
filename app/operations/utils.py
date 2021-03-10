@@ -4,6 +4,7 @@ from fhirpy.base.utils import get_by_path
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
+from urllib.parse import quote
 
 
 def get_type(item, data):
@@ -57,7 +58,11 @@ def prepare_link_ids(questionnaire, variables):
     return walk_dict(questionnaire, update_link_id_or_question(variables))
 
 
-def resolve_string_template(i, env):
+def prepare_bundle(raw_bundle, env):
+    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
+
+
+def resolve_string_template(i, env, encode_result=False):
     if not isinstance(i, str):
         return i
     exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
@@ -65,7 +70,7 @@ def resolve_string_template(i, env):
     for exp in exprs:
         data = fhirpath({}, exp["var"][2:-2], env)
         if len(data) > 0:
-            vs[exp["var"]] = data[0]
+            vs[exp["var"]] = quote(data[0]) if encode_result else data[0]
         else:
             vs[exp["var"]] = ""
     res = i
@@ -73,10 +78,6 @@ def resolve_string_template(i, env):
         res = res.replace(k, v)
 
     return res
-
-
-def prepare_bundle(raw_bundle, env):
-    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env))
 
 
 def prepare_variables(item):
