@@ -4,7 +4,7 @@ from aiohttp import web
 from app.sdk import sdk
 from fhirpathpy import evaluate as fhirpath
 
-from .utils import load_source_queries, parameter_to_env
+from .utils import load_source_queries, parameter_to_env, validate_context
 
 
 class ConstraintCheckOperationOutcome(web.HTTPError):
@@ -37,6 +37,7 @@ class ConstraintCheckOperationOutcome(web.HTTPError):
 async def constraint_check_operation(operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
+    validate_context(questionnaire["launchContext"], env)
     questionnaire_response = env["QuestionnaireResponse"]
     await load_source_queries(sdk, questionnaire, env)
     errors = []
