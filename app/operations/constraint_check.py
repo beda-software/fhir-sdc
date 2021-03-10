@@ -11,7 +11,7 @@ class ConstraintCheckOperationOutcome(web.HTTPError):
     # TODO: use from aidbox-python-sdk
     status_code = 400
 
-    def __init__(self, *, validation_errors):
+    def __init__(self, validation_errors):
         web.HTTPError.__init__(
             self,
             text=json.dumps(

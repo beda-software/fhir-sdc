@@ -1,4 +1,4 @@
-from app.operations.utils import prepare_bundle
+from app.operations.utils import prepare_bundle, prepare_link_ids
 
 
 def test_prepare_bundle():
@@ -13,6 +13,37 @@ def test_prepare_bundle():
         "request": {
             "method": "GET",
             "url": "/QuestionnaireResponse?subject=",
+        }
+    }
+
+
+def test_prepare_bundle_encode_params():
+    bundle_entry = {
+        "request": {
+            "method": "GET",
+            "url": "/Patient?email={{%QuestionnaireResponse.repeat(item).where(linkId='email').answer.value.string}}",
+        }
+    }
+
+    questionnaire_response = {
+        "resourceType": "QuestionnaireResponse",
+        "status": "final",
+        "item": [
+            {
+                "linkId": "email",
+                "answer": [
+                    {
+                        "value": {"string": "test+1@example.com"},
+                    }
+                ],
+            }
+        ],
+    }
+
+    assert prepare_bundle(bundle_entry, {"QuestionnaireResponse": questionnaire_response}) == {
+        "request": {
+            "method": "GET",
+            "url": "/Patient?email=test%2B1%40example.com",
         }
     }
 
@@ -35,4 +66,45 @@ def test_multuple_var_in_one_line():
             "method": "GET",
             "url": "Slot?specialty=394586005&start=2021-01-01&status=free",
         }
+    }
+
+
+def test_prepare_link_ids_does_not_encode_params():
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "assembleContext": [{"name": "prefix", "type": "string"}],
+        "item": [
+            {
+                "linkId": "{{%prefix}}line-1",
+                "type": "string",
+            },
+            {
+                "linkId": "{{%prefix}}line-2",
+                "type": "string",
+                "enableWhen": [
+                    {
+                        "question": "{{%prefix}}line-1",
+                        "operator": "exists",
+                        "answer": {"boolean": True},
+                    }
+                ],
+            },
+        ],
+    }
+
+    assert prepare_link_ids(questionnaire, {"prefix": "test+"}) == {
+        "assembleContext": [{"name": "prefix", "type": "string"}],
+        "item": [
+            {"linkId": "test+line-1", "type": "string"},
+            {
+                "enableWhen": [
+                    {"answer": {"boolean": True}, "operator": "exists", "question": "test+line-1"}
+                ],
+                "linkId": "test+line-2",
+                "type": "string",
+            },
+        ],
+        "resourceType": "Questionnaire",
+        "status": "active",
     }
