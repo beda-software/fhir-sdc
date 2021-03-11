@@ -1,10 +1,13 @@
+from urllib.parse import quote
+
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
-from urllib.parse import quote
+
+from .exception import ConstraintCheckOperationOutcome
 
 
 def get_type(item, data):
@@ -97,6 +100,13 @@ def parameter_to_env(resource):
             polimorphic_key = first(value.keys())
             if polimorphic_key:
                 env[param["name"]] = value[polimorphic_key]
+    # Mapping parameters to fhir resource names
+    questionnaire = env.get("questionnaire")
+    if questionnaire:
+        env["Questionnaire"] = questionnaire
+    questionnaire_response = env.get("questionnaire_response")
+    if questionnaire_response:
+        env["QuestionnaireResponse"] = questionnaire_response
     return env
 
 
@@ -114,9 +124,17 @@ async def load_source_queries(sdk, questionnaire, env):
 
 
 def validate_context(context_definition, env):
-    # TODO: accumulate all errors
     all_vars = env.keys()
+    errors = []
     for item in context_definition:
         name = item["name"]
         if name not in all_vars:
-            raise OperationOutcome("Context variable {} not defined".format(name))
+            errors.append(
+                {
+                    "severity": "error",
+                    "key": "undefinded-var",
+                    "human": "Context variable {} not defined".format(name),
+                }
+            )
+    if len(errors) > 0:
+        raise ConstraintCheckOperationOutcome(errors)

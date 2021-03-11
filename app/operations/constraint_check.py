@@ -1,43 +1,18 @@
-import json
-
 from aiohttp import web
-from app.sdk import sdk
 from fhirpathpy import evaluate as fhirpath
 
+from app.sdk import sdk
+
+from .exception import ConstraintCheckOperationOutcome
 from .utils import load_source_queries, parameter_to_env, validate_context
-
-
-class ConstraintCheckOperationOutcome(web.HTTPError):
-    # TODO: use from aidbox-python-sdk
-    status_code = 400
-
-    def __init__(self, validation_errors):
-        web.HTTPError.__init__(
-            self,
-            text=json.dumps(
-                {
-                    "resourceType": "OperationOutcome",
-                    # "status": 400,
-                    "issue": [
-                        # TODO: check how to proper map Constraint to OperationOutcome issue
-                        {
-                            "severity": e["severity"],
-                            "code": e["key"],
-                            "diagnostics": e["human"],
-                        }
-                        for e in validation_errors
-                    ],
-                }
-            ),
-            content_type="application/json",
-        )
 
 
 @sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
 async def constraint_check_operation(operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
-    validate_context(questionnaire["launchContext"], env)
+    if "launchContext" in questionnaire:
+        validate_context(questionnaire["launchContext"], env)
     questionnaire_response = env["QuestionnaireResponse"]
     await load_source_queries(sdk, questionnaire, env)
     errors = []

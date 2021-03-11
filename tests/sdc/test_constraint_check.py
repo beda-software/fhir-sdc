@@ -1,5 +1,6 @@
 import pytest
 from fhirpy.base.lib import OperationOutcome
+
 from tests.utils import create_parameters
 
 
@@ -8,8 +9,9 @@ async def test_email_uniq(sdk, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
-            "sourceQueries": [{"localRef": "Bundle#AllEmails"},],
+            "sourceQueries": [
+                {"localRef": "Bundle#AllEmails"},
+            ],
             "contained": [
                 {
                     "resourceType": "Bundle",
@@ -43,13 +45,11 @@ async def test_email_uniq(sdk, safe_db):
                     ],
                 },
             ],
-        }
+        },
     )
     await q.save()
 
-    p = sdk.client.resource(
-        "Patient", telecom=[{"system": "email", "value": "p1@beda.software"}]
-    )
+    p = sdk.client.resource("Patient", telecom=[{"system": "email", "value": "p1@beda.software"}])
     await p.save()
 
     valid = sdk.client.resource(

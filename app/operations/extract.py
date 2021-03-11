@@ -2,6 +2,7 @@ from aiohttp import web
 
 from app.sdk import sdk
 
+from .exception import ConstraintCheckOperationOutcome
 from .utils import parameter_to_env, validate_context
 
 
@@ -16,20 +17,22 @@ async def extract_questionnaire(operation, request):
             .search(id=questionnaire_response["questionnaire"])
             .get()
         )
-        return await extract(questionnaire, questionnaire_response)
+        context = {"Questionnaire": Questionnaire, "QuestionnaireResponse": questionnaire_response}
+        return await extract(questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
 
-        questionnaire_data = env.get("questionnaire") or env.get("Questionnaire")
+        questionnaire_data = env.get("Questionnaire")
         if not questionnaire_data:
-            # TODO: return OperationOutcome
-            return web.json_response(
-                {
-                    "error": "bad_request",
-                    "error_description": "`Questionnaire` parameter is required",
-                },
-                status=422,
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "missing-parameter",
+                        "human": "Questionnaire parameter is required",
+                    }
+                ]
             )
 
         questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
@@ -38,13 +41,14 @@ async def extract_questionnaire(operation, request):
             "QuestionnaireResponse"
         )
         if not questionnaire_response_data:
-            # TODO: return OperationOutcome
-            return web.json_response(
-                {
-                    "error": "bad_request",
-                    "error_description": "`QuestionnaireResponse` parameter is required",
-                },
-                status=422,
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "missing-parameter",
+                        "human": "QuestionnaireResponse parameter is required",
+                    }
+                ]
             )
 
         questionnaire_response = sdk.client.resource(
@@ -53,17 +57,23 @@ async def extract_questionnaire(operation, request):
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
         return await extract(
-            questionnaire, {"QuestionnaireResponse": questionnaire_response, **env}
+            questionnaire,
+            {
+                "QuestionnaireResponse": questionnaire_response,
+                "Questionnaire": questionnaire,
+                **env,
+            },
         )
 
-    # TODO: return OperationOutcome
-    return web.json_response(
-        {
-            "error": "bad_request",
-            "error_description": "Either `QuestionnaireResponse` resource or Parameters containing "
-            "QuestionnaireResponse and Questionnaire are required",
-        },
-        status=422,
+    raise ConstraintCheckOperationOutcome(
+        [
+            {
+                "severity": "error",
+                "key": "missing-parameter",
+                "human": "Either `QuestionnaireResponse` resource or Parameters containing "
+                "QuestionnaireResponse are required",
+            }
+        ]
     )
 
 
@@ -77,21 +87,23 @@ async def extract_questionnaire_instance(operation, request):
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
-        return await extract(questionnaire, questionnaire_response)
+        context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
+
+        return await extract(questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
 
-        questionnaire_response_data = env.get("questionnaire_response") or env.get(
-            "QuestionnaireResponse"
-        )
+        questionnaire_response_data = env.get("QuestionnaireResponse")
         if not questionnaire_response_data:
-            return web.json_response(
-                {
-                    "error": "bad_request",
-                    "error_description": "`QuestionnaireResponse` parameter is required",
-                },
-                status=422,
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "missing-parameter",
+                        "human": "`QuestionnaireResponse` parameter is required",
+                    }
+                ]
             )
 
         questionnaire_response = sdk.client.resource(
@@ -100,16 +112,23 @@ async def extract_questionnaire_instance(operation, request):
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
         return await extract(
-            questionnaire, {"QuestionnaireResponse": questionnaire_response, **env}
+            questionnaire,
+            {
+                "QuestionnaireResponse": questionnaire_response,
+                "Questionnaire": questionnaire,
+                **env,
+            },
         )
 
-    return web.json_response(
-        {
-            "error": "bad_request",
-            "error_description": "Either `QuestionnaireResponse` resource or Parameters containing "
-            "QuestionnaireResponse are required",
-        },
-        status=422,
+    raise ConstraintCheckOperationOutcome(
+        [
+            {
+                "severity": "error",
+                "key": "missing-parameter",
+                "human": "Either `QuestionnaireResponse` resource or Parameters containing "
+                "QuestionnaireResponse are required",
+            }
+        ]
     )
 
 

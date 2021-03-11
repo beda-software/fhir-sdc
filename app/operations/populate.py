@@ -11,11 +11,14 @@ from .utils import get_type, load_source_queries, parameter_to_env, validate_con
 async def populate_questionnaire(operation, request):
     env = parameter_to_env(request["resource"])
 
-    questionnaire_data = env.get("questionnaire") or env.get("Questionnaire")
+    questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
         # TODO: return OperationOutcome
         return web.json_response(
-            {"error": "bad_request", "error_description": "`Questionnaire` parameter is required",},
+            {
+                "error": "bad_request",
+                "error_description": "`Questionnaire` parameter is required",
+            },
             status=422,
         )
 
@@ -29,13 +32,16 @@ async def populate_questionnaire_instance(operation, request):
     questionnaire = await sdk.client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
     )
-    populated_resource = await populate(questionnaire, parameter_to_env(request["resource"]))
+    env = parameter_to_env(request["resource"])
+    env["Questionnaire"] = questionnaire
+    populated_resource = await populate(questionnaire, env)
     return web.json_response(populated_resource)
 
 
 async def populate(questionnaire, env):
 
-    validate_context(questionnaire["launchContext"], env)
+    if "launchContext" in questionnaire:
+        validate_context(questionnaire["launchContext"], env)
 
     await load_source_queries(sdk, questionnaire, env)
 
