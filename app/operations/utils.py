@@ -1,5 +1,6 @@
 from urllib.parse import quote
 
+from aidboxpy import AsyncAidboxClient
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
@@ -8,6 +9,15 @@ from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
 from .exception import ConstraintCheckOperationOutcome
+from app.sdk import sdk
+
+def get_user_sdk_client(request):
+    headers = request["headers"]
+    return AsyncAidboxClient(
+        sdk.client.url,
+        authorization=headers["authorization"],
+        extra_headers=headers
+    )
 
 
 def get_type(item, data):
