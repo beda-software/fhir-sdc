@@ -16,5 +16,14 @@ fi
 
 export TEST_COMMAND=" wait-for-it.sh devbox:8080 --strict --timeout=0 -- pipenv run pytest --cov-report html --cov-report term:skip-covered --cov=main $@"
 
-docker-compose -f docker-compose.tests.yaml up --exit-code-from backend backend
+
+M1=`uname -a | grep -o arm64`
+
+if [ -z "${M1}" ]; then
+    COMPOSE_FILES="-f docker-compose.tests.yaml"
+else
+    COMPOSE_FILES="-f docker-compose.tests.yaml -f docker-compose.tests.m1.yaml"
+fi
+
+docker-compose $COMPOSE_FILES  up --exit-code-from backend backend
 exit $?
