@@ -13,16 +13,21 @@ async def constraint_check_operation(operation, request):
     questionnaire = env["Questionnaire"]
     if "launchContext" in questionnaire:
         validate_context(questionnaire["launchContext"], env)
+    return web.json_response(await constraint_check(env))
+
+
+async def constraint_check(env):
+    questionnaire = env["Questionnaire"]
     questionnaire_response = env["QuestionnaireResponse"]
     await load_source_queries(sdk, questionnaire, env)
     errors = []
-    await constraint_check(errors, questionnaire, env)
+    await constraint_check_for_item(errors, questionnaire, env)
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
-    return web.json_response(questionnaire_response)
+    return questionnaire_response
 
 
-async def constraint_check(errors, questionnaire_item, env):
+async def constraint_check_for_item(errors, questionnaire_item, env):
     for constraint in questionnaire_item.get("constraint", []):
         expression = constraint["expression"]["expression"]
         result = fhirpath({}, expression, env)
@@ -37,4 +42,4 @@ async def constraint_check(errors, questionnaire_item, env):
             errors.append(constraint)
 
     for item in questionnaire_item.get("item", []):
-        await constraint_check(errors, item, env)
+        await constraint_check_for_item(errors, item, env)

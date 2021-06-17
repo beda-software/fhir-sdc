@@ -1,3 +1,6 @@
+import pytest
+from fhirpy.base.lib import OperationOutcome
+
 from tests.utils import create_parameters
 
 
@@ -18,7 +21,7 @@ async def test_extract_without_context(sdk, safe_db):
                     }
                 ],
             }
-        }
+        },
     )
 
     await m.save()
@@ -38,7 +41,7 @@ async def test_extract_without_context(sdk, safe_db):
                     "linkId": "patientId",
                 },
             ],
-        }
+        },
     )
     await q.save()
 
@@ -52,7 +55,7 @@ async def test_extract_without_context(sdk, safe_db):
                     "answer": [{"value": {"string": "newPatient"}}],
                 }
             ],
-        }
+        },
     )
 
     extraction = await q.execute("$extract", data=qr)
@@ -88,7 +91,7 @@ async def test_extract_with_context(sdk, safe_db):
                     }
                 ],
             }
-        }
+        },
     )
 
     await m.save()
@@ -108,7 +111,7 @@ async def test_extract_with_context(sdk, safe_db):
                     "linkId": "patientId",
                 },
             ],
-        }
+        },
     )
     await q.save()
 
@@ -122,7 +125,7 @@ async def test_extract_with_context(sdk, safe_db):
                     "answer": [{"value": {"string": "newPatient"}}],
                 }
             ],
-        }
+        },
     )
 
     context = {"resourceType": "ContextResource", "name": "Name"}
@@ -163,7 +166,7 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
                     }
                 ],
             }
-        }
+        },
     )
 
     await m.save()
@@ -194,15 +197,13 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
                     "answer": [{"value": {"string": "newPatient"}}],
                 }
             ],
-        }
+        },
     )
     context = {"resourceType": "ContextResource", "name": "Name"}
 
     extraction = await sdk.client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(
-            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
-        ),
+        data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
@@ -213,3 +214,55 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
 
     assert p[0].id == "newPatient"
     assert p[0].name[0].text == "Name"
+
+
+async def test_extract_fails_because_of_constraint_check(sdk, safe_db):
+    q = sdk.client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "v1",
+                },
+                {
+                    "type": "string",
+                    "linkId": "v2",
+                    "constraint": [
+                        {
+                            "key": "v1eqv2",
+                            "requirements": "v2 should be the same as v1",
+                            "severity": "error",
+                            "human": "v2 is not equal to v1",
+                            "expression": {
+                                "language": "text/fhirpath",
+                                "expression": "%QuestionnaireResponse.item.where(linkId='v1') != %QuestionnaireResponse.item.where(linkId='v2')",
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+    await q.save()
+
+    qr = sdk.client.resource(
+        "QuestionnaireResponse",
+        **{
+            "questionnaire": q.id,
+            "item": [
+                {
+                    "linkId": "v1",
+                    "answer": [{"value": {"string": "1"}}],
+                },
+                {
+                    "linkId": "v2",
+                    "answer": [{"value": {"string": "2"}}],
+                },
+            ],
+        },
+    )
+
+    with pytest.raises(OperationOutcome):
+        await q.execute("$extract", data=qr)

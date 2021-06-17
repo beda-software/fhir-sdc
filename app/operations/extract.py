@@ -2,6 +2,7 @@ from aiohttp import web
 
 from app.sdk import sdk
 
+from ..operations.constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
 from .utils import parameter_to_env, validate_context
 
@@ -17,7 +18,7 @@ async def extract_questionnaire(operation, request):
             .search(id=questionnaire_response["questionnaire"])
             .get()
         )
-        context = {"Questionnaire": Questionnaire, "QuestionnaireResponse": questionnaire_response}
+        context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         return await extract(questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
@@ -133,6 +134,11 @@ async def extract_questionnaire_instance(operation, request):
 
 
 async def extract(questionnaire, context):
+    import logging
+
+    logging.debug("Context %s", context)
+    await constraint_check(context)
+
     resp = []
     for mapper in questionnaire.get("mapping", []):
         resp.append(
