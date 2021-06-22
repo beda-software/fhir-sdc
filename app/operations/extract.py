@@ -134,9 +134,6 @@ async def extract_questionnaire_instance(operation, request):
 
 
 async def extract(questionnaire, context):
-    import logging
-
-    logging.debug("Context %s", context)
     await constraint_check(context)
 
     resp = []
