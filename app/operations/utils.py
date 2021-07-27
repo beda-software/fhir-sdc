@@ -32,6 +32,10 @@ def get_type(item, data):
             return "string"
     elif type == "text":
         type = "string"
+    elif type == "integer":
+        type = "integer"
+    elif type == "decimal":
+        type = "decimal"
     elif type == "attachment":
         type = "Attachment"
     elif type == "email":
