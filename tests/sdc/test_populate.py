@@ -129,6 +129,77 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     }
 
 
+async def test_item_context_with_repeating_group_populate(sdk, safe_db):
+    q = sdk.client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "addresses",
+                    "repeats": True,
+                    "itemContext": {
+                        "language": "text/fhirpath",
+                        "expression": "%LaunchPatient.address",
+                    },
+                    "item": [
+                        {
+                            "type": "string",
+                            "linkId": "city",
+                            "initialExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "city.first()",
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+    await q.save()
+
+    assert q.id is not None
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patienit-id",
+        "address": [{"city": "San Francisco"}, {"city": "San Diego"}],
+    }
+
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+
+    assert p == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "linkId": "city",
+                        "answer": [
+                            {"value": {"string": "San Francisco"}},
+                        ],
+                    }
+                ],
+                "linkId": "addresses",
+            },
+            {
+                "item": [
+                    {
+                        "linkId": "city",
+                        "answer": [
+                            {"value": {"string": "San Diego"}},
+                        ],
+                    }
+                ],
+                "linkId": "addresses",
+            }
+        ],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
 async def test_item_context_without_repeats_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
