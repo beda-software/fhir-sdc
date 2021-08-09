@@ -87,7 +87,7 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
                             "linkId": "firstName",
                             "initialExpression": {
                                 "language": "text/fhirpath",
-                                "expression": "given.first()",
+                                "expression": "given",
                             },
                         },
                     ],
@@ -102,7 +102,7 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     launch_patient = {
         "resourceType": "Patient",
         "id": "patienit-id",
-        "name": [{"given": ["Peter"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]},],
+        "name": [{"given": ["Peter", "Middlename"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]},],
     }
 
     p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
@@ -115,6 +115,7 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
                         "linkId": "firstName",
                         "answer": [
                             {"value": {"string": "Peter"}},
+                            {"value": {"string": "Middlename"}},
                             {"value": {"string": "Pit"}},
                             {"value": {"string": "Little Pitty"}},
                         ],

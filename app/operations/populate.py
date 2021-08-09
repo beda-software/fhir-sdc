@@ -60,10 +60,12 @@ def handle_item(item, env, context):
     root = {"linkId": item["linkId"]}
     if "text" in item:
         root["text"] = item["text"]
+
     if "itemContext" in item:
         data = fhirpath(context, item["itemContext"]["expression"], env)
         context = data
-    if context and "initialExpression" in item and "repeats" in item and item["repeats"] is True:
+
+    if context and "initialExpression" in item and item.get("repeats", False) is True:
         answers = []
         root["answer"] = answers
         for index, _item in enumerate(context):
@@ -74,7 +76,7 @@ def handle_item(item, env, context):
             )
             if data and len(data):
                 type = get_type(item, data)
-                answers.append({"value": {type: data[0]}})
+                answers.extend([{"value": {type: d}} for d in data])
     elif "initialExpression" in item:
         data = fhirpath(context, item["initialExpression"]["expression"], env)
         if data and len(data):
@@ -88,8 +90,7 @@ def handle_item(item, env, context):
 
     if (
         item["type"] == "group"
-        and "repeats" in item
-        and item["repeats"] is True
+        and item.get("repeats", False) is True
         and is_list(context)
     ):
         answer = []
