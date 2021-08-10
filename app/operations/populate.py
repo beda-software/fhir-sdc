@@ -66,6 +66,9 @@ def handle_item(item, env, context):
     if "itemContext" in item:
         context = fhirpath(context, item["itemContext"]["expression"], env)
 
+    if "itemPopulationContext" in item:
+        context = fhirpath(context, item["itemPopulationContext"]["expression"], env)
+
     if (
         item["type"] == "group"
         and item.get("repeats", False) is True

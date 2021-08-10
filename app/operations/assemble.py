@@ -17,7 +17,7 @@ WHITELISTED_ROOT_ELEMENTS = {
     "cqf-library": lambda i: i["expression"],
 }
 
-PROPAGATE_ELEMENTS = ["itemContext"]
+PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
