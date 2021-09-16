@@ -21,13 +21,3 @@ async def get_questionnaire_context(operation, request):
     questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
     await load_source_queries(sdk, questionnaire, env)
     return web.json_response(env)
-
-
-@sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$context"])
-async def get_questionnaire_context_by_id(operation, request):
-    questionnaire = await sdk.client.resources("Questionnaire").get(
-        id=request["route-params"]["id"]
-    )
-    env = {}
-    await load_source_queries(sdk, questionnaire, env)
-    return web.json_response(env)
