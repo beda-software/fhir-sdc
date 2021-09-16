@@ -1,5 +1,8 @@
 from urllib.parse import quote
 
+from aiohttp import web
+import json
+
 from aidboxpy import AsyncAidboxClient
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
@@ -152,3 +155,42 @@ def validate_context(context_definition, env):
             )
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
+
+
+class OperationOutcome(web.HTTPError):
+    # TODO: move to and use from aidbox-python-sdk
+
+    # TODO: restrict code https://www.hl7.org/fhir/valueset-issue-type.html
+
+    def __init__(self, *, reason, status_code=400, severity="fatal", code="invalid"):
+        self.status_code: int = status_code
+        self.severity: str = severity
+        self.code: str = code
+        web.HTTPError.__init__(
+            self,
+            text=json.dumps(
+                {
+                    "resourceType": "OperationOutcome",
+                    # "status": 400,
+                    "issue": [
+                        {
+                            "severity": severity,
+                            "code": code,
+                            "diagnostics": reason or "Error",
+                        }
+                    ],
+                    "text": {
+                        "status": "generated",
+                        "div": reason or "Something went wrong",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+
+
+class SeverityType:
+    fatal = "fatal"
+    error = "error"
+    warning = "warning"
+    information = "information"
