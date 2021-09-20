@@ -51,21 +51,45 @@ async def populate(questionnaire, env):
         "item": [],
     }
     for item in questionnaire["item"]:
-        root["item"].append(handle_item(item, env, {}))
+        root["item"].extend(handle_item(item, env, {}))
 
     return root
 
 
 def handle_item(item, env, context):
-    root = {"linkId": item["linkId"]}
-    if "text" in item:
-        root["text"] = item["text"]
+    def init_item():
+        new_item = {"linkId": item["linkId"]}
+        if "text" in item:
+            new_item["text"] = item["text"]
+        return new_item
+
     if "itemContext" in item:
-        data = fhirpath(context, item["itemContext"]["expression"], env)
-        context = data
-    if context and "initialExpression" in item and "repeats" in item and item["repeats"] is True:
+        context = fhirpath(context, item["itemContext"]["expression"], env)
+
+    if "itemPopulationContext" in item:
+        context = fhirpath(context, item["itemPopulationContext"]["expression"], env)
+
+    if (
+        item["type"] == "group"
+        and item.get("repeats", False) is True
+        and is_list(context)
+    ):
+        root_items = []
+
+        for c in context:
+            populated_items = []
+            for i in item["item"]:
+               populated_items.extend(handle_item(i, env, c))
+            root_item = init_item()
+            root_item["item"] = populated_items
+
+            root_items.append(root_item)
+        return root_items
+
+    root_item = init_item()
+
+    if context and "initialExpression" in item and item.get("repeats", False) is True:
         answers = []
-        root["answer"] = answers
         for index, _item in enumerate(context):
             data = fhirpath(
                 context,
@@ -74,35 +98,28 @@ def handle_item(item, env, context):
             )
             if data and len(data):
                 type = get_type(item, data)
-                answers.append({"value": {type: data[0]}})
+                answers.extend([{"value": {type: d}} for d in data])
+        if answers:
+            root_item["answer"] = answers
     elif "initialExpression" in item:
+        answers = []
         data = fhirpath(context, item["initialExpression"]["expression"], env)
         if data and len(data):
             type = get_type(item, data)
             if item.get("repeats") is True:
-                root["answer"] = [{"value": {type: d}} for d in data]
+                answers = [{"value": {type: d}} for d in data]
             else:
-                root["answer"] = [{"value": {type: data[0]}}]
+                answers = [{"value": {type: data[0]}}]
+        if answers:
+            root_item["answer"] = answers
     elif "initial" in item:
-        root["answer"] = item["initial"]
+        root_item["answer"] = item["initial"]
 
-    if (
-        item["type"] == "group"
-        and "repeats" in item
-        and item["repeats"] is True
-        and is_list(context)
-    ):
-        answer = []
-        for c in context:
-            q = []
-            for i in item["item"]:
-                q.append(handle_item(i, env, c))
-            answer.append({"item": q})
-        root["answer"] = answer
-
-    elif "item" in item:
-        root["item"] = []
+    if "item" in item:
+        populated_items = []
         for i in item["item"]:
-            root["item"].append(handle_item(i, env, context))
+            populated_items.extend(handle_item(i, env, context))
 
-    return root
+        root_item["item"] = populated_items
+
+    return [root_item]

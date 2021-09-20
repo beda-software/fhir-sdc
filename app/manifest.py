@@ -43,11 +43,23 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
         },
+        "Questionnaire.itemPopulationContext": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["itemPopulationContext"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+        },
         "Questionnaire.item.itemContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["item", "itemContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+        },
+        "Questionnaire.item.itemPopulationContext": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["item", "itemPopulationContext"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
         },
         "Questionnaire.item.hidden": {
             "type": {"resourceType": "Entity", "id": "boolean"},

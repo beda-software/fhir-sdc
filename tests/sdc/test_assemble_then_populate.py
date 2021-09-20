@@ -283,7 +283,6 @@ async def test_assemble_then_populate(sdk, safe_db):
                 ],
                 "linkId": "patient-address",
             },
-            {"answer": [], "linkId": "patient-contact"},
         ],
         "questionnaire": None,
         "resourceType": "QuestionnaireResponse",
