@@ -166,5 +166,59 @@ meta_resources = {
             "extensionUrl": "expression",
             "isRequired": True,
         },
+        "Questionnaire.item.answerExpression": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["item", "answerExpression"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-answerExpression",
+            "isRequired": False,
+            "description": "An expression (FHIRPath, CQL or FHIR Query) that resolves to a list of permitted answers for the question item or that establishes context for a group item."
+        },
+        "Questionnaire.item.referenceResource": {
+            "type": {"resourceType": "Entity", "id": "code"},
+            "path": ["item", "referenceResource"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource",
+            "isCollection": True,
+            "isRequired": False,
+            "description": "Where the type for a question is Reference, indicates a type of resource that is permitted."
+        },
+        "Questionnaire.item.choiceColumn": {
+            "path": ["item", "choiceColumn"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-choiceColumn",
+            "isRequired": False,
+            "isCollection": True,
+            "description": "Guide for rendering multi-column choices"
+        },
+        "Questionnaire.item.choiceColumn.path": {
+            "type": {"resourceType": "Entity", "id": "string"},
+            "path": ["item", "choiceColumn", "path"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "path",
+            "isRequired": True,
+            "description": "Column path",
+        },
+        "Questionnaire.item.choiceColumn.label": {
+            "type": {"resourceType": "Entity", "id": "string"},
+            "path": ["item", "choiceColumn", "label"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "label",
+            "description": "Column label",
+        },
+        "Questionnaire.item.choiceColumn.width": {
+            "type": {"resourceType": "Entity", "id": "Quantity"},
+            "path": ["item", "choiceColumn", "width"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "width",
+            "description": "Width of column",
+        },
+        "Questionnaire.item.choiceColumn.forDisplay": {
+            "type": {"resourceType": "Entity", "id": "boolean"},
+            "path": ["item", "choiceColumn", "forDisplay"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "forDisplay",
+            "description": "Use for display ?"
+        },
     },
 }
