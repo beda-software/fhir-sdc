@@ -36,30 +36,35 @@ meta_resources = {
             "path": ["item", "initialExpression"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+            "description": "Initial value for a question answer as determined by an evaluated expression."
         },
         "Questionnaire.itemContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["itemContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+            "description": "Deprecated in favour itemPopulationContext"
         },
         "Questionnaire.itemPopulationContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["itemPopulationContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+            "description": "Specifies a query that identifies the resource (or set of resources for a repeating item) that should be used to populate this Questionnaire or Questionnaire.item on initial population."
         },
         "Questionnaire.item.itemContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["item", "itemContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+            "description": "Deprecated in favour itemPopulationContext"
         },
         "Questionnaire.item.itemPopulationContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["item", "itemPopulationContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+            "description": "Specifies a query that identifies the resource (or set of resources for a repeating item) that should be used to populate this Questionnaire or Questionnaire.item on initial population."
         },
         "Questionnaire.item.hidden": {
             "type": {"resourceType": "Entity", "id": "boolean"},
@@ -74,6 +79,7 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://beda.software/fhir-extensions/questionnaire-mapper",
             "isCollection": True,
+            "description": "List of mapping resources that must be executed on extract"
         },
         "Questionnaire.item.subQuestionnaire": {
             "type": {"resourceType": "Entity", "id": "canonical"},
@@ -111,19 +117,34 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "description",
         },
+        "Questionnaire.variable": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["variable"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/StructureDefinition/variable",
+            "isCollection": True,
+            "description": "Variable specifying a logic to generate a variable for use in subsequent logic. "
+                           "The name of the variable will be added to FHIRPath's context when processing descendants "
+                           "of the element that contains this extension."
+        },
         "Questionnaire.item.variable": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["item", "variable"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/StructureDefinition/variable",
             "isCollection": True,
+            "description": "Variable specifying a logic to generate a variable for use in subsequent logic. "
+                           "The name of the variable will be added to FHIRPath's context when processing descendants "
+                           "of the element that contains this extension."
         },
+        # TODO: add support for root constraint definition
         # "Questionnaire.constraint": constraint_extension,
         "Questionnaire.item.constraint": {
             "path": ["item", "constraint"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
             "isCollection": True,
+            "description": "An invariant that must be satisfied before responses to the questionnaire can be considered \"complete\"."
         },
         "Questionnaire.item.constraint.key": {
             "type": {"resourceType": "Entity", "id": "id"},
@@ -171,8 +192,21 @@ meta_resources = {
             "path": ["item", "answerExpression"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-answerExpression",
-            "isRequired": False,
             "description": "An expression (FHIRPath, CQL or FHIR Query) that resolves to a list of permitted answers for the question item or that establishes context for a group item."
+        },
+        "Questionnaire.item.calculatedExpression": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["item", "calculatedExpression"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-calculatedExpression",
+            "description": "Calculated value for a question answer as determined by an evaluated expression."
+        },
+        "Questionnaire.item.enableWhenExpression": {
+            "type": {"resourceType": "Entity", "id": "Expression"},
+            "path": ["item", "enableWhenExpression"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-enableWhenExpression",
+            "description": "An expression that returns a boolean value for whether to enable the item."
         },
         "Questionnaire.item.referenceResource": {
             "type": {"resourceType": "Entity", "id": "code"},
@@ -180,14 +214,12 @@ meta_resources = {
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource",
             "isCollection": True,
-            "isRequired": False,
             "description": "Where the type for a question is Reference, indicates a type of resource that is permitted."
         },
         "Questionnaire.item.choiceColumn": {
             "path": ["item", "choiceColumn"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-choiceColumn",
-            "isRequired": False,
             "isCollection": True,
             "description": "Guide for rendering multi-column choices"
         },
