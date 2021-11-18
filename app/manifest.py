@@ -1,5 +1,12 @@
 meta_resources = {
     "Attribute": {
+        "Questionnaire.runOnBehalfRoot": {
+            "type": {"resourceType": "Entity", "id": "boolean"},
+            "path": ["runOnBehalfRoot"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "urn:ext:run-on-behalf-root",
+            "description": "If true - add backward compatible behaviour for populating and extracting from root (means without access restrictions)"
+        },
         "Questionnaire.sourceQueries": {
             "type": {"resourceType": "Entity", "id": "Reference"},
             "path": ["sourceQueries"],

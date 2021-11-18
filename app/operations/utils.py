@@ -1,11 +1,7 @@
 from urllib.parse import quote
 
-from aiohttp import web
-import json
-
 from aidboxpy import AsyncAidboxClient
 from fhirpathpy import evaluate as fhirpath
-from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from funcy.seqs import first
 from funcy.strings import re_all
@@ -13,6 +9,7 @@ from funcy.types import is_list, is_mapping
 
 from .exception import ConstraintCheckOperationOutcome
 from app.sdk import sdk
+
 
 def get_user_sdk_client(request):
     headers = request["headers"]
@@ -90,6 +87,7 @@ def resolve_string_template(i, env, encode_result=False):
     for exp in exprs:
         data = fhirpath({}, exp["var"][2:-2], env)
         if len(data) > 0:
+            # TODO: pass comma separated values for x-fhir-query
             vs[exp["var"]] = quote(data[0]) if encode_result else data[0]
         else:
             vs[exp["var"]] = ""
@@ -149,48 +147,9 @@ def validate_context(context_definition, env):
             errors.append(
                 {
                     "severity": "error",
-                    "key": "undefinded-var",
+                    "key": "undefined-var",
                     "human": "Context variable {} not defined".format(name),
                 }
             )
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
-
-
-class OperationOutcome(web.HTTPError):
-    # TODO: move to and use from aidbox-python-sdk
-
-    # TODO: restrict code https://www.hl7.org/fhir/valueset-issue-type.html
-
-    def __init__(self, *, reason, status_code=400, severity="fatal", code="invalid"):
-        self.status_code: int = status_code
-        self.severity: str = severity
-        self.code: str = code
-        web.HTTPError.__init__(
-            self,
-            text=json.dumps(
-                {
-                    "resourceType": "OperationOutcome",
-                    # "status": 400,
-                    "issue": [
-                        {
-                            "severity": severity,
-                            "code": code,
-                            "diagnostics": reason or "Error",
-                        }
-                    ],
-                    "text": {
-                        "status": "generated",
-                        "div": reason or "Something went wrong",
-                    },
-                }
-            ),
-            content_type="application/json",
-        )
-
-
-class SeverityType:
-    fatal = "fatal"
-    error = "error"
-    warning = "warning"
-    information = "information"

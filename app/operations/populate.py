@@ -23,6 +23,7 @@ async def populate_questionnaire(operation, request):
         )
 
     questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
+
     populated_resource = await populate(questionnaire, env)
     return web.json_response(populated_resource)
 
