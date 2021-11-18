@@ -4,30 +4,33 @@ from fhirpathpy import evaluate as fhirpath
 from app.sdk import sdk
 
 from .exception import ConstraintCheckOperationOutcome
-from .utils import load_source_queries, parameter_to_env, validate_context
+from .utils import load_source_queries, parameter_to_env, validate_context, get_user_sdk_client
 
 
 @sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
-async def constraint_check_operation(operation, request):
+async def constraint_check_operation(_operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
     if "launchContext" in questionnaire:
         validate_context(questionnaire["launchContext"], env)
-    return web.json_response(await constraint_check(env))
+
+    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+
+    return web.json_response(await constraint_check(client, env))
 
 
-async def constraint_check(env):
+async def constraint_check(client, env):
     questionnaire = env["Questionnaire"]
     questionnaire_response = env["QuestionnaireResponse"]
-    await load_source_queries(sdk, questionnaire, env)
+    await load_source_queries(client, questionnaire, env)
     errors = []
-    await constraint_check_for_item(errors, questionnaire, env)
+    constraint_check_for_item(errors, questionnaire, env)
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
     return questionnaire_response
 
 
-async def constraint_check_for_item(errors, questionnaire_item, env):
+def constraint_check_for_item(errors, questionnaire_item, env):
     for constraint in questionnaire_item.get("constraint", []):
         expression = constraint["expression"]["expression"]
         result = fhirpath({}, expression, env)
@@ -42,4 +45,4 @@ async def constraint_check_for_item(errors, questionnaire_item, env):
             errors.append(constraint)
 
     for item in questionnaire_item.get("item", []):
-        await constraint_check_for_item(errors, item, env)
+        constraint_check_for_item(errors, item, env)

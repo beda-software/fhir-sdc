@@ -125,7 +125,7 @@ def parameter_to_env(resource):
     return env
 
 
-async def load_source_queries(sdk, questionnaire, env):
+async def load_source_queries(client, questionnaire, env):
     contained = {
         f"{item['resourceType']}#{item['id']}": item for item in questionnaire.get("contained", [])
     }
@@ -135,7 +135,7 @@ async def load_source_queries(sdk, questionnaire, env):
             raw_bundle = contained[source_query["localRef"]]
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
-                env[bundle["id"]] = await sdk.client.execute("/", data=bundle)
+                env[bundle["id"]] = await client.execute("/", data=bundle)
 
 
 def validate_context(context_definition, env):

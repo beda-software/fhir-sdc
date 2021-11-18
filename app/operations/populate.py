@@ -4,11 +4,11 @@ from funcy import is_list
 
 from app.sdk import sdk
 
-from .utils import get_type, load_source_queries, parameter_to_env, validate_context
+from .utils import get_type, load_source_queries, parameter_to_env, validate_context, get_user_sdk_client
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
-async def populate_questionnaire(operation, request):
+async def populate_questionnaire(_operation, request):
     env = parameter_to_env(request["resource"])
 
     questionnaire_data = env["Questionnaire"]
@@ -23,28 +23,30 @@ async def populate_questionnaire(operation, request):
         )
 
     questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
+    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
 
-    populated_resource = await populate(questionnaire, env)
+    populated_resource = await populate(client, questionnaire, env)
     return web.json_response(populated_resource)
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
-async def populate_questionnaire_instance(operation, request):
+async def populate_questionnaire_instance(_operation, request):
     questionnaire = await sdk.client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
     )
     env = parameter_to_env(request["resource"])
     env["Questionnaire"] = questionnaire
-    populated_resource = await populate(questionnaire, env)
+    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+
+    populated_resource = await populate(client, questionnaire, env)
     return web.json_response(populated_resource)
 
 
-async def populate(questionnaire, env):
-
+async def populate(client, questionnaire, env):
     if "launchContext" in questionnaire:
         validate_context(questionnaire["launchContext"], env)
 
-    await load_source_queries(sdk, questionnaire, env)
+    await load_source_queries(client, questionnaire, env)
 
     root = {
         "resourceType": "QuestionnaireResponse",
@@ -80,7 +82,7 @@ def handle_item(item, env, context):
         for c in context:
             populated_items = []
             for i in item["item"]:
-               populated_items.extend(handle_item(i, env, c))
+                populated_items.extend(handle_item(i, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 

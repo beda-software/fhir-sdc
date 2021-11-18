@@ -6,7 +6,7 @@ from .utils import resolve_string_template
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
-def resolve_expression(operation, request):
+def resolve_expression(_operation, request):
     try:
         env = request["resource"]["env"]
         expression = request["resource"]["expression"]

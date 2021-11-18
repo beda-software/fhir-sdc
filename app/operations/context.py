@@ -3,11 +3,11 @@ from fhirpy.base.exceptions import OperationOutcome
 
 from app.sdk import sdk
 
-from .utils import load_source_queries, parameter_to_env
+from .utils import load_source_queries, parameter_to_env, get_user_sdk_client
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$context"])
-async def get_questionnaire_context(operation, request):
+async def get_questionnaire_context(_operation, request):
     try:
         env = parameter_to_env(request["resource"])
     except Exception as e:
@@ -20,5 +20,8 @@ async def get_questionnaire_context(operation, request):
         raise OperationOutcome(error)
 
     questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
-    await load_source_queries(sdk, questionnaire, env)
+
+    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+
+    await load_source_queries(client, questionnaire, env)
     return web.json_response(env)

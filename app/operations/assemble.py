@@ -2,7 +2,6 @@ import asyncio
 import json
 
 from aiohttp import web
-from fhirpy.base.exceptions import OperationOutcome
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
@@ -21,7 +20,7 @@ PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
-async def assemble(operation, request):
+async def assemble(_operation, request):
     client = get_user_sdk_client(request)
     questionnaire = await client.resources("Questionnaire").get(
         id=request["route-params"]["id"]
@@ -36,7 +35,7 @@ async def assemble(operation, request):
     return web.json_response(questionnaire, dumps=lambda a: json.dumps(a, default=list))
 
 
-async def load_sub_questionanire(client, root_elements, parent_item, item):
+async def load_sub_questionnaire(client, root_elements, parent_item, item):
     if "subQuestionnaire" in item:
         sub = await client.resources("Questionnaire").get(id=item["subQuestionnaire"])
 
@@ -62,7 +61,7 @@ async def assemble_questionnaire(client, parent, questionnaire_items, root_eleme
     with_sub_items = questionnaire_items
     while len([i for i in with_sub_items if "subQuestionnaire" in i]):
         with_sub_items_futures = (
-            load_sub_questionanire(client, root_elements, parent, i) for i in with_sub_items
+            load_sub_questionnaire(client, root_elements, parent, i) for i in with_sub_items
         )
         with_sub_items = list(flatten(await asyncio.gather(*with_sub_items_futures)))
 

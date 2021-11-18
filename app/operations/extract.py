@@ -4,11 +4,11 @@ from app.sdk import sdk
 
 from ..operations.constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
-from .utils import parameter_to_env, validate_context
+from .utils import parameter_to_env, validate_context, get_user_sdk_client
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
-async def extract_questionnaire(operation, request):
+async def extract_questionnaire(_operation, request):
     resource = request["resource"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
@@ -19,7 +19,9 @@ async def extract_questionnaire(operation, request):
             .get()
         )
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-        return await extract(questionnaire, context)
+        client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+
+        return await extract(client, questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
@@ -57,7 +59,10 @@ async def extract_questionnaire(operation, request):
         )
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
+        client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+
         return await extract(
+            client,
             questionnaire,
             {
                 "QuestionnaireResponse": questionnaire_response,
@@ -79,18 +84,19 @@ async def extract_questionnaire(operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
-async def extract_questionnaire_instance(operation, request):
+async def extract_questionnaire_instance(_operation, request):
     questionnaire = (
         await sdk.client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
     )
 
     resource = request["resource"]
+    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
 
-        return await extract(questionnaire, context)
+        return await extract(client, questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
@@ -113,6 +119,7 @@ async def extract_questionnaire_instance(operation, request):
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
         return await extract(
+            client,
             questionnaire,
             {
                 "QuestionnaireResponse": questionnaire_response,
@@ -133,13 +140,13 @@ async def extract_questionnaire_instance(operation, request):
     )
 
 
-async def extract(questionnaire, context):
-    await constraint_check(context)
+async def extract(client, questionnaire, context):
+    await constraint_check(client, context)
 
     resp = []
     for mapper in questionnaire.get("mapping", []):
         resp.append(
-            await sdk.client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
+            await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
         )
 
     return web.json_response(resp)
