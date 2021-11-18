@@ -12,7 +12,13 @@ from app.sdk import sdk
 
 
 def get_user_sdk_client(request):
-    headers = request["headers"]
+    headers = request["headers"].copy()
+
+    # We removed content-length because populate extract are post operations
+    # and post queries contains content-length that must not be set as default header
+    if "content-length" in headers:
+        headers.pop("content-length")
+
     return AsyncAidboxClient(
         sdk.client.url,
         authorization=headers["authorization"],
