@@ -52,6 +52,13 @@ meta_resources = {
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
             "description": "Deprecated in favour itemPopulationContext"
         },
+        "Questionnaire.item.itemControl": {
+            "type": {"resourceType": "Entity", "id": "CodeableConcept"},
+            "path": ["item", "itemControl"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+            "description": "The type of data entry control or structure that should be used to render the item."
+        },
         "Questionnaire.itemPopulationContext": {
             "type": {"resourceType": "Entity", "id": "Expression"},
             "path": ["itemPopulationContext"],
