@@ -28,7 +28,7 @@ def get_user_sdk_client(request):
 
 def get_type(item, data):
     type = item["type"]
-    if type == "choice":
+    if type == "choice" or type == "open-choice":
         option_type = get_by_path(item, ["answerOption", 0, "value"])
         if option_type:
             type = next(iter(option_type.keys()))
