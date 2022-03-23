@@ -4,7 +4,7 @@ from app.sdk import sdk
 
 from ..operations.constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
-from .utils import parameter_to_env, validate_context, get_user_sdk_client
+from .utils import get_user_sdk_client, parameter_to_env, validate_context
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
@@ -20,7 +20,7 @@ async def extract_questionnaire(_operation, request):
         )
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
-
+        await constraint_check(client, context)
         return await extract(client, questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
@@ -60,15 +60,16 @@ async def extract_questionnaire(_operation, request):
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
         client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
-
+        context = {
+            "QuestionnaireResponse": questionnaire_response,
+            "Questionnaire": questionnaire,
+            **env,
+        }
+        await constraint_check(client, context)
         return await extract(
             client,
             questionnaire,
-            {
-                "QuestionnaireResponse": questionnaire_response,
-                "Questionnaire": questionnaire,
-                **env,
-            },
+            context,
         )
 
     raise ConstraintCheckOperationOutcome(
@@ -95,7 +96,7 @@ async def extract_questionnaire_instance(_operation, request):
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-
+        await constraint_check(client, context)
         return await extract(client, questionnaire, context)
 
     elif resource["resourceType"] == "Parameters":
@@ -118,14 +119,16 @@ async def extract_questionnaire_instance(_operation, request):
         )
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
+        context = {
+            "QuestionnaireResponse": questionnaire_response,
+            "Questionnaire": questionnaire,
+            **env,
+        }
+        await constraint_check(client, context)
         return await extract(
             client,
             questionnaire,
-            {
-                "QuestionnaireResponse": questionnaire_response,
-                "Questionnaire": questionnaire,
-                **env,
-            },
+            context,
         )
 
     raise ConstraintCheckOperationOutcome(
@@ -140,9 +143,7 @@ async def extract_questionnaire_instance(_operation, request):
     )
 
 
-async def extract(client, questionnaire, context):
-    await constraint_check(client, context)
-
+async def extract(client, questionnaire, context):    
     resp = []
     for mapper in questionnaire.get("mapping", []):
         resp.append(
