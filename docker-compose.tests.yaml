@@ -8,16 +8,28 @@ services:
     - env_tests
     environment:
       APP_FAST_START_MODE: ${APP_FAST_START_MODE}
-    depends_on:
-      - devbox
     links:
       - devbox
     volumes:
       - .:/app
-      - ./wait-for-it.sh:/usr/local/bin/wait-for-it.sh:cached
+    depends_on:
+      devbox-healthcheck:
+        condition:
+          service_healthy
+  devbox-healthcheck:
+    image: curlimages/curl
+    entrypoint: /bin/sleep 10000
+    links:
+      - devbox
+    depends_on:
+      - devbox
+    healthcheck:
+      test: curl --fail http://devbox:8080/__healthcheck || exit 1
+      interval: 1s
+      timeout: 20s
+      retries: 100
   devbox:
     image: healthsamurai/devbox:edge
-    command: ["wait-for-it.sh", "database:5432", "--strict", "--timeout=0", "--", "java", "-jar", "/aidbox.jar", "-m", "devbox.core"]
     depends_on:
       - devbox-db
     links:
@@ -27,8 +39,6 @@ services:
     environment:
       AIDBOX_LICENSE_ID: ${TESTS_AIDBOX_LICENSE_ID}
       AIDBOX_LICENSE_KEY: ${TESTS_AIDBOX_LICENSE_KEY}
-    volumes:
-      - ./wait-for-it.sh:/usr/local/bin/wait-for-it.sh:cached
   devbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:
