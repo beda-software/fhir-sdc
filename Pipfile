@@ -40,4 +40,4 @@ antlr4-python3-runtime = "==4.8"
 fhirpy = "==1.2.0"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
