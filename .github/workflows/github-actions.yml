@@ -16,9 +16,8 @@ jobs:
             - run: docker run --rm --privileged tonistiigi/binfmt --install all
             - run: docker pull ${{ env.CACHE_IMAGE }} || true
             - run: >-
-                  docker buildx build --platform linux/arm64,linux/amd64
-                  --cache-from ${{ env.CACHE_IMAGE }}
-                  --tag ${{ env.BUILD_IMAGE }} --tag ${{ env.CACHE_IMAGE }} .
+                  docker build --cache-from ${{ env.CACHE_IMAGE }} 
+                  --tag ${{ env.BUILD_IMAGE }} .
             - name: Run tests
               run: ./run_test.sh
             - name: Login to Docker Hub
@@ -26,5 +25,7 @@ jobs:
               with:
                   username: ${{ secrets.DOCKER_HUB_USERNAME }}
                   password: ${{ secrets.DOCKER_HUB_TOKEN }}
-            - run: docker push ${{ env.CACHE_IMAGE }}
-            - run: docker push ${{ env.BUILD_IMAGE }}
+            - run: >-
+                  docker buildx build --platform linux/arm64,linux/amd64
+                  --cache-from ${{ env.CACHE_IMAGE }} --push
+                  --tag ${{ env.BUILD_IMAGE }} --tag ${{ env.CACHE_IMAGE }} .
