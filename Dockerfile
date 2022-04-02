@@ -1,5 +1,5 @@
 FROM python:3.9
-RUN curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
+RUN pip install pipenv
 RUN mkdir /app
 WORKDIR /app
 ENV PYTHONPATH /app
