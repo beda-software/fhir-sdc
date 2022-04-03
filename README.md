@@ -1,3 +1,4 @@
+![example workflow](https://github.com/beda-software/aidbox-sdc/actions/workflows/github-actions.yml/badge.svg)
 # SDC spec implementation as Aidbox application
 
 The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/2019May/index.html  
