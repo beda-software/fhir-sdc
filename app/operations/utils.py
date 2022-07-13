@@ -94,7 +94,7 @@ def resolve_string_template(i, env, encode_result=False):
         data = fhirpath({}, exp["var"][2:-2], env)
         if len(data) > 0:
             # TODO: pass comma separated values for x-fhir-query
-            vs[exp["var"]] = quote(data[0]) if encode_result else data[0]
+            vs[exp["var"]] = quote(str(data[0])) if encode_result else str(data[0])
         else:
             vs[exp["var"]] = ""
     res = i
