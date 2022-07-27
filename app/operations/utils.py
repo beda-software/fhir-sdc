@@ -96,7 +96,7 @@ def resolve_string_template(i, env, encode_result=False):
             # NOTE: http://build.fhir.org/ig/HL7/sdc/expressions.html#x-fhir-query-enhancements
             # If the expression resolves to a collection of more than one value,
             # the substitution will be a list of comma-separated values (i.e. behaving as 'or').
-            search_str = ",".join(data)
+            search_str = ",".join([str(item) for item in data])
             vs[exp["var"]] = quote(search_str) if encode_result else search_str
         else:
             vs[exp["var"]] = ""
