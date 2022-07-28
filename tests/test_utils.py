@@ -113,15 +113,15 @@ def test_prepare_link_ids_does_not_encode_params():
 
 
 @pytest.mark.parametrize(
-    "ids,expected",
+    "answer_type,values,expected",
     [
-        (["abc", "dfe", "htd"], "/Patient?_id=abc,dfe,htd"),
-        ([1, 4, 5], "/Patient?_id=1,4,5"),
-        (["single-id"], "/Patient?_id=single-id"),
-        ([5], "/Patient?_id=5"),
+        ("string", ["abc", "dfe", "htd"], "/Patient?_id=abc,dfe,htd"),
+        ("number", [1, 4, 5], "/Patient?_id=1,4,5"),
+        ("string", ["single-id"], "/Patient?_id=single-id"),
+        ("number", [5], "/Patient?_id=5"),
     ],
 )
-def test_resolve_string_template(ids, expected):
+def test_resolve_string_template(answer_type, values, expected):
     questionnaire_response = {
         "resourceType": "QuestionnaireResponse",
         "item": [
@@ -130,22 +130,16 @@ def test_resolve_string_template(ids, expected):
                 "item": [
                     {
                         "linkId": "patients-set",
-                        "answer": [
-                            {
-                                "value": {
-                                    "Reference": {
-                                        "resourceType": "Patient",
-                                        "id": id,
-                                    }
-                                }
-                            }
-                            for id in ids
-                        ],
+                        "answer": [{"value": {answer_type: value}} for value in values],
                     }
                 ],
             }
         ],
     }
-    input = "/Patient?_id={{%QuestionnaireResponse.repeat(item).where(linkId='patients-set').answer.children().Reference.id}}"
+    input = (
+        "/Patient?_id={{%QuestionnaireResponse.repeat(item).where(linkId='patients-set').answer.children()."
+        + answer_type
+        + "}}"
+    )
     result = resolve_string_template(input, {"QuestionnaireResponse": questionnaire_response})
     assert result == expected
