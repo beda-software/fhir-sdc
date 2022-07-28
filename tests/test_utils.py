@@ -1,4 +1,6 @@
-from app.operations.utils import prepare_bundle, prepare_link_ids
+import pytest
+
+from app.operations.utils import prepare_bundle, prepare_link_ids, resolve_string_template
 
 
 def test_prepare_bundle():
@@ -108,3 +110,36 @@ def test_prepare_link_ids_does_not_encode_params():
         "resourceType": "Questionnaire",
         "status": "active",
     }
+
+
+@pytest.mark.parametrize(
+    "answer_type,values,expected",
+    [
+        ("string", ["abc", "dfe", "htd"], "/Patient?_id=abc,dfe,htd"),
+        ("number", [1, 4, 5], "/Patient?_id=1,4,5"),
+        ("string", ["single-id"], "/Patient?_id=single-id"),
+        ("number", [5], "/Patient?_id=5"),
+    ],
+)
+def test_resolve_string_template(answer_type, values, expected):
+    questionnaire_response = {
+        "resourceType": "QuestionnaireResponse",
+        "item": [
+            {
+                "linkId": "patients-group",
+                "item": [
+                    {
+                        "linkId": "patients-set",
+                        "answer": [{"value": {answer_type: value}} for value in values],
+                    }
+                ],
+            }
+        ],
+    }
+    input = (
+        "/Patient?_id={{%QuestionnaireResponse.repeat(item).where(linkId='patients-set').answer.children()."
+        + answer_type
+        + "}}"
+    )
+    result = resolve_string_template(input, {"QuestionnaireResponse": questionnaire_response})
+    assert result == expected
