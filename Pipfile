@@ -30,7 +30,7 @@ aiocontextvars = "==0.2.2"
 coloredlogs = "==10.0"
 aidbox-python-sdk = {editable = true, ref = "09d82f80505e6d68d383782fd99cf1369d5d5219", git = "https://github.com/Aidbox/aidbox-python-sdk.git"}
 aidboxpy = "*"
-fhirpathpy = {git = "https://github.com/beda-software/fhirpath-py.git",ref = "1c689ecd081427b26f0f08b9f33e05098fab384a"}
+fhirpathpy = "==0.1.1"
 pytest-aiohttp = "==0.3.0"
 pytest-cov = "==2.8.1"
 pytest = "==5.3.1"
