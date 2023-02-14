@@ -1,6 +1,7 @@
 from aiohttp import web
 from fhirpathpy import evaluate as fhirpath
 from funcy import is_list
+from fhirpy.base.exceptions import OperationOutcome
 
 from app.sdk import sdk
 
@@ -106,7 +107,10 @@ def handle_item(item, env, context):
             root_item["answer"] = answers
     elif "initialExpression" in item:
         answers = []
-        data = fhirpath(context, item["initialExpression"]["expression"], env)
+        try:
+            data = fhirpath(context, item["initialExpression"]["expression"], env)
+        except Exception as e:
+            raise OperationOutcome(str(e))
         if data and len(data):
             type = get_type(item, data)
             if item.get("repeats") is True:
