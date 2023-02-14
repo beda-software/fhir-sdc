@@ -110,7 +110,7 @@ def handle_item(item, env, context):
         try:
             data = fhirpath(context, item["initialExpression"]["expression"], env)
         except Exception as e:
-            raise OperationOutcome(str(e))
+            raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
         if data and len(data):
             type = get_type(item, data)
             if item.get("repeats") is True:
