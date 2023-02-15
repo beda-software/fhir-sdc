@@ -452,12 +452,7 @@ async def test_fhirpath_failure_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient"
-                }
-            ],
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
             "item": [
                 {
                     "type": "string",
@@ -469,8 +464,7 @@ async def test_fhirpath_failure_populate(sdk, safe_db):
                 }
             ],
             "status": "active",
-        }
-        ,
+        },
     )
     await q.save()
 
@@ -507,12 +501,7 @@ async def test_fhirpath_success_populate(sdk, safe_db):
     q = sdk.client.resource(
         "Questionnaire",
         **{
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient"
-                }
-            ],
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
             "item": [
                 {
                     "type": "string",
@@ -524,8 +513,7 @@ async def test_fhirpath_success_populate(sdk, safe_db):
                 }
             ],
             "status": "active",
-        }
-        ,
+        },
     )
     await q.save()
 
