@@ -1,3 +1,5 @@
+import json
+
 from tests.utils import create_parameters
 
 
@@ -443,4 +445,102 @@ async def test_multiple_answers_populate(sdk, safe_db):
                 ],
             }
         ],
+    }
+
+
+async def test_fhirpath_failure_populate(sdk, safe_db):
+    q = sdk.client.resource(
+        "Questionnaire",
+        **{
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient"
+                }
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "patientName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%Patient.name.given[0] & ' ' & %Patient.name.family"
+                    }
+                }
+            ],
+            "status": "active",
+        }
+        ,
+    )
+    await q.save()
+
+    assert q.id is not None
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
+    }
+
+    try:
+        await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    except Exception as e:
+        assert json.loads(str(e)) == {
+            "resourceType": "OperationOutcome",
+            "issue": [
+                {
+                    "severity": "fatal",
+                    "code": "invalid",
+                    "diagnostics": "Error: \"%Patient.name.given[0] & ' ' & %Patient.name.family\" - can only concatenate list (not \"str\") to list"
+                }
+            ],
+            "text": {
+                "status": "generated",
+                "div": "Error: \"%Patient.name.given[0] & ' ' & %Patient.name.family\" - can only concatenate list (not \"str\") to list"
+            }
+        }
+        return
+    assert False
+
+
+async def test_fhirpath_success_populate(sdk, safe_db):
+    q = sdk.client.resource(
+        "Questionnaire",
+        **{
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient"
+                }
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "patientName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family"
+                    }
+                }
+            ],
+            "status": "active",
+        }
+        ,
+    )
+    await q.save()
+
+    assert q.id is not None
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
+    }
+
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [{"linkId": "patientName"}],
     }
