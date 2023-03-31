@@ -139,7 +139,12 @@ async def load_source_queries(client, questionnaire, env):
         f"{item['resourceType']}#{item['id']}": item for item in questionnaire.get("contained", [])
     }
 
-    for source_query in questionnaire.get("sourceQueries", []):
+    source_queries = questionnaire.get("sourceQueries", {})
+
+    if isinstance(source_queries, dict):
+        source_queries = [source_queries]
+
+    for source_query in source_queries:
         if "localRef" in source_query:
             raw_bundle = contained[source_query["localRef"]]
             if raw_bundle:
@@ -152,6 +157,8 @@ def validate_context(context_definition, env):
     errors = []
     for item in context_definition:
         name = item["name"]
+        if not isinstance(name, str):
+            name = item["name"]["code"]
         if name not in all_vars:
             errors.append(
                 {
