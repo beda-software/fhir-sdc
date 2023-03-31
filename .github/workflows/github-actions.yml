@@ -1,13 +1,13 @@
 name: github-actions
 on: [push, pull_request]
+env:
+    BUILD_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:master
+    CACHE_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
+    TESTS_AIDBOX_LICENSE_KEY: ${{ secrets.TESTS_AIDBOX_LICENSE_KEY }}
+    TESTS_AIDBOX_LICENSE_ID: ${{ secrets.TESTS_AIDBOX_LICENSE_ID }}
 jobs:
     Build:
         runs-on: ubuntu-latest
-        env:
-            BUILD_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:master
-            CACHE_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
-            TESTS_AIDBOX_LICENSE_KEY: ${{ secrets.TESTS_AIDBOX_LICENSE_KEY }}
-            TESTS_AIDBOX_LICENSE_ID: ${{ secrets.TESTS_AIDBOX_LICENSE_ID }}
         steps:
             - uses: actions/checkout@v2
             - name: Set up Docker Buildx
@@ -20,6 +20,12 @@ jobs:
                   --tag ${{ env.BUILD_IMAGE }} .
             - name: Run tests
               run: ./run_test.sh
+
+    Push:
+        needs: Build
+        if: github.ref == 'refs/heads/master'
+        runs-on: ubuntu-latest
+        steps:
             - name: Login to Docker Hub
               uses: docker/login-action@v1
               with:
