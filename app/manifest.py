@@ -1,4 +1,4 @@
-meta_resources = {
+meta_resources_v2_7_0 = {
     "Attribute": {
         "Questionnaire.runOnBehalfOfRoot": {
             "type": {"resourceType": "Entity", "id": "boolean"},
@@ -267,4 +267,31 @@ meta_resources = {
             "description": "Use for display ?"
         },
     },
+}
+
+updated_meta_resources_v3_0_0 = {
+    "Attribute": {
+        "Questionnaire.sourceQueries": {
+            "type": {"resourceType": "Entity", "id": "Reference"},
+            "path": ["sourceQueries"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+        },
+        "Questionnaire.launchContext.name": {
+            "type": {"resourceType": "Entity", "id": "id"},
+            "path": ["launchContext", "name", "code"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "name",
+        },
+        "Questionnaire.launchContext.type": {
+            "type": {"resourceType": "Entity", "id": "code"},
+            "path": ["launchContext", "type", "0"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "type",
+        },
+    }
+}
+
+meta_resources_v3_0_0 = {
+    "Attribute": {**meta_resources_v2_7_0["Attribute"], **updated_meta_resources_v3_0_0["Attribute"]}
 }

@@ -10,7 +10,7 @@ The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/2019May
 - JUTE-based extraction
 
 ## Further plans:
-- Support FHIR resource format https://docs.aidbox.app/basic-concepts/aidbox-and-fhir-formats
+- Support FHIR resource format https://docs.aidbox.app/modules-1/fhir-resources/aidbox-and-fhir-formats
 - JUTE-based population
 - Observation-based population
 - Observation-based extraction
