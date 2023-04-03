@@ -51,7 +51,7 @@ async def populate(client, questionnaire, env):
 
     root = {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": questionnaire.id,
+        "questionnaire": questionnaire.get("id"),
         "item": [],
     }
     for item in questionnaire["item"]:
