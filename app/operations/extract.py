@@ -1,6 +1,6 @@
-from aiohttp import web
+from aiohttp import ClientSession, web
 
-from app.sdk import sdk
+from app.sdk import jute_service, sdk
 
 from ..operations.constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
@@ -19,7 +19,9 @@ async def extract_questionnaire(_operation, request):
             .get()
         )
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-        client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+        client = (
+            sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+        )
         await constraint_check(client, context)
         return await extract(client, questionnaire, context)
 
@@ -59,7 +61,9 @@ async def extract_questionnaire(_operation, request):
         )
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
-        client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+        client = (
+            sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+        )
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,
@@ -91,7 +95,7 @@ async def extract_questionnaire_instance(_operation, request):
     )
 
     resource = request["resource"]
-    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+    client = sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
@@ -143,11 +147,25 @@ async def extract_questionnaire_instance(_operation, request):
     )
 
 
-async def extract(client, questionnaire, context):    
+async def extract(client, questionnaire, context):
     resp = []
-    for mapper in questionnaire.get("mapping", []):
-        resp.append(
-            await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
-        )
-
+    if jute_service == "aidbox":
+        for mapper in questionnaire.get("mapping", []):
+            resp.append(
+                await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
+            )
+    else:
+        for mr in questionnaire.get("mapping", []):
+            mapping = client.resource("Mapping", id=mr.id)
+            await mapping.refresh()
+            async with ClientSession() as session:
+                async with session.post(
+                    jute_service,
+                    json={
+                        "template": mapping["body"],
+                        "context": context,
+                    },
+                ) as result:
+                    bundle = await result.json()
+                    resp.append(await client.execute("/", data=bundle))
     return web.json_response(resp)

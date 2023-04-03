@@ -8,6 +8,7 @@ services:
     - env_tests
     environment:
       APP_FAST_START_MODE: ${APP_FAST_START_MODE}
+      JUTE_SERVICE: http://jute:8090/parse-template
     links:
       - devbox
     volumes:
@@ -16,6 +17,9 @@ services:
       devbox-healthcheck:
         condition:
           service_healthy
+      jute:
+        condition:
+          service_started
   devbox-healthcheck:
     image: curlimages/curl
     entrypoint: /bin/sleep 10000
@@ -45,3 +49,6 @@ services:
       POSTGRES_USER:     postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB:       devbox
+  jute:
+    image: bedasoftware/jute-microservice:latest
+
