@@ -1,8 +1,8 @@
 name: github-actions
 on: [push, pull_request]
 env:
-  BUILD_IMAGE: bedasoftware/aidbox-sdc:master
-  CACHE_IMAGE: bedasoftware/aidbox-sdc:latest
+  BUILD_IMAGE: bedasoftware/fhir-sdc:master
+  CACHE_IMAGE: bedasoftware/fhir-sdc:latest
   TESTS_AIDBOX_LICENSE: ${{ secrets.TESTS_AIDBOX_LICENSE }}
 jobs:
   Build:
@@ -13,8 +13,8 @@ jobs:
       - run: >-
           docker build --cache-from ${{ env.CACHE_IMAGE }} 
           --tag ${{ env.BUILD_IMAGE }} .
-      # - name: Run tests
-      #   run: ./run_test.sh
+      - name: Run tests
+        run: ./run_test.sh
 
   Publish:
     needs: Build
