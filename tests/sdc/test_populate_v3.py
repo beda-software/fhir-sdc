@@ -27,7 +27,7 @@ questionnaire = {
             "linkId": "names",
             "itemPopulationContext": {
                 "language": "text/fhirpath",
-                "expression": "%PrePopQuery.entry.resource.entry.resource",
+                "expression": "%PrePopQuery.entry.resource.entry.resource.name",
             },
             "item": [
                 {
@@ -36,7 +36,7 @@ questionnaire = {
                     "linkId": "firstName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "name.given",
+                        "expression": "given",
                     },
                 },
             ],
