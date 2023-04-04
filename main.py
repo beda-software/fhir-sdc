@@ -26,3 +26,6 @@ sentry_sdk.init(integrations=[AioHttpIntegration(), sentry_logging])
 
 def create_app():
     return _create_app(sdk)
+
+async def create_gunicorn_app():
+    return _create_app(sdk)
