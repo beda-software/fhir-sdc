@@ -9,7 +9,7 @@ if [ -z "${TESTS_AIDBOX_LICENSE}" ]; then
     exit 1
 fi
 
-export TEST_COMMAND="pipenv run pytest --cov-report html --cov-report term:skip-covered --cov=main $@"
+export TEST_COMMAND="pipenv run pytest --cov-report html --cov-report term:skip-covered --cov=app $@"
 
 COMPOSE_FILES="-f docker-compose.tests.yaml"
 
