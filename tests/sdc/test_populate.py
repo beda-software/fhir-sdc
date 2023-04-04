@@ -1,14 +1,22 @@
 import json
 
+import pytest
+
 from tests.utils import create_parameters
 
 
-async def test_initial_expression_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_initial_expression_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient",
+                },
+            ],
             "item": [
                 {
                     "type": "string",
@@ -32,16 +40,27 @@ async def test_initial_expression_populate(sdk, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
-        "item": [{"linkId": "patientId", "answer": [{"value": {"string": launch_patient["id"]}}],}],
+        "item": [
+            {
+                "linkId": "patientId",
+                "answer": [{"value": {"string": launch_patient["id"]}}],
+            }
+        ],
     }
 
 
-async def test_initial_expression_populate_using_list_endpoint(sdk, safe_db):
+@pytest.mark.asyncio
+async def test_initial_expression_populate_using_list_endpoint(aidbox_client, safe_db):
     q = {
         "id": "virtual-id",
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+        "launchContext": [
+            {
+                "name": "LaunchPatient",
+                "type": "Patient",
+            },
+        ],
         "item": [
             {
                 "type": "string",
@@ -56,7 +75,7 @@ async def test_initial_expression_populate_using_list_endpoint(sdk, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": "patient-id"}
 
-    p = await sdk.client.execute(
+    p = await aidbox_client.execute(
         "Questionnaire/$populate",
         data=create_parameters(Questionnaire=q, LaunchPatient=launch_patient),
     )
@@ -64,16 +83,27 @@ async def test_initial_expression_populate_using_list_endpoint(sdk, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q["id"],
-        "item": [{"linkId": "patientId", "answer": [{"value": {"string": launch_patient["id"]}}],}],
+        "item": [
+            {
+                "linkId": "patientId",
+                "answer": [{"value": {"string": launch_patient["id"]}}],
+            }
+        ],
     }
 
 
-async def test_item_context_with_repeats_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_item_context_with_repeats_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient",
+                },
+            ],
             "item": [
                 {
                     "type": "group",
@@ -104,7 +134,11 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     launch_patient = {
         "resourceType": "Patient",
         "id": "patienit-id",
-        "name": [{"given": ["Peter", "Middlename"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]},],
+        "name": [
+            {"given": ["Peter", "Middlename"]},
+            {"given": ["Pit"]},
+            {"given": ["Little Pitty"]},
+        ],
     }
 
     p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
@@ -131,12 +165,18 @@ async def test_item_context_with_repeats_populate(sdk, safe_db):
     }
 
 
-async def test_item_context_with_repeating_group_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_item_context_with_repeating_group_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient",
+                },
+            ],
             "item": [
                 {
                     "type": "group",
@@ -195,19 +235,25 @@ async def test_item_context_with_repeating_group_populate(sdk, safe_db):
                     }
                 ],
                 "linkId": "addresses",
-            }
+            },
         ],
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
     }
 
 
-async def test_item_context_without_repeats_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_item_context_without_repeats_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient",
+                },
+            ],
             "item": [
                 {
                     "text": "Address",
@@ -309,11 +355,12 @@ async def test_item_context_without_repeats_populate(sdk, safe_db):
     }
 
 
-async def test_source_queries_populate(sdk, safe_db):
-    p = sdk.client.resource("Patient")
+@pytest.mark.asyncio
+async def test_source_queries_populate(aidbox_client, safe_db):
+    p = aidbox_client.resource("Patient")
     await p.save()
 
-    a = sdk.client.resource(
+    a = aidbox_client.resource(
         "Appointment",
         **{
             "status": "booked",
@@ -323,7 +370,7 @@ async def test_source_queries_populate(sdk, safe_db):
     )
     await a.save()
 
-    q = sdk.client.resource(
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -342,8 +389,15 @@ async def test_source_queries_populate(sdk, safe_db):
                     ],
                 }
             ],
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient",},],
-            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"},],
+            "launchContext": [
+                {
+                    "name": "LaunchPatient",
+                    "type": "Patient",
+                },
+            ],
+            "sourceQueries": [
+                {"localRef": "Bundle#PrePopQuery"},
+            ],
             "item": [
                 {
                     "type": "string",
@@ -364,16 +418,27 @@ async def test_source_queries_populate(sdk, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
-        "item": [{"linkId": "last-appointment", "answer": [{"value": {"string": a["start"]}}],}],
+        "item": [
+            {
+                "linkId": "last-appointment",
+                "answer": [{"value": {"string": a["start"]}}],
+            }
+        ],
     }
 
 
-async def test_multiple_answers_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_multiple_answers_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": "Diet", "type": "Bundle",},],
+            "launchContext": [
+                {
+                    "name": "Diet",
+                    "type": "Bundle",
+                },
+            ],
             "item": [
                 {
                     "type": "choice",
@@ -399,7 +464,12 @@ async def test_multiple_answers_populate(sdk, safe_db):
                     "resourceType": "NutritionOrder",
                     "oralDiet": {
                         "type": {
-                            "coding": [{"system": "http://snomed.info/sct", "code": "160671006",},]
+                            "coding": [
+                                {
+                                    "system": "http://snomed.info/sct",
+                                    "code": "160671006",
+                                },
+                            ]
                         },
                     },
                 },
@@ -407,7 +477,16 @@ async def test_multiple_answers_populate(sdk, safe_db):
             {
                 "resource": {
                     "resourceType": "NutritionOrder",
-                    "oralDiet": {"type": {"coding": [{"system": "UNKNOWN", "code": "ABC",},]},},
+                    "oralDiet": {
+                        "type": {
+                            "coding": [
+                                {
+                                    "system": "UNKNOWN",
+                                    "code": "ABC",
+                                },
+                            ]
+                        },
+                    },
                 },
             },
             {
@@ -415,7 +494,12 @@ async def test_multiple_answers_populate(sdk, safe_db):
                     "resourceType": "NutritionOrder",
                     "oralDiet": {
                         "type": {
-                            "coding": [{"system": "http://snomed.info/sct", "code": "302320003",},]
+                            "coding": [
+                                {
+                                    "system": "http://snomed.info/sct",
+                                    "code": "302320003",
+                                },
+                            ]
                         },
                     },
                 },
@@ -434,12 +518,18 @@ async def test_multiple_answers_populate(sdk, safe_db):
                 "answer": [
                     {
                         "value": {
-                            "Coding": {"system": "http://snomed.info/sct", "code": "160671006",}
+                            "Coding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "160671006",
+                            }
                         }
                     },
                     {
                         "value": {
-                            "Coding": {"system": "http://snomed.info/sct", "code": "302320003",}
+                            "Coding": {
+                                "system": "http://snomed.info/sct",
+                                "code": "302320003",
+                            }
                         }
                     },
                 ],
@@ -448,8 +538,9 @@ async def test_multiple_answers_populate(sdk, safe_db):
     }
 
 
-async def test_fhirpath_failure_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_fhirpath_failure_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -459,8 +550,8 @@ async def test_fhirpath_failure_populate(sdk, safe_db):
                     "linkId": "patientName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "%Patient.name.given[0] & ' ' & %Patient.name.family"
-                    }
+                        "expression": "%Patient.name.given[0] & ' ' & %Patient.name.family",
+                    },
                 }
             ],
             "status": "active",
@@ -485,20 +576,21 @@ async def test_fhirpath_failure_populate(sdk, safe_db):
                 {
                     "severity": "fatal",
                     "code": "invalid",
-                    "diagnostics": "Error: \"%Patient.name.given[0] & ' ' & %Patient.name.family\" - can only concatenate list (not \"str\") to list"
+                    "diagnostics": 'Error: "%Patient.name.given[0] & \' \' & %Patient.name.family" - can only concatenate list (not "str") to list',
                 }
             ],
             "text": {
                 "status": "generated",
-                "div": "Error: \"%Patient.name.given[0] & ' ' & %Patient.name.family\" - can only concatenate list (not \"str\") to list"
-            }
+                "div": 'Error: "%Patient.name.given[0] & \' \' & %Patient.name.family" - can only concatenate list (not "str") to list',
+            },
         }
         return
     assert False
 
 
-async def test_fhirpath_success_populate(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_fhirpath_success_populate(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -508,8 +600,8 @@ async def test_fhirpath_success_populate(sdk, safe_db):
                     "linkId": "patientName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family"
-                    }
+                        "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family",
+                    },
                 }
             ],
             "status": "active",

@@ -4,8 +4,9 @@ from fhirpy.base.lib import OperationOutcome
 from tests.utils import create_parameters
 
 
-async def test_email_uniq(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_email_uniq(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -49,10 +50,12 @@ async def test_email_uniq(sdk, safe_db):
     )
     await q.save()
 
-    p = sdk.client.resource("Patient", telecom=[{"system": "email", "value": "p1@beda.software"}])
+    p = aidbox_client.resource(
+        "Patient", telecom=[{"system": "email", "value": "p1@beda.software"}]
+    )
     await p.save()
 
-    valid = sdk.client.resource(
+    valid = aidbox_client.resource(
         "QuestionnaireResponse",
         status="final",
         item=[
@@ -64,7 +67,7 @@ async def test_email_uniq(sdk, safe_db):
     )
     await valid.save()
 
-    invalid = sdk.client.resource(
+    invalid = aidbox_client.resource(
         "QuestionnaireResponse",
         status="final",
         item=[
@@ -77,12 +80,12 @@ async def test_email_uniq(sdk, safe_db):
     await invalid.save()
 
     with pytest.raises(OperationOutcome):
-        assert await sdk.client.execute(
+        assert await aidbox_client.execute(
             "QuestionnaireResponse/$constraint-check",
             data=create_parameters(Questionnaire=q, QuestionnaireResponse=invalid),
         )
 
-    result = await sdk.client.execute(
+    result = await aidbox_client.execute(
         "QuestionnaireResponse/$constraint-check",
         data=create_parameters(Questionnaire=q, QuestionnaireResponse=valid),
     )

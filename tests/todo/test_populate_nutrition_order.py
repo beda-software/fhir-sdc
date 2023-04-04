@@ -1,15 +1,17 @@
+import pytest
 from fhirpathpy import evaluate as fhirpath
 
 from tests.utils import create_parameters
 
 
-async def test_populate_nutritio_order(sdk, safe_db):
+@pytest.mark.asyncio
+async def test_populate_nutritio_order(aidbox_client, safe_db):
     """
     TODO think how this kind of error may be handled
     Shown typo (missing bracket) causes an empty bundle response
     The system should check such cases an fire warnings
     """
-    q = sdk.client.resource(
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -49,12 +51,12 @@ async def test_populate_nutritio_order(sdk, safe_db):
 
     assert q.id is not None
 
-    launch_patient = sdk.client.resource("Patient")
+    launch_patient = aidbox_client.resource("Patient")
     await launch_patient.save()
 
     assert launch_patient.id is not None
 
-    n = sdk.client.resource(
+    n = aidbox_client.resource(
         "NutritionOrder",
         **{
             "intent": "plan",

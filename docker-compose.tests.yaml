@@ -33,7 +33,7 @@ services:
       timeout: 20s
       retries: 100
   devbox:
-    image: healthsamurai/devbox:edge
+    image: healthsamurai/aidboxone:stable
     depends_on:
       - devbox-db
     links:
@@ -41,8 +41,9 @@ services:
     env_file:
       - env_tests
     environment:
-      AIDBOX_LICENSE_ID: ${TESTS_AIDBOX_LICENSE_ID}
-      AIDBOX_LICENSE_KEY: ${TESTS_AIDBOX_LICENSE_KEY}
+      AIDBOX_LICENSE: ${TESTS_AIDBOX_LICENSE}
+    ports:
+    - 8080:8080
   devbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:

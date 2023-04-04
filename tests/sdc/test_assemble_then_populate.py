@@ -1,15 +1,18 @@
+import pytest
+
 from tests.utils import create_parameters
 
 
-async def create_questionnaire(sdk, questionnaire):
-    q = sdk.client.resource("Questionnaire", **questionnaire)
+async def create_questionnaire(aidbox_client, questionnaire):
+    q = aidbox_client.resource("Questionnaire", **questionnaire)
     await q.save()
     assert q.id is not None
     return q
 
-async def create_address_questionnaire(sdk):
+
+async def create_address_questionnaire(aidbox_client):
     return await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -37,11 +40,12 @@ async def create_address_questionnaire(sdk):
     )
 
 
-async def test_assemble_then_populate(sdk, safe_db):
-    address = await create_address_questionnaire(sdk)
+@pytest.mark.asyncio
+async def test_assemble_then_populate(aidbox_client, safe_db):
+    address = await create_address_questionnaire(aidbox_client)
 
     appointment = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "contained": [
@@ -75,7 +79,7 @@ async def test_assemble_then_populate(sdk, safe_db):
     )
 
     q = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -255,10 +259,10 @@ async def test_assemble_then_populate(sdk, safe_db):
         ],
     }
 
-    patient = sdk.client.resource("Patient")
+    patient = aidbox_client.resource("Patient")
     await patient.save()
 
-    appointment = sdk.client.resource(
+    appointment = aidbox_client.resource(
         "Appointment",
         **{
             "status": "booked",
@@ -268,7 +272,7 @@ async def test_assemble_then_populate(sdk, safe_db):
     )
     await appointment.save()
 
-    p = await sdk.client.execute(
+    p = await aidbox_client.execute(
         "Questionnaire/$populate",
         data=create_parameters(LaunchPatient=patient, questionnaire=assembled),
     )

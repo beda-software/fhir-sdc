@@ -4,8 +4,9 @@ from fhirpy.base.lib import OperationOutcome
 from tests.utils import create_parameters
 
 
-async def test_extract_without_context(sdk, safe_db):
-    m = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_extract_without_context(aidbox_client, safe_db):
+    m = aidbox_client.resource(
         "Mapping",
         **{
             "body": {
@@ -25,7 +26,7 @@ async def test_extract_without_context(sdk, safe_db):
     )
 
     await m.save()
-    q = sdk.client.resource(
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -45,7 +46,7 @@ async def test_extract_without_context(sdk, safe_db):
     )
     await q.save()
 
-    qr = sdk.client.resource(
+    qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
@@ -62,15 +63,16 @@ async def test_extract_without_context(sdk, safe_db):
 
     assert len(extraction) == 1
 
-    p = await sdk.client.resources("Patient").search().fetch_all()
+    p = await aidbox_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
     assert p[0].id == "newPatient"
 
 
-async def test_extract_with_context(sdk, safe_db):
-    m = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_extract_with_context(aidbox_client, safe_db):
+    m = aidbox_client.resource(
         "Mapping",
         **{
             "body": {
@@ -95,7 +97,7 @@ async def test_extract_with_context(sdk, safe_db):
     )
 
     await m.save()
-    q = sdk.client.resource(
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -115,7 +117,7 @@ async def test_extract_with_context(sdk, safe_db):
     )
     await q.save()
 
-    qr = sdk.client.resource(
+    qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
@@ -136,7 +138,7 @@ async def test_extract_with_context(sdk, safe_db):
 
     assert len(extraction) == 1
 
-    p = await sdk.client.resources("Patient").search().fetch_all()
+    p = await aidbox_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
@@ -144,8 +146,9 @@ async def test_extract_with_context(sdk, safe_db):
     assert p[0].name[0].text == "Name"
 
 
-async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
-    m = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_extract_using_list_endpoint_with_context(aidbox_client, safe_db):
+    m = aidbox_client.resource(
         "Mapping",
         **{
             "body": {
@@ -187,7 +190,7 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
         ],
     }
 
-    qr = sdk.client.resource(
+    qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": "virtual_id",
@@ -201,14 +204,14 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
     )
     context = {"resourceType": "ContextResource", "name": "Name"}
 
-    extraction = await sdk.client.execute(
+    extraction = await aidbox_client.execute(
         "Questionnaire/$extract",
         data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
 
-    p = await sdk.client.resources("Patient").search().fetch_all()
+    p = await aidbox_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
@@ -216,8 +219,9 @@ async def test_extract_using_list_endpoint_with_context(sdk, safe_db):
     assert p[0].name[0].text == "Name"
 
 
-async def test_extract_fails_because_of_constraint_check(sdk, safe_db):
-    q = sdk.client.resource(
+@pytest.mark.asyncio
+async def test_extract_fails_because_of_constraint_check(aidbox_client, safe_db):
+    q = aidbox_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -247,7 +251,7 @@ async def test_extract_fails_because_of_constraint_check(sdk, safe_db):
     )
     await q.save()
 
-    qr = sdk.client.resource(
+    qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,

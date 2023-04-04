@@ -4,17 +4,18 @@ from fhirpathpy import evaluate as fhirpath
 from app.sdk import sdk
 
 from .exception import ConstraintCheckOperationOutcome
-from .utils import load_source_queries, parameter_to_env, validate_context, get_user_sdk_client
+from .utils import get_user_sdk_client, load_source_queries, parameter_to_env, validate_context
 
 
 @sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
 async def constraint_check_operation(_operation, request):
+    client = request["app"]["client"]
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
     if "launchContext" in questionnaire:
         validate_context(questionnaire["launchContext"], env)
 
-    client = sdk.client if questionnaire.get('runOnBehalfOfRoot') else get_user_sdk_client(request)
+    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
     return web.json_response(await constraint_check(client, env))
 

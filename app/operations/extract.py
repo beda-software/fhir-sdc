@@ -10,18 +10,17 @@ from .utils import get_user_sdk_client, parameter_to_env, validate_context
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
 async def extract_questionnaire(_operation, request):
     resource = request["resource"]
+    client = request["app"]["client"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
+        questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
         questionnaire = (
-            await sdk.client.resources("Questionnaire")
+            await client.resources("Questionnaire")
             .search(id=questionnaire_response["questionnaire"])
             .get()
         )
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-        client = (
-            sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-        )
+        client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
         await constraint_check(client, context)
         return await extract(client, questionnaire, context)
 
@@ -40,7 +39,7 @@ async def extract_questionnaire(_operation, request):
                 ]
             )
 
-        questionnaire = sdk.client.resource("Questionnaire", **questionnaire_data)
+        questionnaire = client.resource("Questionnaire", **questionnaire_data)
 
         questionnaire_response_data = env.get("questionnaire_response") or env.get(
             "QuestionnaireResponse"
@@ -56,14 +55,12 @@ async def extract_questionnaire(_operation, request):
                 ]
             )
 
-        questionnaire_response = sdk.client.resource(
+        questionnaire_response = client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
-        client = (
-            sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-        )
+        client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,
@@ -90,15 +87,16 @@ async def extract_questionnaire(_operation, request):
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
 async def extract_questionnaire_instance(_operation, request):
+    client = request["app"]["client"]
     questionnaire = (
-        await sdk.client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
+        await client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
     )
 
     resource = request["resource"]
-    client = sdk.client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = sdk.client.resource("QuestionnaireResponse", **request["resource"])
+        questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         await constraint_check(client, context)
         return await extract(client, questionnaire, context)
@@ -118,7 +116,7 @@ async def extract_questionnaire_instance(_operation, request):
                 ]
             )
 
-        questionnaire_response = sdk.client.resource(
+        questionnaire_response = client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
         if "launchContext" in questionnaire:

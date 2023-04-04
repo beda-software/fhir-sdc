@@ -1,10 +1,17 @@
+import pytest
+
 from app.operations.populate import populate
 
 questionnaire = {
     "resourceType": "Questionnaire",
     "id": "example-questionnaire",
     "status": "active",
-    "launchContext": [{"name": {"code": "patient"}, "type": ["Patient"], }, ],
+    "launchContext": [
+        {
+            "name": {"code": "patient"},
+            "type": ["Patient"],
+        },
+    ],
     "contained": [
         {
             "resourceType": "Bundle",
@@ -44,23 +51,28 @@ questionnaire = {
     ],
 }
 
-env = {"patient": {
-    "id": "example",
-    "resourceType": "Patient",
-    "name": [{"given": ["Peter", "Middlename"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]}, ],
-}}
+env = {
+    "patient": {
+        "id": "example",
+        "resourceType": "Patient",
+        "name": [
+            {"given": ["Peter", "Middlename"]},
+            {"given": ["Pit"]},
+            {"given": ["Little Pitty"]},
+        ],
+    }
+}
 
 
-async def test_populate_v3(sdk, safe_db):
-    patient_example = sdk.client.resource(
-        "Patient",
-        **env["patient"])
+@pytest.mark.asyncio
+async def test_populate_v3(aidbox_client, safe_db):
+    patient_example = aidbox_client.resource("Patient", **env["patient"])
 
     await patient_example.save()
 
     assert patient_example.id is not None
 
-    questionnaire_response = await populate(sdk.client, questionnaire, env)
+    questionnaire_response = await populate(aidbox_client, questionnaire, env)
 
     assert questionnaire_response == {
         "item": [

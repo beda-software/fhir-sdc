@@ -8,11 +8,9 @@ from sentry_sdk.integrations.logging import LoggingIntegration
 
 # Don't remove these imports
 import app.operations
-from app.sdk import sdk, sdk_settings
+from app.sdk import sdk
 
-coloredlogs.install(
-    level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+coloredlogs.install(level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
 )
@@ -26,5 +24,5 @@ sentry_logging = LoggingIntegration(
 sentry_sdk.init(integrations=[AioHttpIntegration(), sentry_logging])
 
 
-async def create_app():
-    return await _create_app(sdk_settings, sdk, debug=True)
+def create_app():
+    return _create_app(sdk)

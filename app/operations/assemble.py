@@ -6,7 +6,8 @@ from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
 from app.sdk import sdk
-from .utils import prepare_link_ids, prepare_variables, validate_context, get_user_sdk_client
+
+from .utils import get_user_sdk_client, prepare_link_ids, prepare_variables, validate_context
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -22,9 +23,7 @@ PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
 async def assemble(_operation, request):
     client = get_user_sdk_client(request)
-    questionnaire = await client.resources("Questionnaire").get(
-        id=request["route-params"]["id"]
-    )
+    questionnaire = await client.resources("Questionnaire").get(id=request["route-params"]["id"])
     root_elements = project(dict(questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
     questionnaire["item"] = await assemble_questionnaire(
         client, questionnaire, questionnaire["item"], root_elements

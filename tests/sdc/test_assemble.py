@@ -1,17 +1,20 @@
-from tests.sdc.test_assemble_then_populate import create_address_questionnaire
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-async def create_questionnaire(sdk, questionnaire):
-    q = sdk.client.resource("Questionnaire", **questionnaire)
+from tests.sdc.test_assemble_then_populate import create_address_questionnaire
+
+
+async def create_questionnaire(aidbox_client, questionnaire):
+    q = aidbox_client.resource("Questionnaire", **questionnaire)
     await q.save()
     assert q.id is not None
     return q
 
 
-async def test_assemble_sub_questionnaire(sdk, safe_db):
+@pytest.mark.asyncio
+async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
     get_given_name = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -33,7 +36,7 @@ async def test_assemble_sub_questionnaire(sdk, safe_db):
     )
 
     get_family_name = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -55,7 +58,7 @@ async def test_assemble_sub_questionnaire(sdk, safe_db):
     )
 
     q = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "resourceType": "Questionnaire",
@@ -122,9 +125,10 @@ async def test_assemble_sub_questionnaire(sdk, safe_db):
     }
 
 
-async def test_assemble_reuse_questionnaire(sdk, safe_db):
+@pytest.mark.asyncio
+async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
     address = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -158,7 +162,7 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
     )
 
     q = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "actice",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
@@ -315,11 +319,12 @@ async def test_assemble_reuse_questionnaire(sdk, safe_db):
     }
 
 
-async def test_validate_assemble_context(sdk):
-    address = await create_address_questionnaire(sdk)
+@pytest.mark.asyncio
+async def test_validate_assemble_context(aidbox_client):
+    address = await create_address_questionnaire(aidbox_client)
 
     q = await create_questionnaire(
-        sdk,
+        aidbox_client,
         {
             "status": "active",
             "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
