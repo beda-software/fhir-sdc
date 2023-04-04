@@ -4,69 +4,81 @@ questionnaire = {
     "resourceType": "Questionnaire",
     "id": "example-questionnaire",
     "status": "active",
-    "launchContext": [
-        {
-            "name": {
-                "code": "patient"
-            },
-            "type": ["Patient"],
-            "description": "Patient resource"
-        }
-    ],
+    "launchContext": [{"name": {"code": "patient"}, "type": ["Patient"], }, ],
     "contained": [
         {
             "resourceType": "Bundle",
-            "id": "Example",
-            "type": "transaction",
+            "id": "PrePopQuery",
+            "type": "batch",
             "entry": [
                 {
-                  "request": {
-                      "method": "GET",
-                      "url": "/Patient"
-                  }
-                }
-            ]
+                    "request": {
+                        "method": "GET",
+                        "url": "Patient?_id={{%patient.id}}",
+                    },
+                },
+            ],
         }
     ],
-    "sourceQueries": {
-        "localRef": "Bundle#Example"
-    },
+    "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
     "item": [
         {
             "type": "group",
-            "linkId": "example",
+            "linkId": "names",
+            "itemPopulationContext": {
+                "language": "text/fhirpath",
+                "expression": "%PrePopQuery.entry.resource.entry.resource",
+            },
             "item": [
                 {
-                    "text": "example",
+                    "repeats": True,
                     "type": "string",
-                    "linkId": "example",
-                    "hidden": True,
-                    "itemPopulationContext": {
-                      "language": "text/fhirpath",
-                      "expression": "%Expression"
-                    },
+                    "linkId": "firstName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "name.given.first()"
-                    }
-                }
-            ]
-        }
+                        "expression": "name.given",
+                    },
+                },
+            ],
+        },
     ],
-    "meta": {
-        "profile": ["https://beda.software/beda-emr-questionnaire"]
-    },
 }
 
-env = {'patient': {'resourceType': 'Patient', 'id': 'example-patient', 'name': [{'given': ['Name'], 'family': 'Name'}]}}
+env = {"patient": {
+    "id": "example",
+    "resourceType": "Patient",
+    "name": [{"given": ["Peter", "Middlename"]}, {"given": ["Pit"]}, {"given": ["Little Pitty"]}, ],
+}}
 
 
 async def test_populate_v3(sdk, safe_db):
-    qr = await populate(sdk.client, questionnaire, env)
+    patient_example = sdk.client.resource(
+        "Patient",
+        **env["patient"])
 
-    assert qr == {'item': [{'item': [{'linkId': 'example',
-                            'text': 'example'}],
-                            'linkId': 'example'}],
-                  'questionnaire': 'example-questionnaire',
-                  'resourceType': 'QuestionnaireResponse',
-                  }
+    await patient_example.save()
+
+    assert patient_example.id is not None
+
+    questionnaire_response = await populate(sdk.client, questionnaire, env)
+
+    assert questionnaire_response == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "linkId": "firstName",
+                        "answer": [
+                            {"value": {"string": "Peter"}},
+                            {"value": {"string": "Middlename"}},
+                            {"value": {"string": "Pit"}},
+                            {"value": {"string": "Little Pitty"}},
+                        ],
+                    }
+                ],
+                "linkId": "names",
+            },
+        ],
+        "questionnaire": questionnaire["id"],
+        "resourceType": "QuestionnaireResponse",
+    }
