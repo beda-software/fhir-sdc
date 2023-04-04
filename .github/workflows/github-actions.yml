@@ -1,8 +1,8 @@
 name: github-actions
 on: [push, pull_request]
 env:
-  BUILD_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:master
-  CACHE_IMAGE: ${{ secrets.DOCKER_HUB_REPOSITORY }}:latest
+  BUILD_IMAGE: bedasoftware/fhir-sdc:master
+  CACHE_IMAGE: bedasoftware/fhir-sdc:latest
   TESTS_AIDBOX_LICENSE: ${{ secrets.TESTS_AIDBOX_LICENSE }}
 jobs:
   Build:
