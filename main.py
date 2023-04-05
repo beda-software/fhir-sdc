@@ -2,12 +2,13 @@ import logging
 
 import coloredlogs
 import sentry_sdk
-from aidbox_python_sdk.main import create_app as _create_app
+from aidbox_python_sdk.main import init as init_aidbox_app
+from aidbox_python_sdk.main import setup_routes as setup_aidbox_app_routes
+from aiohttp import web
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-# Don't remove these imports
-import app.operations
+import app.operations  # pylint: disable=unused-import
 from app.sdk import sdk
 
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -25,7 +26,15 @@ sentry_sdk.init(integrations=[AioHttpIntegration(), sentry_logging])
 
 
 def create_app():
-    return _create_app(sdk)
+    app = web.Application()
+    app.cleanup_ctx.append(init_aidbox_app)
+    app.update(
+        settings=sdk.settings,
+        sdk=sdk,
+    )
+    setup_aidbox_app_routes(app)
+    return app
+
 
 async def create_gunicorn_app():
-    return _create_app(sdk)
+    return create_app()
