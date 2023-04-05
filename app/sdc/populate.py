@@ -1,52 +1,8 @@
-from aiohttp import web
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
-from app.sdk import sdk
-
-from .utils import (
-    get_type,
-    get_user_sdk_client,
-    load_source_queries,
-    parameter_to_env,
-    validate_context,
-)
-
-
-@sdk.operation(["POST"], ["Questionnaire", "$populate"])
-async def populate_questionnaire(_operation, request):
-    client = request["app"]["client"]
-    env = parameter_to_env(request["resource"])
-
-    questionnaire_data = env["Questionnaire"]
-    if not questionnaire_data:
-        # TODO: return OperationOutcome
-        return web.json_response(
-            {
-                "error": "bad_request",
-                "error_description": "`Questionnaire` parameter is required",
-            },
-            status=422,
-        )
-
-    questionnaire = client.resource("Questionnaire", **questionnaire_data)
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-
-    populated_resource = await populate(client, questionnaire, env)
-    return web.json_response(populated_resource)
-
-
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
-async def populate_questionnaire_instance(_operation, request):
-    client = request["app"]["client"]
-    questionnaire = await client.resources("Questionnaire").get(id=request["route-params"]["id"])
-    env = parameter_to_env(request["resource"])
-    env["Questionnaire"] = questionnaire
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-
-    populated_resource = await populate(client, questionnaire, env)
-    return web.json_response(populated_resource)
+from .utils import get_type, load_source_queries, validate_context
 
 
 async def populate(client, questionnaire, env):

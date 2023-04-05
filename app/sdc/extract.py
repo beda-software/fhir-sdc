@@ -1,32 +1,24 @@
-from aiohttp import ClientSession, web
+from aiohttp import ClientSession
 
-from app.sdk import sdk
-
-from ..operations.constraint_check import constraint_check
+from .constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
-from .utils import get_user_sdk_client, parameter_to_env, validate_context
+from .utils import parameter_to_env, validate_context
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$extract"])
-async def extract_questionnaire(_operation, request):
-    resource = request["resource"]
-    client = request["app"]["client"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
-
+async def extract_questionnaire(client, resource, jute_service):
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
+        questionnaire_response = client.resource("QuestionnaireResponse", **resource)
         questionnaire = (
             await client.resources("Questionnaire")
             .search(id=questionnaire_response["questionnaire"])
             .get()
         )
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-        client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
         await constraint_check(client, context)
         return await extract(client, questionnaire, context, jute_service)
 
     if resource["resourceType"] == "Parameters":
-        env = parameter_to_env(request["resource"])
+        env = parameter_to_env(resource)
 
         questionnaire_data = env.get("Questionnaire")
         if not questionnaire_data:
@@ -61,7 +53,6 @@ async def extract_questionnaire(_operation, request):
         )
         if "launchContext" in questionnaire:
             validate_context(questionnaire["launchContext"], env)
-        client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,
@@ -82,25 +73,15 @@ async def extract_questionnaire(_operation, request):
     )
 
 
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
-async def extract_questionnaire_instance(_operation, request):
-    client = request["app"]["client"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
-    questionnaire = (
-        await client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
-    )
-
-    resource = request["resource"]
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-
+async def extract_questionnaire_instance(client, questionnaire, resource, jute_service):
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
+        questionnaire_response = client.resource("QuestionnaireResponse", **resource)
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         await constraint_check(client, context)
         return await extract(client, questionnaire, context, jute_service)
 
     if resource["resourceType"] == "Parameters":
-        env = parameter_to_env(request["resource"])
+        env = parameter_to_env(resource)
 
         questionnaire_response_data = env.get("QuestionnaireResponse")
         if not questionnaire_response_data:
@@ -160,4 +141,4 @@ async def extract(client, questionnaire, context, jute_service):
                 ) as result:
                     bundle = await result.json()
                     resp.append(await client.execute("/", data=bundle))
-    return web.json_response(resp)
+    return resp

@@ -1,6 +1,6 @@
 import pytest
 
-from app.operations.populate import populate
+from app.sdc.populate import populate
 
 questionnaire = {
     "resourceType": "Questionnaire",

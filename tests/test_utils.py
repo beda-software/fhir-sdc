@@ -1,6 +1,6 @@
 import pytest
 
-from app.operations.utils import prepare_bundle, prepare_link_ids, resolve_string_template
+from app.sdc.utils import prepare_bundle, prepare_link_ids, resolve_string_template
 
 
 def test_prepare_bundle():

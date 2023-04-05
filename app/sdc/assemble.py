@@ -1,13 +1,9 @@
 import asyncio
-import json
 
-from aiohttp import web
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
-from app.sdk import sdk
-
-from .utils import get_user_sdk_client, prepare_link_ids, prepare_variables, validate_context
+from .utils import prepare_link_ids, prepare_variables, validate_context
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"],
@@ -20,10 +16,7 @@ WHITELISTED_ROOT_ELEMENTS = {
 PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 
-@sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
-async def assemble(_operation, request):
-    client = get_user_sdk_client(request)
-    questionnaire = await client.resources("Questionnaire").get(id=request["route-params"]["id"])
+async def assemble(client, questionnaire):
     root_elements = project(dict(questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
     questionnaire["item"] = await assemble_questionnaire(
         client, questionnaire, questionnaire["item"], root_elements
@@ -31,12 +24,12 @@ async def assemble(_operation, request):
     dict.update(questionnaire, root_elements)
     questionnaire.assembledFrom = questionnaire["id"]
     del questionnaire["id"]
-    return web.json_response(questionnaire, dumps=lambda a: json.dumps(a, default=list))
+    return questionnaire
 
 
 async def load_sub_questionnaire(client, root_elements, parent_item, item):
     if "subQuestionnaire" in item:
-        sub = await client.resources("Questionnaire").get(id=item["subQuestionnaire"])
+        sub = await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
 
         variables = prepare_variables(item)
         if validate_assemble_context(sub, variables):

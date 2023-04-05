@@ -1,14 +1,7 @@
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-from tests.sdc.test_assemble_then_populate import create_address_questionnaire
-
-
-async def create_questionnaire(aidbox_client, questionnaire):
-    q = aidbox_client.resource("Questionnaire", **questionnaire)
-    await q.save()
-    assert q.id is not None
-    return q
+from app.test.utils import create_address_questionnaire, create_questionnaire
 
 
 @pytest.mark.asyncio
