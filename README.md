@@ -1,16 +1,9 @@
-![example workflow](https://github.com/beda-software/aidbox-sdc/actions/workflows/github-actions.yml/badge.svg)
-# SDC spec implementation as Aidbox application
+![example workflow](https://github.com/beda-software/fhir-sdc/actions/workflows/github-actions.yml/badge.svg)
+# SDC spec implementation as microservice
 
-The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/2019May/index.html  
-
-## WIP Features:  
-
-- FHIRPath-based population http://hl7.org/fhir/uv/sdc/2019May/populate.html#fhirpath-based-population
-- Assemble operation https://jira.hl7.org/browse/FHIR-22356
-- JUTE-based extraction
+The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
 ## Further plans:
-- Support FHIR resource format https://docs.aidbox.app/modules-1/fhir-resources/aidbox-and-fhir-formats
 - JUTE-based population
 - Observation-based population
 - Observation-based extraction
