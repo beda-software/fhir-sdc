@@ -9,7 +9,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 import app.operations  # pylint: disable=unused-import
-from app.sdk import sdk
+from app.aidbox import sdk
 
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logging.basicConfig(
