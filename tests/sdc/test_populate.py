@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from tests.utils import create_parameters
+from app.test.utils import create_parameters
 
 
 @pytest.mark.asyncio

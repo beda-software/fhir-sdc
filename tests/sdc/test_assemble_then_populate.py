@@ -1,6 +1,6 @@
 import pytest
 
-from tests.utils import create_parameters
+from app.test.utils import create_parameters
 
 
 async def create_questionnaire(aidbox_client, questionnaire):

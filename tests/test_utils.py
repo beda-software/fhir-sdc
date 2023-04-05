@@ -136,10 +136,12 @@ def test_resolve_string_template(answer_type, values, expected):
             }
         ],
     }
-    input = (
+    template_input = (
         "/Patient?_id={{%QuestionnaireResponse.repeat(item).where(linkId='patients-set').answer.children()."
         + answer_type
         + "}}"
     )
-    result = resolve_string_template(input, {"QuestionnaireResponse": questionnaire_response})
+    result = resolve_string_template(
+        template_input, {"QuestionnaireResponse": questionnaire_response}
+    )
     assert result == expected

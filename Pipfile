@@ -16,9 +16,8 @@ isort = "*"
 autoflake = "*"
 importmagic = "*"
 epc = "*"
-pep8 = "*"
-flake8 = "*"
 ipython = "*"
+pylint = "*"
 
 [packages]
 python-dateutil = "==2.8.2"

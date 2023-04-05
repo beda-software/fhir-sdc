@@ -8,6 +8,6 @@ async def test_resolve_expression(aidbox_client, safe_db):
     env = {"LaunchPatient": {"resourceType": "Patient", "id": "test-id"}}
     data = {"expression": raw_expression, "env": env}
     resolved_expression = await aidbox_client.execute(
-        f"Questionnaire/$resolve-expression", method="POST", data=data, params=None
+        "Questionnaire/$resolve-expression", method="POST", data=data, params=None
     )
     assert resolved_expression == expected_expression

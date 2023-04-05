@@ -1,7 +1,7 @@
 import pytest
 from fhirpy.base.lib import OperationOutcome
 
-from tests.utils import create_parameters
+from app.test.utils import create_parameters
 
 
 @pytest.mark.asyncio

@@ -42,8 +42,6 @@ services:
       - env_tests
     environment:
       AIDBOX_LICENSE: ${TESTS_AIDBOX_LICENSE}
-    ports:
-    - 8080:8080
   devbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:
