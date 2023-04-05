@@ -58,7 +58,7 @@ async def load_sub_questionnaire(client, root_elements, parent_item, item):
 
 async def assemble_questionnaire(client, parent, questionnaire_items, root_elements):
     with_sub_items = questionnaire_items
-    while len([i for i in with_sub_items if "subQuestionnaire" in i]):
+    while len([i for i in with_sub_items if "subQuestionnaire" in i]) > 0:
         with_sub_items_futures = (
             load_sub_questionnaire(client, root_elements, parent, i) for i in with_sub_items
         )
