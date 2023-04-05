@@ -1,6 +1,6 @@
 from aiohttp import ClientSession, web
 
-from app.sdk import jute_service, sdk
+from app.sdk import sdk
 
 from ..operations.constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
@@ -11,6 +11,7 @@ from .utils import get_user_sdk_client, parameter_to_env, validate_context
 async def extract_questionnaire(_operation, request):
     resource = request["resource"]
     client = request["app"]["client"]
+    jute_service = request["app"]["settings"].JUTE_SERVICE
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
@@ -22,9 +23,9 @@ async def extract_questionnaire(_operation, request):
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
         await constraint_check(client, context)
-        return await extract(client, questionnaire, context)
+        return await extract(client, questionnaire, context, jute_service)
 
-    elif resource["resourceType"] == "Parameters":
+    if resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
 
         questionnaire_data = env.get("Questionnaire")
@@ -67,11 +68,7 @@ async def extract_questionnaire(_operation, request):
             **env,
         }
         await constraint_check(client, context)
-        return await extract(
-            client,
-            questionnaire,
-            context,
-        )
+        return await extract(client, questionnaire, context, jute_service)
 
     raise ConstraintCheckOperationOutcome(
         [
@@ -88,6 +85,7 @@ async def extract_questionnaire(_operation, request):
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
 async def extract_questionnaire_instance(_operation, request):
     client = request["app"]["client"]
+    jute_service = request["app"]["settings"].JUTE_SERVICE
     questionnaire = (
         await client.resources("Questionnaire").search(id=request["route-params"]["id"]).get()
     )
@@ -99,9 +97,9 @@ async def extract_questionnaire_instance(_operation, request):
         questionnaire_response = client.resource("QuestionnaireResponse", **request["resource"])
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         await constraint_check(client, context)
-        return await extract(client, questionnaire, context)
+        return await extract(client, questionnaire, context, jute_service)
 
-    elif resource["resourceType"] == "Parameters":
+    if resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
 
         questionnaire_response_data = env.get("QuestionnaireResponse")
@@ -127,11 +125,7 @@ async def extract_questionnaire_instance(_operation, request):
             **env,
         }
         await constraint_check(client, context)
-        return await extract(
-            client,
-            questionnaire,
-            context,
-        )
+        return await extract(client, questionnaire, context, jute_service)
 
     raise ConstraintCheckOperationOutcome(
         [
@@ -145,7 +139,7 @@ async def extract_questionnaire_instance(_operation, request):
     )
 
 
-async def extract(client, questionnaire, context):
+async def extract(client, questionnaire, context, jute_service):
     resp = []
     if jute_service == "aidbox":
         for mapper in questionnaire.get("mapping", []):

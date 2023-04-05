@@ -5,9 +5,8 @@ from aidbox_python_sdk.settings import Settings
 
 import app.manifest
 
-sdc_version = os.getenv("SDC_VERSION")
-jute_service = os.getenv("JUTE_SERVICE", "aidbox")
-sdk_settings = Settings()
+sdc_version = os.getenv("SDC_VERSION", "2.7.0")
+sdk_settings = Settings(SDC_VERSION=sdc_version, JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox"))
 
 resources = (
     app.manifest.meta_resources_v3_0_0
