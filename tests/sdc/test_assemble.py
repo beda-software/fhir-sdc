@@ -350,3 +350,143 @@ async def test_validate_assemble_context(aidbox_client):
     )
     with pytest.raises(OperationOutcome):
         await q.execute("$assemble", method="get")
+
+
+@pytest.mark.asyncio
+async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
+    get_given_name = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "itemContext": {
+                "language": "text/fhirpath",
+                "expression": "%LaunchPatient.name",
+            },
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "firstName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "given.first()",
+                    },
+                },
+            ],
+        },
+    )
+
+    get_family_name = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "itemContext": {
+                "language": "text/fhirpath",
+                "expression": "%LaunchPatient.name",
+            },
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "familyName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "family",
+                    },
+                },
+            ],
+        },
+    )
+
+    q = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "resourceType": "Questionnaire",
+            "item": [
+                {
+                    "linkId": "demographics",
+                    "type": "group",
+                    "item": [
+                        {
+                            "type": "display",
+                            "linkId": "givenNameGroup",
+                            "text": "Sub questionnaire is not supported",
+                            "subQuestionnaire": get_given_name.id,
+                        },
+                        {
+                            "type": "display",
+                            "linkId": "familyNameGroup",
+                            "text": "Sub questionnaire is not supported",
+                            "subQuestionnaire": get_family_name.id,
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+
+    assembled = await aidbox_client.execute(f"fhir/Questionnaire/{q['id']}/$assemble", method="get")
+
+    del assembled["meta"]
+
+    assert assembled == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "firstName",
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                                "valueExpression": {
+                                    "language": "text/fhirpath",
+                                    "expression": "given.first()",
+                                },
+                            }
+                        ],
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "familyName",
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                                "valueExpression": {
+                                    "language": "text/fhirpath",
+                                    "expression": "family",
+                                },
+                            }
+                        ],
+                    },
+                ],
+                "type": "group",
+                "linkId": "demographics",
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+                        "valueExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "%LaunchPatient.name",
+                        },
+                    }
+                ],
+            }
+        ],
+        "status": "active",
+        "resourceType": "Questionnaire",
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                "extension": [
+                    {"url": "name", "valueId": "LaunchPatient"},
+                    {"url": "type", "valueCode": "Patient"},
+                ],
+            },
+            {
+                "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
+                "valueCanonical": q.id,
+            },
+        ],
+    }

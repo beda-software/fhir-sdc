@@ -18,18 +18,25 @@ from .utils import get_user_sdk_client
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
 @sdk.operation(["GET"], ["fhir", "Questionnaire", {"name": "id"}, "$assemble"])
-async def assemble_op(_operation, request):
+async def assemble_op(operation, request):
+    is_fhir = operation["request"][1] == "fhir"
+
     client = get_user_sdk_client(request)
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
     )
 
-    assembled_questionnaire = await assemble(client, questionnaire)
-    return web.json_response(assembled_questionnaire, dumps=lambda a: json.dumps(a, default=list))
+    assembled_questionnaire_lazy = await assemble(client, questionnaire)
+    assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
+    if is_fhir:
+        assembled_questionnaire = (
+            await client.execute("$to-format/fhir", data=assembled_questionnaire)
+        )["resource"]
+    return web.json_response(assembled_questionnaire)
 
 
 @sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
-@sdk.operation(["POST"], ["fhir","QuestionnaireResponse", "$constraint-check"])
+@sdk.operation(["POST"], ["fhir", "QuestionnaireResponse", "$constraint-check"])
 async def constraint_check_operation(_operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
