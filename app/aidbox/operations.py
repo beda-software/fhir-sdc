@@ -13,7 +13,7 @@ from ..sdc import (
 )
 from ..sdc.utils import parameter_to_env
 from .sdk import sdk
-from .utils import get_user_sdk_client
+from .utils import get_aidbox_fhir_client, get_user_sdk_client
 
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -129,7 +129,9 @@ async def populate_questionnaire(operation, request):
 
     client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
-    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = await populate(
+        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
+    )
     if is_fhir:
         populated_resource = (await client.execute("$to-format/fhir", data=populated_resource))[
             "resource"

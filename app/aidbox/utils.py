@@ -1,4 +1,5 @@
 from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
+from fhirpy import AsyncFHIRClient
 
 
 def get_user_sdk_client(request):
@@ -11,3 +12,11 @@ def get_user_sdk_client(request):
         headers.pop("content-length")
 
     return AsyncAidboxClient(client.url, extra_headers=headers)
+
+
+def get_aidbox_fhir_client(aidbox_client):
+    return AsyncFHIRClient(
+        f"{aidbox_client.url}/fhir",
+        authorization=aidbox_client.authorization,
+        extra_headers=aidbox_client.extra_headers,
+    )
