@@ -1,7 +1,7 @@
 name: github-actions
 on: [push, pull_request]
 env:
-  BUILD_IMAGE: bedasoftware/fhir-sdc:master
+  BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
   TESTS_AIDBOX_LICENSE: ${{ secrets.TESTS_AIDBOX_LICENSE }}
 jobs:
@@ -15,18 +15,15 @@ jobs:
           --tag ${{ env.BUILD_IMAGE }} .
       - name: Run tests
         run: ./run_test.sh
-
-  Publish:
-    needs: Build
-    if: github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
           password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=$(echo ${GITHUB_REF#refs/heads/})" >>$GITHUB_OUTPUT
+        id: extract_branch
       - name: Set up Docker Buildx
         id: buildx
         uses: docker/setup-buildx-action@v1
@@ -34,4 +31,4 @@ jobs:
       - run: >-
           docker buildx build --platform linux/arm64,linux/amd64
           --cache-from ${{ env.CACHE_IMAGE }} --push
-          --tag ${{ env.BUILD_IMAGE }} --tag ${{ env.CACHE_IMAGE }} .
+          --tag ${{ env.BUILD_IMAGE }}:${{ steps.extract_branch.outputs.branch }} --tag ${{ env.CACHE_IMAGE }} .
