@@ -17,6 +17,7 @@ from .utils import get_user_sdk_client
 
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
+@sdk.operation(["GET"], ["fhir", "Questionnaire", {"name": "id"}, "$assemble"])
 async def assemble_op(_operation, request):
     client = get_user_sdk_client(request)
     questionnaire = (
@@ -28,6 +29,7 @@ async def assemble_op(_operation, request):
 
 
 @sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
+@sdk.operation(["POST"], ["fhir","QuestionnaireResponse", "$constraint-check"])
 async def constraint_check_operation(_operation, request):
     env = parameter_to_env(request["resource"])
     questionnaire = env["Questionnaire"]
@@ -41,6 +43,7 @@ async def constraint_check_operation(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$context"])
+@sdk.operation(["POST"], ["fhir", "Questionnaire", "$context"])
 async def get_questionnaire_context_operation(_operation, request):
     client = request["app"]["client"]
     env = parameter_to_env(request["resource"])
@@ -55,6 +58,7 @@ async def get_questionnaire_context_operation(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
+@sdk.operation(["POST"], ["fhir", "Questionnaire", "$extract"])
 async def extract_questionnaire_operation(_operation, request):
     resource = request["resource"]
     client = request["app"]["client"]
@@ -75,6 +79,7 @@ async def extract_questionnaire_operation(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
+@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$extract"])
 async def extract_questionnaire_instance_operation(_operation, request):
     resource = request["resource"]
     client = request["app"]["client"]
@@ -93,6 +98,7 @@ async def extract_questionnaire_instance_operation(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
+@sdk.operation(["POST"], ["fhir", "Questionnaire", "$populate"])
 async def populate_questionnaire(_operation, request):
     client = request["app"]["client"]
     env = parameter_to_env(request["resource"])
@@ -116,6 +122,7 @@ async def populate_questionnaire(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
+@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$populate"])
 async def populate_questionnaire_instance(_operation, request):
     client = request["app"]["client"]
     questionnaire = (
@@ -130,5 +137,6 @@ async def populate_questionnaire_instance(_operation, request):
 
 
 @sdk.operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
+@sdk.operation(["POST"], ["fhir", "Questionnaire", "$resolve-expression"], public=True)
 def resolve_expression_operation(_operation, request):
     return web.json_response(resolve_expression(request["resource"]))
