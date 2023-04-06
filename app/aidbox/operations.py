@@ -106,10 +106,10 @@ async def extract_questionnaire_instance_operation(_operation, request):
 
 @sdk.operation(["POST"], ["Questionnaire", "$populate"])
 @sdk.operation(["POST"], ["fhir", "Questionnaire", "$populate"])
-async def populate_questionnaire(_operation, request):
+async def populate_questionnaire(operation, request):
+    is_fhir = operation["request"][1] == "fhir"
     client = request["app"]["client"]
     env = parameter_to_env(request["resource"])
-
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
         # TODO: return OperationOutcome
@@ -121,10 +121,19 @@ async def populate_questionnaire(_operation, request):
             status=422,
         )
 
-    questionnaire = client.resource("Questionnaire", **questionnaire_data)
+    if is_fhir:
+        converted = await client.execute("$to-format/aidbox", data=questionnaire_data)
+        questionnaire = client.resource("Questionnaire", **converted["resource"])
+    else:
+        questionnaire = client.resource("Questionnaire", **questionnaire_data)
+
     client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
     populated_resource = await populate(client, questionnaire, env)
+    if is_fhir:
+        populated_resource = (await client.execute("$to-format/fhir", data=populated_resource))[
+            "resource"
+        ]
     return web.json_response(populated_resource)
 
 

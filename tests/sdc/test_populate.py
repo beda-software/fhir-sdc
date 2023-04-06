@@ -624,4 +624,52 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
         "questionnaire": q.id,
         "item": [{"linkId": "patientName", "answer": [{"value": {"string": "Peter Chalmers"}}]}],
     }
+
+
+@pytest.mark.asyncio
+async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
+    q = {
+        "item": [
+            {
+                "type": "string",
+                "linkId": "patientName",
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                        "valueExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family",
+                        },
+                    }
+                ],
+            }
+        ],
+        "status": "active",
+        "resourceType": "Questionnaire",
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                "extension": [
+                    {"url": "name", "valueId": "LaunchPatient"},
+                    {"url": "type", "valueCode": "Patient"},
+                ],
+            }
+        ],
+    }
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
+    }
+
+    p = await aidbox_client.execute(
+        "fhir/Questionnaire/$populate",
+        data=create_parameters(LaunchPatient=launch_patient, Questionnaire=q),
+    )
+
+    assert p == {
+        "item": [{"answer": [{"valueString": "Peter Chalmers"}], "linkId": "patientName"}],
+        "questionnaire": None,
+        "resourceType": "QuestionnaireResponse",
     }
