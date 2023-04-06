@@ -741,3 +741,72 @@ async def test_source_query_populate_fhir(aidbox_client, safe_db):
         "questionnaire": None,
         "resourceType": "QuestionnaireResponse",
     }
+
+
+@pytest.mark.asyncio
+async def test_source_query_populate_fhir_from_api(aidbox_client, safe_db):
+    q = {
+        "item": [
+            {
+                "type": "dateTime",
+                "linkId": "deceased",
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                        "valueExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
+                        },
+                    }
+                ],
+            }
+        ],
+        "status": "active",
+        "resourceType": "Questionnaire",
+        "contained": [
+            {
+                "id": "PrePopQuery",
+                "type": "batch",
+                "entry": [
+                    {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
+                ],
+                "resourceType": "Bundle",
+            }
+        ],
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                "extension": [
+                    {"url": "name", "valueId": "LaunchPatient"},
+                    {"url": "type", "valueCode": "Patient"},
+                ],
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                "valueReference": {"reference": "#Bundle#PrePopQuery"},
+            },
+        ],
+    }
+
+    questionnaire = await aidbox_client.execute("fhir/Questionnaire", method="PUT", data=q)
+    assert questionnaire.id
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "deceased": {"dateTime": "2020"},
+    }
+
+    patient = aidbox_client.resource("Patient", **launch_patient)
+    await patient.save()
+
+    p = await aidbox_client.execute(
+        f"fhir/Questionnaire/{questionnaire.id}/$populate",
+        data=create_parameters(LaunchPatient={"resourceType": "Patient", "id": patient["id"]}),
+    )
+
+    assert p == {
+        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
+        "questionnaire": questionnaire.id,
+        "resourceType": "QuestionnaireResponse",
+    }

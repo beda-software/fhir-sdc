@@ -141,7 +141,8 @@ async def populate_questionnaire(operation, request):
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
 @sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$populate"])
-async def populate_questionnaire_instance(_operation, request):
+async def populate_questionnaire_instance(operation, request):
+    is_fhir = operation["request"][1] == "fhir"
     client = request["app"]["client"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
@@ -150,7 +151,13 @@ async def populate_questionnaire_instance(_operation, request):
     env["Questionnaire"] = questionnaire
     client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
-    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = await populate(
+        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
+    )
+    if is_fhir:
+        populated_resource = (await client.execute("$to-format/fhir", data=populated_resource))[
+            "resource"
+        ]
     return web.json_response(populated_resource)
 
 
