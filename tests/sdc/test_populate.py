@@ -600,7 +600,7 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
                     "linkId": "patientName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family",
+                        "expression": "%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family",
                     },
                 }
             ],
@@ -622,5 +622,6 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
     assert p == {
         "resourceType": "QuestionnaireResponse",
         "questionnaire": q.id,
-        "item": [{"linkId": "patientName"}],
+        "item": [{"linkId": "patientName", "answer": [{"value": {"string": "Peter Chalmers"}}]}],
+    }
     }
