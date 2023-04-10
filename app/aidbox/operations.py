@@ -84,7 +84,7 @@ async def extract_questionnaire_operation(operation, request):
         env = parameter_to_env(request["resource"])
         questionnaire_data = env.get("Questionnaire")
         questionnaire = (
-            await client.execute("$to-format/aidbox", data=questionnaire_data)
+            (await client.execute("$to-format/aidbox", data=questionnaire_data))["resource"]
             if is_fhir
             else questionnaire_data
         )
