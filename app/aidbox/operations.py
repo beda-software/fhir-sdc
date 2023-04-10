@@ -5,7 +5,7 @@ from aiohttp import web
 from ..sdc import (
     assemble,
     constraint_check,
-    extract_questionnaire,
+    extract,
     extract_questionnaire_instance,
     get_questionnaire_context,
     populate,
@@ -66,23 +66,46 @@ async def get_questionnaire_context_operation(_operation, request):
 
 @sdk.operation(["POST"], ["Questionnaire", "$extract"])
 @sdk.operation(["POST"], ["fhir", "Questionnaire", "$extract"])
-async def extract_questionnaire_operation(_operation, request):
+async def extract_questionnaire_operation(operation, request):
+    is_fhir = operation["request"][1] == "fhir"
     resource = request["resource"]
     client = request["app"]["client"]
     jute_service = request["app"]["settings"].JUTE_SERVICE
+
     run_on_behalf_of_root = False
     if resource["resourceType"] == "QuestionnaireResponse":
+        env = {}
+        questionnaire_response = resource
         questionnaire = (
             await client.resources("Questionnaire").search(_id=resource["questionnaire"]).get()
         )
         run_on_behalf_of_root = questionnaire.get("runOnBehalfOfRoot")
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request["resource"])
-        questionnaire = env.get("Questionnaire")
+        questionnaire_data = env.get("Questionnaire")
+        questionnaire = (
+            await client.execute("$to-format/aidbox", data=questionnaire_data)
+            if is_fhir
+            else questionnaire_data
+        )
+        questionnaire_response = env.get("QuestionnaireResponse")
         run_on_behalf_of_root = questionnaire.get("runOnBehalfOfRoot")
+
+    mappings = [
+        await client.resources("Mapping").search(_id=m["id"]).get()
+        for m in questionnaire.get("mapping", [])
+    ]
     client = request["app"]["client"] if run_on_behalf_of_root else get_user_sdk_client(request)
 
-    return web.json_response(await extract_questionnaire(client, resource, jute_service))
+    context = {
+        "Questionnaire": questionnaire,
+        "QuestionnaireResponse": questionnaire_response,
+        **env,
+    }
+
+    await constraint_check(get_aidbox_fhir_client(client) if is_fhir else client, context)
+    extraction_result = await extract(client, mappings, context, jute_service)
+    return web.json_response(extraction_result)
 
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])

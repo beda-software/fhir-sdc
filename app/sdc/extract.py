@@ -77,8 +77,12 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
+        mappings = [
+            await client.resources("Mapping").search(_id=m["id"]).get()
+            for m in questionnaire.get("mapping", [])
+        ]
         await constraint_check(client, context)
-        return await extract(client, questionnaire, context, jute_service)
+        return await extract(client, mappings, context, jute_service)
 
     if resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
@@ -105,8 +109,12 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
             "Questionnaire": questionnaire,
             **env,
         }
+        mappings = [
+            await client.resources("Mapping").search(_id=m["id"]).get()
+            for m in questionnaire.get("mapping", [])
+        ]
         await constraint_check(client, context)
-        return await extract(client, questionnaire, context, jute_service)
+        return await extract(client, mappings, context, jute_service)
 
     raise ConstraintCheckOperationOutcome(
         [
@@ -120,22 +128,20 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
     )
 
 
-async def extract(client, questionnaire, context, jute_service):
+async def extract(client, mappings, context, jute_service):
     resp = []
     if jute_service == "aidbox":
-        for mapper in questionnaire.get("mapping", []):
+        for mapper in mappings:
             resp.append(
                 await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
             )
     else:
-        for mr in questionnaire.get("mapping", []):
-            mapping = client.resource("Mapping", id=mr.id)
-            await mapping.refresh()
+        for mapper in mappings:
             async with ClientSession() as session:
                 async with session.post(
                     jute_service,
                     json={
-                        "template": mapping["body"],
+                        "template": mapper["body"],
                         "context": context,
                     },
                 ) as result:
