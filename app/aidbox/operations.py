@@ -2,6 +2,8 @@ import json
 
 from aiohttp import web
 
+from app.fce import from_first_class_extension, to_first_class_extension
+
 from ..sdc import (
     assemble,
     constraint_check,
@@ -29,9 +31,7 @@ async def assemble_op(operation, request):
     assembled_questionnaire_lazy = await assemble(client, questionnaire)
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
     if is_fhir:
-        assembled_questionnaire = (
-            await client.execute("$to-format/fhir", data=assembled_questionnaire)
-        )["resource"]
+        assembled_questionnaire = from_first_class_extension(assembled_questionnaire)
     return web.json_response(assembled_questionnaire)
 
 
@@ -84,9 +84,7 @@ async def extract_questionnaire_operation(operation, request):
         env = parameter_to_env(request["resource"])
         questionnaire_data = env.get("Questionnaire")
         questionnaire = (
-            (await client.execute("$to-format/aidbox", data=questionnaire_data))["resource"]
-            if is_fhir
-            else questionnaire_data
+            to_first_class_extension(questionnaire_data) if is_fhir else questionnaire_data
         )
         questionnaire_response = env.get("QuestionnaireResponse")
         run_on_behalf_of_root = questionnaire.get("runOnBehalfOfRoot")
@@ -145,7 +143,7 @@ async def populate_questionnaire(operation, request):
         )
 
     if is_fhir:
-        converted = await client.execute("$to-format/aidbox", data=questionnaire_data)
+        converted = to_first_class_extension(questionnaire_data)
         questionnaire = client.resource("Questionnaire", **converted["resource"])
     else:
         questionnaire = client.resource("Questionnaire", **questionnaire_data)
@@ -156,9 +154,7 @@ async def populate_questionnaire(operation, request):
         get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
     )
     if is_fhir:
-        populated_resource = (await client.execute("$to-format/fhir", data=populated_resource))[
-            "resource"
-        ]
+        populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
@@ -178,9 +174,7 @@ async def populate_questionnaire_instance(operation, request):
         get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
     )
     if is_fhir:
-        populated_resource = (await client.execute("$to-format/fhir", data=populated_resource))[
-            "resource"
-        ]
+        populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
