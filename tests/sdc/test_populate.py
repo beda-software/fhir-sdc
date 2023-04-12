@@ -775,7 +775,13 @@ async def test_source_query_populate_fhir_from_api(aidbox_client, safe_db):
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
                 "extension": [
-                    {"url": "name", "valueId": "LaunchPatient"},
+                    {
+                        "url": "name",
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                            "code": "LaunchPatient",
+                        },
+                    },
                     {"url": "type", "valueCode": "Patient"},
                 ],
             },

@@ -26,8 +26,8 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     ],
                 }
             ],
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
-            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
             "item": [
                 {
                     "type": "string",
@@ -45,7 +45,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "linkId": "patient-appointment-display",
