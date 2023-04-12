@@ -138,15 +138,8 @@ async def load_source_queries(client, questionnaire, env):
 def validate_context(context_definition, env):
     all_vars = env.keys()
     errors = []
-
     for item in context_definition:
-        extensions = item["extension"]
-
-        for ext in extensions:
-            if "url" in ext and ext["url"] == "name":
-                name = ext["valueCoding"]["code"]
-                break
-
+        name = item["name"]["code"]
         if name not in all_vars:
             errors.append(
                 {
@@ -155,6 +148,5 @@ def validate_context(context_definition, env):
                     "human": "Context variable {} not defined".format(name),
                 }
             )
-
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
