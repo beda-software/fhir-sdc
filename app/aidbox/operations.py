@@ -144,7 +144,7 @@ async def populate_questionnaire(operation, request):
 
     if is_fhir:
         converted = to_first_class_extension(questionnaire_data)
-        questionnaire = client.resource("Questionnaire", **converted["resource"])
+        questionnaire = client.resource("Questionnaire", **converted)
     else:
         questionnaire = client.resource("Questionnaire", **questionnaire_data)
 

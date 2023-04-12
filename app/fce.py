@@ -817,3 +817,30 @@ def processExtensionsToFHIR(questionnaire):
         questionnaire["extension"] = questionnaire.get("extension", [])
         questionnaire["extension"].append(mapping_extension)
         del questionnaire["mapping"]
+
+    if questionnaire.get("assembledFrom"):
+        assembled_from_extension = {
+            "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
+            "valueCanonical": questionnaire.get("assembledFrom"),
+        }
+        questionnaire["extension"] = questionnaire.get("extension", [])
+        questionnaire["extension"].append(assembled_from_extension)
+        del questionnaire["assembledFrom"]
+
+    def process_item(item):
+        if "item" in item:
+            for sub_item in item["item"]:
+                process_item(sub_item)
+
+        if item.get("itemContext"):
+            item_context_extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+                "valueExpression": item["itemContext"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(item_context_extension)
+            del item["itemContext"]
+
+    if "item" in questionnaire:
+        for item in questionnaire["item"]:
+            process_item(item)
