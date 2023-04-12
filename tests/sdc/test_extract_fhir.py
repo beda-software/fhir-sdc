@@ -64,6 +64,9 @@ questionnaire = {
     ],
     "status": "active",
     "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
+    "meta": {
+        "profile": ["https://beda.software/beda-emr-questionnaire"],
+    },
 }
 
 
