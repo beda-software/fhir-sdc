@@ -6,7 +6,7 @@ from funcy.seqs import concat, distinct, flatten
 from .utils import prepare_link_ids, prepare_variables, validate_context
 
 WHITELISTED_ROOT_ELEMENTS = {
-    "launchContext": lambda i: i["name"],
+    "launchContext": lambda i: i["name"]["code"],
     "mapping": lambda i: i["id"],
     "contained": lambda i: i["id"],
     "sourceQueries": lambda i: i.get("id", i["localRef"]),
