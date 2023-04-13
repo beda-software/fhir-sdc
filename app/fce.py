@@ -793,7 +793,13 @@ def processExtensionsToFHIR(questionnaire):
             description = launchContext.get("description")
 
             launch_context_extension = [
-                {"url": "name", "valueId": {"code": name}},
+                {
+                    "url": "name",
+                    "valueCoding": {
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                        "code": name,
+                    },
+                },
                 {"url": "type", "valueCode": type_},
             ]
 
