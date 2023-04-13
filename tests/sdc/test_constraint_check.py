@@ -10,7 +10,7 @@ async def test_email_uniq(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "sourceQueries": {"localRef": "Bundle#AllEmails"},
+            "sourceQueries": [{"localRef": "Bundle#AllEmails"}],
             "contained": [
                 {
                     "resourceType": "Bundle",

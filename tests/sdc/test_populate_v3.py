@@ -27,7 +27,7 @@ questionnaire = {
             ],
         }
     ],
-    "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
+    "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
     "item": [
         {
             "type": "group",

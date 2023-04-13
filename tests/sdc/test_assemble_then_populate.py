@@ -27,7 +27,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                 }
             ],
             "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
-            "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
+            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
             "item": [
                 {
                     "type": "string",
@@ -120,7 +120,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         "resourceType": "Questionnaire",
         "status": "active",
         "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
-        "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
+        "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
         "contained": [
             {
                 "resourceType": "Bundle",

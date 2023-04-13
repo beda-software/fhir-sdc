@@ -395,7 +395,7 @@ async def test_source_queries_populate(aidbox_client, safe_db):
                     "type": "Patient",
                 },
             ],
-            "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
+            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
             "item": [
                 {
                     "type": "string",

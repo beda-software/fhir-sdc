@@ -12,6 +12,7 @@ manifest = {
             "path": ["sourceQueries"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+            "isCollection": True,
         },
         "Questionnaire.launchContext": {
             "path": ["launchContext"],

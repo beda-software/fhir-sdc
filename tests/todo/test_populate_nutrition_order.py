@@ -16,7 +16,7 @@ async def test_populate_nutritio_order(aidbox_client, safe_db):
         **{
             "status": "active",
             "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
-            "sourceQueries": {"localRef": "Bundle#DietAndNutrition"},
+            "sourceQueries": [{"localRef": "Bundle#DietAndNutrition"}],
             "contained": [
                 {
                     "id": "DietAndNutrition",
