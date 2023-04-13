@@ -13,6 +13,6 @@ export TEST_COMMAND="pipenv run pytest --cov-report html --cov-report term:skip-
 
 COMPOSE_FILES="-f docker-compose.tests.yaml"
 
-docker-compose -f docker-compose.tests.yaml build
-docker-compose $COMPOSE_FILES  up --exit-code-from backend backend
+docker compose -f docker-compose.tests.yaml build
+docker compose $COMPOSE_FILES  up --exit-code-from backend backend
 exit $?
