@@ -20,8 +20,8 @@ manifest = {
             "isCollection": True,
         },
         "Questionnaire.launchContext.name": {
-            "type": {"resourceType": "Entity", "id": "id"},
-            "path": ["launchContext", "name", "code"],
+            "type": {"resourceType": "Entity", "id": "Coding"},
+            "path": ["launchContext", "name"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "name",
         },
