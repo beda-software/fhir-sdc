@@ -16,6 +16,7 @@ logging.basicConfig(
 )
 logging.getLogger("aidbox_sdk").setLevel(logging.INFO)
 logging.getLogger("urllib3").setLevel(logging.INFO)
+logging.getLogger("faker").setLevel(logging.WARNING)
 
 sentry_logging = LoggingIntegration(
     level=logging.DEBUG,  # Capture info and above as breadcrumbs
