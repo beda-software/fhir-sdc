@@ -1,5 +1,7 @@
 import copy
 
+from fhirpy.base.utils import get_by_path
+
 
 def trim_empty(e):
     for prop, val in list(e.items()):
@@ -321,9 +323,9 @@ def process_launch_context(fhir_questionnaire):
             None,
         )
 
-        name_code = name_extension.get("valueId", {}).get("code") if name_extension else None
-        type_code = type_extension.get("valueCode") if type_extension else None
-        description = description_extension.get("valueString") if description_extension else None
+        name_code = get_by_path(name_extension, ["valueCoding", "code"])
+        type_code = get_by_path(type_extension, ["valueCode"])
+        description = get_by_path(description_extension, ["valueString"])
 
         context = {
             "name": {
