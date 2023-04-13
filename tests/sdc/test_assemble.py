@@ -157,7 +157,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
     q = await create_questionnaire(
         aidbox_client,
         {
-            "status": "actice",
+            "status": "active",
             "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
@@ -228,8 +228,8 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
     assert assembled == {
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
-        "status": "actice",
-        "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+        "status": "active",
+        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
         "item": [
             {
                 "type": "group",

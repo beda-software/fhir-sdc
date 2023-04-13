@@ -139,7 +139,9 @@ def validate_context(context_definition, env):
     all_vars = env.keys()
     errors = []
     for item in context_definition:
-        name = item["name"]["code"]
+        name = item["name"]
+        if not isinstance(name, str):
+            name = item["name"]["code"]
         if name not in all_vars:
             errors.append(
                 {
