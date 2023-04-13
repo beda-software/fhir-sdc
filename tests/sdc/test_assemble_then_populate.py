@@ -119,8 +119,8 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
-        "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+        "sourceQueries": {"localRef": "Bundle#PrePopQuery"},
         "contained": [
             {
                 "resourceType": "Bundle",

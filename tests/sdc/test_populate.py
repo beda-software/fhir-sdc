@@ -541,7 +541,7 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
     q = aidbox_client.resource(
         "Questionnaire",
         **{
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "string",
@@ -591,7 +591,7 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
     q = aidbox_client.resource(
         "Questionnaire",
         **{
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "string",
@@ -648,7 +648,13 @@ async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
                 "extension": [
-                    {"url": "name", "valueId": "LaunchPatient"},
+                    {
+                        "url": "name",
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                            "code": "LaunchPatient",
+                        },
+                    },
                     {"url": "type", "valueCode": "Patient"},
                 ],
             }
@@ -676,6 +682,9 @@ async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
 @pytest.mark.asyncio
 async def test_source_query_populate_fhir(aidbox_client, safe_db):
     q = {
+        "meta": {
+            "profile": ["https://beda.software/beda-emr-questionnaire"],
+        },
         "item": [
             {
                 "type": "dateTime",
@@ -707,7 +716,13 @@ async def test_source_query_populate_fhir(aidbox_client, safe_db):
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
                 "extension": [
-                    {"url": "name", "valueId": "LaunchPatient"},
+                    {
+                        "url": "name",
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                            "code": "LaunchPatient",
+                        },
+                    },
                     {"url": "type", "valueCode": "Patient"},
                 ],
             },

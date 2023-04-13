@@ -10,7 +10,7 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -32,7 +32,7 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -86,7 +86,7 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
         "item": [
             {
                 "linkId": "demographics",
@@ -124,7 +124,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "assembleContext": [{"name": "prefix", "type": "string"}],
             "item": [
                 {
@@ -158,7 +158,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "actice",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "group",
@@ -320,7 +320,7 @@ async def test_validate_assemble_context(aidbox_client):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "group",
@@ -358,7 +358,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -380,7 +380,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": "LaunchPatient", "type": "Patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
