@@ -342,7 +342,7 @@ def process_launch_context(fhir_questionnaire):
     return result
 
 
-def processMapping(fhirQuestionnaire):
+def process_mapping(fhirQuestionnaire):
     mapperExtensions = list(
         filter(
             lambda ext: ext.get("url")
@@ -365,6 +365,24 @@ def processMapping(fhirQuestionnaire):
     )
 
 
+def process_source_queries(fhirQuestionnaire):
+    extensions = list(
+        filter(
+            lambda ext: ext.get("url")
+            == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+            fhirQuestionnaire.get("extension", []),
+        )
+    )
+    return list(
+        map(
+            lambda ext: {
+                "localRef": get_by_path(ext, ["valueReference", "reference"], default="")[1:]
+            },
+            extensions,
+        )
+    )
+
+
 def processMeta(fhirQuestionnaire):
     createdAt = get_created_at(fhirQuestionnaire)
     return {**fhirQuestionnaire.get("meta", {}), **createdAt, "extension": None}
@@ -380,11 +398,15 @@ def processItems(fhirQuestionnaire):
 
 def processExtensions(fhirQuestionnaire):
     launchContext = process_launch_context(fhirQuestionnaire)
-    mapping = processMapping(fhirQuestionnaire)
+    mapping = process_mapping(fhirQuestionnaire)
+    source_queries = process_source_queries(fhirQuestionnaire)
+
+    print("source_queries=", source_queries)
 
     return {
-        "launchContext": launchContext if launchContext and len(launchContext) else None,
-        "mapping": mapping if mapping and len(mapping) else None,
+        "launchContext": launchContext if launchContext else None,
+        "mapping": mapping if mapping else None,
+        "sourceQueries": source_queries if source_queries else None,
     }
 
 
@@ -560,6 +582,7 @@ def to_first_class_extension(fhirResource):
                 "item": item,
                 "launchContext": extensions["launchContext"],
                 "mapping": extensions["mapping"],
+                "sourceQueries": extensions["sourceQueries"],
                 "extension": None,
             }
         )
