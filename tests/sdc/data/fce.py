@@ -7967,3 +7967,44 @@ vitals_fhir_Questionnaire = {
     "id": "vitals",
     "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/vitals",
 }
+
+source_queries_fhir_questionnaire = {
+    "meta": {
+        "profile": ["https://beda.software/beda-emr-questionnaire"],
+    },
+    "item": [{"linkId": "question-1", "type": "string", "text": "Question"}],
+    "status": "active",
+    "resourceType": "Questionnaire",
+    "contained": [
+        {
+            "id": "PrePopQuery",
+            "type": "batch",
+            "entry": [{"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}],
+            "resourceType": "Bundle",
+        }
+    ],
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+            "valueReference": {"reference": "#Bundle#PrePopQuery"},
+        },
+    ],
+}
+
+source_queries_aidbox_questionnaire = {
+    "meta": {
+        "profile": ["https://beda.software/beda-emr-questionnaire"],
+    },
+    "item": [{"linkId": "question-1", "type": "string", "text": "Question"}],
+    "status": "active",
+    "resourceType": "Questionnaire",
+    "contained": [
+        {
+            "id": "PrePopQuery",
+            "type": "batch",
+            "entry": [{"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}],
+            "resourceType": "Bundle",
+        }
+    ],
+    "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+}

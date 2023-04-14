@@ -304,6 +304,30 @@ def process_items_to_fhir(items):
 
 
 def process_extension_to_fhir(questionnaire):
+    process_launch_context(questionnaire)
+    process_mapping(questionnaire)
+    process_assebled_from(questionnaire)
+    process_source_queries(questionnaire)
+
+    def process_item(item):
+        if "item" in item:
+            for sub_item in item["item"]:
+                process_item(sub_item)
+        if item.get("itemContext"):
+            item_context_extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+                "valueExpression": item["itemContext"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(item_context_extension)
+            del item["itemContext"]
+
+    if "item" in questionnaire:
+        for item in questionnaire["item"]:
+            process_item(item)
+
+
+def process_launch_context(questionnaire):
     if questionnaire.get("launchContext"):
         extension = []
         for launchContext in questionnaire.get("launchContext"):
@@ -336,15 +360,21 @@ def process_extension_to_fhir(questionnaire):
         questionnaire["extension"].extend(extension)
         del questionnaire["launchContext"]
 
-    if questionnaire.get("mapping"):
-        mapping_extension = {
-            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
-            "valueReference": {"reference": f"Mapping/{questionnaire.get('mapping')[0].get('id')}"},
-        }
-        questionnaire["extension"] = questionnaire.get("extension", [])
-        questionnaire["extension"].append(mapping_extension)
+
+def process_mapping(questionnaire):
+    if "mapping" in questionnaire:
+        mapping = questionnaire["mapping"]
+        for item in mapping:
+            mapping_extension = {
+                "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+                "valueReference": {"reference": f"Mapping/{item['id']}"},
+            }
+            questionnaire["extension"] = questionnaire.get("extension", [])
+            questionnaire["extension"].append(mapping_extension)
         del questionnaire["mapping"]
 
+
+def process_assebled_from(questionnaire):
     if questionnaire.get("assembledFrom"):
         assembled_from_extension = {
             "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
@@ -354,20 +384,15 @@ def process_extension_to_fhir(questionnaire):
         questionnaire["extension"].append(assembled_from_extension)
         del questionnaire["assembledFrom"]
 
-    def process_item(item):
-        if "item" in item:
-            for sub_item in item["item"]:
-                process_item(sub_item)
 
-        if item.get("itemContext"):
-            item_context_extension = {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
-                "valueExpression": item["itemContext"],
+def process_source_queries(questionnaire):
+    if "sourceQueries" in questionnaire:
+        source_queries = questionnaire["sourceQueries"]
+        for item in source_queries:
+            extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                "valueReference": {"reference": f"#{item['localRef']}"},
             }
-            item["extension"] = item.get("extension", [])
-            item["extension"].append(item_context_extension)
-            del item["itemContext"]
-
-    if "item" in questionnaire:
-        for item in questionnaire["item"]:
-            process_item(item)
+            questionnaire["extension"] = questionnaire.get("extension", [])
+            questionnaire["extension"].append(extension)
+        del questionnaire["sourceQueries"]
