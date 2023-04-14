@@ -61,6 +61,8 @@ from tests.sdc.data.fce import (
     practitioner_fhir_QuestionnaireResponse,
     source_queries_aidbox_questionnaire,
     source_queries_fhir_questionnaire,
+    few_answers_fhir_questionnaire_response,
+    few_answers_aidbox_questionnaire_response,
 )
 
 
@@ -117,6 +119,10 @@ def test_fhir_to_fce_QuestionnaireResponse():
         to_first_class_extension(newappointment_fhir_QuestionnaireResponse)
         == newappointment_aidbox_QuestionnaireResponse
     )
+    assert (
+        to_first_class_extension(few_answers_fhir_questionnaire_response)
+        == few_answers_aidbox_questionnaire_response
+    )
 
 
 def test_fce_to_fhir_QuestionnaireResponse():
@@ -171,6 +177,10 @@ def test_fce_to_fhir_QuestionnaireResponse():
     assert (
         from_first_class_extension(newappointment_aidbox_QuestionnaireResponse)
         == newappointment_fhir_QuestionnaireResponse
+    )
+    assert (
+        from_first_class_extension(few_answers_aidbox_questionnaire_response)
+        == few_answers_fhir_questionnaire_response
     )
 
 
@@ -282,4 +292,7 @@ def test_fce_to_fhir_Questionnaire():
         == review_of_systems_fhir_Questionnaire
     )
     assert from_first_class_extension(vitals_aidbox_Questionnaire) == vitals_fhir_Questionnaire
-    assert from_first_class_extension(source_queries_aidbox_questionnaire) == source_queries_fhir_questionnaire
+    assert (
+        from_first_class_extension(source_queries_aidbox_questionnaire)
+        == source_queries_fhir_questionnaire
+    )

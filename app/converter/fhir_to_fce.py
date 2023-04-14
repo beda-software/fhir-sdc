@@ -30,10 +30,10 @@ def to_first_class_extension(fhirResource):
         return questionnaireResponse
 
 
-def process_answer_to_fce(itemList):
-    if not itemList:
+def process_answer_to_fce(items):
+    if not items:
         return
-    for item in itemList:
+    for item in items:
         if item.get("answer") and item.get("answer")[0].get("valueString"):
             item["answer"][0]["value"] = {"string": item["answer"][0].get("valueString")}
             del item["answer"][0]["valueString"]

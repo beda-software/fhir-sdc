@@ -8015,3 +8015,89 @@ source_queries_aidbox_questionnaire = {
     ],
     "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
 }
+
+few_answers_fhir_questionnaire_response = {
+    "item": [
+        {
+            "answer": [
+                {
+                    "valueCoding": {
+                        "code": "39579001",
+                        "system": "http://snomed.ct",
+                        "display": "Anaphylaxis",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "247472004",
+                        "system": "http://snomed.ct",
+                        "display": "Hives (Wheal)",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "422587007",
+                        "system": "http://snomed.ct",
+                        "display": "Nausea",
+                    }
+                },
+            ],
+            "linkId": "reaction",
+        },
+    ],
+    "source": {"reference": "Patient/test-patient"},
+    "status": "completed",
+    "authored": "2023-04-14T09:36:35Z",
+    "questionnaire": "allergies",
+    "id": "test",
+    "resourceType": "QuestionnaireResponse",
+    "meta": {
+        "extension": [{"url": "ex:createdAt", "valueInstant": "2023-04-14T09:36:35.349085Z"}],
+    },
+}
+
+few_answers_aidbox_questionnaire_response = {
+    "item": [
+        {
+            "answer": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "39579001",
+                            "system": "http://snomed.ct",
+                            "display": "Anaphylaxis",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "247472004",
+                            "system": "http://snomed.ct",
+                            "display": "Hives (Wheal)",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "422587007",
+                            "system": "http://snomed.ct",
+                            "display": "Nausea",
+                        }
+                    }
+                },
+            ],
+            "linkId": "reaction",
+        },
+    ],
+    "source": {"id": "test-patient", "resourceType": "Patient"},
+    "status": "completed",
+    "authored": "2023-04-14T09:36:35Z",
+    "questionnaire": "allergies",
+    "id": "test",
+    "resourceType": "QuestionnaireResponse",
+    "meta": {
+        "createdAt": "2023-04-14T09:36:35.349085Z",
+    },
+}
