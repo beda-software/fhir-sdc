@@ -34,12 +34,7 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "contained": [
                 {
                     "id": "Data1",

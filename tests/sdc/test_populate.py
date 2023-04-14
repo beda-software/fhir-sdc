@@ -11,12 +11,7 @@ async def test_initial_expression_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "string",
@@ -98,12 +93,7 @@ async def test_item_context_with_repeats_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "group",
@@ -171,12 +161,7 @@ async def test_item_context_with_repeating_group_populate(aidbox_client, safe_db
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "type": "group",
@@ -248,12 +233,7 @@ async def test_item_context_without_repeats_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "item": [
                 {
                     "text": "Address",
@@ -389,12 +369,7 @@ async def test_source_queries_populate(aidbox_client, safe_db):
                     ],
                 }
             ],
-            "launchContext": [
-                {
-                    "name": "LaunchPatient",
-                    "type": "Patient",
-                },
-            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
             "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
             "item": [
                 {
@@ -431,12 +406,7 @@ async def test_multiple_answers_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [
-                {
-                    "name": "Diet",
-                    "type": "Bundle",
-                },
-            ],
+            "launchContext": [{"name": {"code": "Diet"}, "type": "bundle"}],
             "item": [
                 {
                     "type": "choice",
@@ -659,6 +629,9 @@ async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
                 ],
             }
         ],
+        "meta": {
+            "profile": ["https://beda.software/beda-emr-questionnaire"],
+        },
     }
 
     launch_patient = {
