@@ -2755,7 +2755,10 @@ encounter_create_aidbox_Questionnaire = {
             "itemControl": {"coding": [{"code": "time-range-picker"}]},
         },
     ],
-    "mapping": [{"id": "encounter-create-extract", "resourceType": "Mapping"}],
+    "mapping": [
+        {"id": "encounter-create-extract", "resourceType": "Mapping"},
+        {"id": "test-mapper", "resourceType": "Mapping"},
+    ],
     "resourceType": "Questionnaire",
     "title": "Encounter create",
     "status": "active",
@@ -2890,6 +2893,10 @@ encounter_create_fhir_Questionnaire = {
         {
             "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
             "valueReference": {"reference": "Mapping/encounter-create-extract"},
+        },
+        {
+            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "valueReference": {"reference": "Mapping/test-mapper"},
         },
     ],
     "status": "active",

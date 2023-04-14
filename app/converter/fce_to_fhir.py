@@ -328,9 +328,9 @@ def process_extension_to_fhir(questionnaire):
 
 
 def process_launch_context(questionnaire):
-    if questionnaire.get("launchContext"):
+    if "launchContext" in questionnaire:
         extension = []
-        for launchContext in questionnaire.get("launchContext"):
+        for launchContext in questionnaire["launchContext"]:
             name = launchContext.get("name").get("code")
             type_ = launchContext.get("type")
             description = launchContext.get("description")
