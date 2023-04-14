@@ -1,8 +1,9 @@
 import json
 
 from aiohttp import web
+from app.converter.fhir_to_fce import to_first_class_extension
 
-from app.fce import from_first_class_extension, to_first_class_extension
+from app.converter.fce_to_fhir import from_first_class_extension
 
 from ..sdc import (
     assemble,

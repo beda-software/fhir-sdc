@@ -1,4 +1,5 @@
-from app.fce import to_first_class_extension, from_first_class_extension
+from app.converter.fhir_to_fce import to_first_class_extension
+from app.converter.fce_to_fhir import from_first_class_extension
 from tests.sdc.data.fce import patient_fhir_QuestionnaireResponse, patient_aidbox_QuestionnaireResponse, \
     practitioner_aidbox_QuestionnaireResponse, allergies_fhir_QuestionnaireResponse, \
     allergies_aidbox_QuestionnaireResponse, gad7_fhir_QuestionnaireResponse, gad7_aidbox_QuestionnaireResponse, \
