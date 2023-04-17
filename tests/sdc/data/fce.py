@@ -1980,8 +1980,8 @@ allergies_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "LaunchPatient"}, "type": "patient"},
-        {"name": {"code": "Author"}, "type": "resource"},
+        {"name": {"code": "LaunchPatient"}, "type": ["Patient"]},
+        {"name": {"code": "Author"}, "type": ["Resource"]},
     ],
     "name": "Allergies",
     "item": [
@@ -2646,7 +2646,7 @@ allergies_fhir_Questionnaire = {
                         "code": "LaunchPatient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -2659,7 +2659,7 @@ allergies_fhir_Questionnaire = {
                         "code": "Author",
                     },
                 },
-                {"url": "type", "valueCode": "resource"},
+                {"url": "type", "valueCode": "Resource"},
             ],
         },
         {
@@ -2679,7 +2679,7 @@ encounter_create_aidbox_Questionnaire = {
         "createdAt": "2023-04-05T05:22:35.752466Z",
         "versionId": "694",
     },
-    "launchContext": [{"name": {"code": "Patient"}, "type": "patient"}],
+    "launchContext": [{"name": {"code": "Patient"}, "type": ["Patient"]}],
     "name": "encounter-create",
     "item": [
         {
@@ -2887,7 +2887,7 @@ encounter_create_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -2913,8 +2913,8 @@ gad7_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "Patient"}, "type": "patient"},
-        {"name": {"code": "Author"}, "type": "resource"},
+        {"name": {"code": "Patient"}, "type": ["Patient"]},
+        {"name": {"code": "Author"}, "type": ["Resource"]},
     ],
     "name": "GAD-7",
     "item": [
@@ -3676,7 +3676,7 @@ gad7_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -3689,7 +3689,7 @@ gad7_fhir_Questionnaire = {
                         "code": "Author",
                     },
                 },
-                {"url": "type", "valueCode": "resource"},
+                {"url": "type", "valueCode": "Resource"},
             ],
         },
         {
@@ -3711,8 +3711,8 @@ immunization_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "Patient"}, "type": "patient"},
-        {"name": {"code": "Author"}, "type": "resource"},
+        {"name": {"code": "Patient"}, "type": ["Patient"]},
+        {"name": {"code": "Author"}, "type": ["Resource"]},
     ],
     "name": "Immunization",
     "item": [
@@ -4005,7 +4005,7 @@ immunization_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -4018,7 +4018,7 @@ immunization_fhir_Questionnaire = {
                         "code": "Author",
                     },
                 },
-                {"url": "type", "valueCode": "resource"},
+                {"url": "type", "valueCode": "Resource"},
             ],
         },
         {
@@ -4040,8 +4040,8 @@ medication_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "Patient"}, "type": "patient"},
-        {"name": {"code": "Author"}, "type": "resource"},
+        {"name": {"code": "Patient"}, "type": ["Patient"]},
+        {"name": {"code": "Author"}, "type": ["Resource"]},
     ],
     "name": "Medication",
     "item": [
@@ -4340,7 +4340,7 @@ medication_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -4353,7 +4353,7 @@ medication_fhir_Questionnaire = {
                         "code": "Author",
                     },
                 },
-                {"url": "type", "valueCode": "resource"},
+                {"url": "type", "valueCode": "Resource"},
             ],
         },
         {
@@ -4465,7 +4465,7 @@ patient_edit_aidbox_Questionnaire = {
         "createdAt": "2023-04-05T05:22:35.752466Z",
         "versionId": "694",
     },
-    "launchContext": [{"name": {"code": "Patient"}, "type": "patient"}],
+    "launchContext": [{"name": {"code": "Patient"}, "type": ["Patient"]}],
     "name": "edit-patient",
     "item": [
         {
@@ -4688,7 +4688,7 @@ patient_edit_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -4710,8 +4710,8 @@ phq2phq9_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "Patient"}, "type": "patient"},
-        {"name": {"code": "Author"}, "type": "resource"},
+        {"name": {"code": "Patient"}, "type": ["Patient"]},
+        {"name": {"code": "Author"}, "type": ["Resource"]},
     ],
     "name": "PHQ-2/PHQ-9 Depression Screening",
     "item": [
@@ -5647,7 +5647,7 @@ phq2phq9_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -5660,7 +5660,7 @@ phq2phq9_fhir_Questionnaire = {
                         "code": "Author",
                     },
                 },
-                {"url": "type", "valueCode": "resource"},
+                {"url": "type", "valueCode": "Resource"},
             ],
         },
         {
@@ -5684,7 +5684,7 @@ physicalexam_aidbox_Questionnaire = {
     "launchContext": [
         {
             "name": {"code": "Patient"},
-            "type": "patient",
+            "type": ["Patient"],
             "description": "Patient is answering the questionnaire",
         }
     ],
@@ -6376,7 +6376,7 @@ physicalexam_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
                 {"url": "description", "valueString": "Patient is answering the questionnaire"},
             ],
         }
@@ -6535,8 +6535,8 @@ practitioner_edit_aidbox_Questionnaire = {
         "versionId": "694",
     },
     "launchContext": [
-        {"name": {"code": "Practitioner"}, "type": "practitioner"},
-        {"name": {"code": "PractitionerRole"}, "type": "practitionerRole"},
+        {"name": {"code": "Practitioner"}, "type": ["Practitioner"]},
+        {"name": {"code": "PractitionerRole"}, "type": ["PractitionerRole"]},
     ],
     "name": "practitioner edit",
     "item": [
@@ -6807,7 +6807,7 @@ practitioner_edit_fhir_Questionnaire = {
                         "code": "Practitioner",
                     },
                 },
-                {"url": "type", "valueCode": "practitioner"},
+                {"url": "type", "valueCode": "Practitioner"},
             ],
         },
         {
@@ -6820,7 +6820,7 @@ practitioner_edit_fhir_Questionnaire = {
                         "code": "PractitionerRole",
                     },
                 },
-                {"url": "type", "valueCode": "practitionerRole"},
+                {"url": "type", "valueCode": "PractitionerRole"},
             ],
         },
         {
@@ -7645,7 +7645,7 @@ vitals_aidbox_Questionnaire = {
         "createdAt": "2023-04-05T05:22:35.752466Z",
         "versionId": "694",
     },
-    "launchContext": [{"name": {"code": "Patient"}, "type": "patient"}],
+    "launchContext": [{"name": {"code": "Patient"}, "type": ["Patient"]}],
     "name": "Vitals",
     "item": [
         {
@@ -7962,7 +7962,7 @@ vitals_fhir_Questionnaire = {
                         "code": "Patient",
                     },
                 },
-                {"url": "type", "valueCode": "patient"},
+                {"url": "type", "valueCode": "Patient"},
             ],
         },
         {
@@ -8100,4 +8100,704 @@ few_answers_aidbox_questionnaire_response = {
     "meta": {
         "createdAt": "2023-04-14T09:36:35.349085Z",
     },
+}
+
+multiple_type_aidbox_Questionnaire = {
+    "subjectType": ["Encounter", "Patient"],
+    "meta": {
+        "profile": ["https://beda.software/beda-emr-questionnaire"],
+        "lastUpdated": "2023-04-10T03:43:34.792167Z",
+        "createdAt": "2023-04-05T05:22:35.752466Z",
+        "versionId": "694",
+    },
+    "launchContext": [
+        {"name": {"code": "LaunchPatient"}, "type": ["Patient", "Resource"]},
+    ],
+    "name": "Allergies",
+    "item": [
+        {
+            "text": "DateTime",
+            "type": "dateTime",
+            "hidden": True,
+            "linkId": "dateTime",
+            "initialExpression": {"language": "text/fhirpath", "expression": "now()"},
+        },
+        {
+            "text": "PatientId",
+            "type": "string",
+            "hidden": True,
+            "linkId": "patientId",
+            "initialExpression": {"language": "text/fhirpath", "expression": "%Patient.id"},
+        },
+        {
+            "text": "PatientName",
+            "type": "string",
+            "hidden": True,
+            "linkId": "patientName",
+            "initialExpression": {
+                "language": "text/fhirpath",
+                "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family",
+            },
+        },
+        {
+            "text": "Type",
+            "type": "choice",
+            "linkId": "type",
+            "required": True,
+            "itemControl": {"coding": [{"code": "inline-choice"}]},
+            "answerOption": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "418634005",
+                            "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                            "display": "Drug",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "414285001",
+                            "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                            "display": "Food",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "426232007",
+                            "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                            "display": "Environmental",
+                        }
+                    }
+                },
+            ],
+        },
+        {
+            "text": "Reaction",
+            "type": "choice",
+            "linkId": "reaction",
+            "repeats": True,
+            "itemControl": {"coding": [{"code": "inline-choice"}]},
+            "answerOption": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "39579001",
+                            "system": "http://snomed.ct",
+                            "display": "Anaphylaxis",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "25064002",
+                            "system": "http://snomed.ct",
+                            "display": "Headache",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "247472004",
+                            "system": "http://snomed.ct",
+                            "display": "Hives (Wheal)",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "422587007",
+                            "system": "http://snomed.ct",
+                            "display": "Nausea",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "422400008",
+                            "system": "http://snomed.ct",
+                            "display": "Vomiting",
+                        }
+                    }
+                },
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-drug",
+            "enableWhen": [
+                {
+                    "answer": {"Coding": {"code": "418634005", "system": "http://snomed.ct"}},
+                    "operator": "=",
+                    "question": "type",
+                }
+            ],
+            "itemControl": {"coding": [{"code": "inline-choice"}]},
+            "answerOption": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "LA26702-3",
+                            "system": "http://loinc.org",
+                            "display": "Aspirin",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "LA30119-4",
+                            "system": "http://loinc.org",
+                            "display": "Iodine",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "LA14348-9",
+                            "system": "http://loinc.org",
+                            "display": "Naproxen, ketoprofen or other non-steroidal",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "LA28487-9",
+                            "system": "http://loinc.org",
+                            "display": "Penicillin",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "LA30118-6",
+                            "system": "http://loinc.org",
+                            "display": "Sulfa drugs",
+                        }
+                    }
+                },
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-food",
+            "enableWhen": [
+                {
+                    "answer": {"Coding": {"code": "414285001", "system": "http://snomed.ct"}},
+                    "operator": "=",
+                    "question": "type",
+                }
+            ],
+            "itemControl": {"coding": [{"code": "inline-choice"}]},
+            "answerOption": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102259006",
+                            "system": "http://snomed.ct",
+                            "display": "Citrus fruit",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102260001",
+                            "system": "http://snomed.ct",
+                            "display": "Peanut butter",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102261002",
+                            "system": "http://snomed.ct",
+                            "display": "Strawberry",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102262009",
+                            "system": "http://snomed.ct",
+                            "display": "Chocolate",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102263004",
+                            "system": "http://snomed.ct",
+                            "display": "Eggs",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "102264005",
+                            "system": "http://snomed.ct",
+                            "display": "Cheese",
+                        }
+                    }
+                },
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-environmental",
+            "enableWhen": [
+                {
+                    "answer": {"Coding": {"code": "426232007", "system": "http://snomed.ct"}},
+                    "operator": "=",
+                    "question": "type",
+                }
+            ],
+            "itemControl": {"coding": [{"code": "inline-choice"}]},
+            "answerOption": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "111088007",
+                            "system": "http://snomed.ct",
+                            "display": "Latex",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "256259004",
+                            "system": "http://snomed.ct",
+                            "display": "Pollen",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "256277009",
+                            "system": "http://snomed.ct",
+                            "display": "Grass pollen",
+                        }
+                    }
+                },
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "256417003",
+                            "system": "http://snomed.ct",
+                            "display": "Horse dander",
+                        }
+                    }
+                },
+            ],
+        },
+        {"text": "Notes", "type": "string", "linkId": "notes"},
+        {
+            "text": "Active",
+            "type": "string",
+            "hidden": True,
+            "linkId": "status",
+            "initial": [
+                {
+                    "value": {
+                        "Coding": {
+                            "code": "active",
+                            "system": "http://terminology.hl7.org/ValueSet/allergyintolerance-clinical",
+                            "display": "Active",
+                        }
+                    }
+                }
+            ],
+        },
+    ],
+    "mapping": [{"id": "allergy-extract", "resourceType": "Mapping"}],
+    "resourceType": "Questionnaire",
+    "status": "active",
+    "id": "allergies",
+    "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/allergies",
+}
+
+multiple_type_fhir_Questionnaire = {
+    "subjectType": ["Encounter", "Patient"],
+    "meta": {
+        "profile": ["https://beda.software/beda-emr-questionnaire"],
+        "lastUpdated": "2023-04-10T03:43:34.792167Z",
+        "versionId": "694",
+        "extension": [{"url": "ex:createdAt", "valueInstant": "2023-04-05T05:22:35.752466Z"}],
+    },
+    "name": "Allergies",
+    "item": [
+        {
+            "text": "DateTime",
+            "type": "dateTime",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+                    "valueBoolean": True,
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                    "valueExpression": {"language": "text/fhirpath", "expression": "now()"},
+                },
+            ],
+            "linkId": "dateTime",
+        },
+        {
+            "text": "PatientId",
+            "type": "string",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+                    "valueBoolean": True,
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                    "valueExpression": {"language": "text/fhirpath", "expression": "%Patient.id"},
+                },
+            ],
+            "linkId": "patientId",
+        },
+        {
+            "text": "PatientName",
+            "type": "string",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+                    "valueBoolean": True,
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                    "valueExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%Patient.name.given[0] + ' ' + %Patient.name.family",
+                    },
+                },
+            ],
+            "linkId": "patientName",
+        },
+        {
+            "text": "Type",
+            "type": "choice",
+            "linkId": "type",
+            "required": True,
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "code": "418634005",
+                        "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                        "display": "Drug",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "414285001",
+                        "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                        "display": "Food",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "426232007",
+                        "system": "http://hl7.org/fhir/allergy-intolerance-category",
+                        "display": "Environmental",
+                    }
+                },
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {"coding": [{"code": "inline-choice"}]},
+                }
+            ],
+        },
+        {
+            "text": "Reaction",
+            "type": "choice",
+            "linkId": "reaction",
+            "repeats": True,
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "code": "39579001",
+                        "system": "http://snomed.ct",
+                        "display": "Anaphylaxis",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "25064002",
+                        "system": "http://snomed.ct",
+                        "display": "Headache",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "247472004",
+                        "system": "http://snomed.ct",
+                        "display": "Hives (Wheal)",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "422587007",
+                        "system": "http://snomed.ct",
+                        "display": "Nausea",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "422400008",
+                        "system": "http://snomed.ct",
+                        "display": "Vomiting",
+                    }
+                },
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {"coding": [{"code": "inline-choice"}]},
+                }
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-drug",
+            "enableWhen": [
+                {
+                    "question": "type",
+                    "operator": "=",
+                    "answerCoding": {"code": "418634005", "system": "http://snomed.ct"},
+                }
+            ],
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "code": "LA26702-3",
+                        "system": "http://loinc.org",
+                        "display": "Aspirin",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "LA30119-4",
+                        "system": "http://loinc.org",
+                        "display": "Iodine",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "LA14348-9",
+                        "system": "http://loinc.org",
+                        "display": "Naproxen, ketoprofen or other non-steroidal",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "LA28487-9",
+                        "system": "http://loinc.org",
+                        "display": "Penicillin",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "LA30118-6",
+                        "system": "http://loinc.org",
+                        "display": "Sulfa drugs",
+                    }
+                },
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {"coding": [{"code": "inline-choice"}]},
+                }
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-food",
+            "enableWhen": [
+                {
+                    "question": "type",
+                    "operator": "=",
+                    "answerCoding": {"code": "414285001", "system": "http://snomed.ct"},
+                }
+            ],
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "code": "102259006",
+                        "system": "http://snomed.ct",
+                        "display": "Citrus fruit",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "102260001",
+                        "system": "http://snomed.ct",
+                        "display": "Peanut butter",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "102261002",
+                        "system": "http://snomed.ct",
+                        "display": "Strawberry",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "102262009",
+                        "system": "http://snomed.ct",
+                        "display": "Chocolate",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "102263004",
+                        "system": "http://snomed.ct",
+                        "display": "Eggs",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "102264005",
+                        "system": "http://snomed.ct",
+                        "display": "Cheese",
+                    }
+                },
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {"coding": [{"code": "inline-choice"}]},
+                }
+            ],
+        },
+        {
+            "text": "Substance",
+            "type": "choice",
+            "linkId": "substance-environmental",
+            "enableWhen": [
+                {
+                    "question": "type",
+                    "operator": "=",
+                    "answerCoding": {"code": "426232007", "system": "http://snomed.ct"},
+                }
+            ],
+            "answerOption": [
+                {
+                    "valueCoding": {
+                        "code": "111088007",
+                        "system": "http://snomed.ct",
+                        "display": "Latex",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "256259004",
+                        "system": "http://snomed.ct",
+                        "display": "Pollen",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "256277009",
+                        "system": "http://snomed.ct",
+                        "display": "Grass pollen",
+                    }
+                },
+                {
+                    "valueCoding": {
+                        "code": "256417003",
+                        "system": "http://snomed.ct",
+                        "display": "Horse dander",
+                    }
+                },
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
+                    "valueCodeableConcept": {"coding": [{"code": "inline-choice"}]},
+                }
+            ],
+        },
+        {"text": "Notes", "type": "string", "linkId": "notes"},
+        {
+            "text": "Active",
+            "type": "string",
+            "initial": [
+                {
+                    "valueCoding": {
+                        "code": "active",
+                        "system": "http://terminology.hl7.org/ValueSet/allergyintolerance-clinical",
+                        "display": "Active",
+                    }
+                }
+            ],
+            "linkId": "status",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+                    "valueBoolean": True,
+                }
+            ],
+        },
+    ],
+    "resourceType": "Questionnaire",
+    "extension": [
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+            "extension": [
+                {
+                    "url": "name",
+                    "valueCoding": {
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                        "code": "LaunchPatient",
+                    },
+                },
+                {"url": "type", "valueCode": "Patient"},
+            ],
+        },
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+            "extension": [
+                {
+                    "url": "name",
+                    "valueCoding": {
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                        "code": "LaunchPatient",
+                    },
+                },
+                {"url": "type", "valueCode": "Resource"},
+            ],
+        },
+        {
+            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "valueReference": {"reference": "Mapping/allergy-extract"},
+        },
+    ],
+    "status": "active",
+    "id": "allergies",
+    "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/allergies",
 }

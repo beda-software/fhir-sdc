@@ -192,9 +192,9 @@ def process_launch_context(fhir_questionnaire):
     for launch_context_extension in launch_context_extensions:
         name_extension = next(
             (
-                ext
-                for ext in launch_context_extension.get("extension", [])
-                if ext.get("url") == "name"
+                extenstion
+                for extenstion in launch_context_extension.get("extension", [])
+                if extenstion.get("url") == "name"
             ),
             None,
         )
@@ -223,7 +223,7 @@ def process_launch_context(fhir_questionnaire):
             "name": {
                 "code": name_code,
             },
-            "type": type_code,
+            "type": [type_code],
         }
 
         if description:

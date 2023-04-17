@@ -63,6 +63,8 @@ from tests.sdc.data.fce import (
     source_queries_fhir_questionnaire,
     few_answers_fhir_questionnaire_response,
     few_answers_aidbox_questionnaire_response,
+    multiple_type_fhir_Questionnaire,
+    multiple_type_aidbox_Questionnaire,
 )
 
 
@@ -237,6 +239,10 @@ def test_fhir_to_fce_Questionnaire():
         to_first_class_extension(source_queries_fhir_questionnaire)
         == source_queries_aidbox_questionnaire
     )
+    # assert (
+    #     to_first_class_extension(multiple_type_fhir_Questionnaire)
+    #     == multiple_type_aidbox_Questionnaire
+    # )
 
 
 def test_fce_to_fhir_Questionnaire():
@@ -296,3 +302,7 @@ def test_fce_to_fhir_Questionnaire():
         from_first_class_extension(source_queries_aidbox_questionnaire)
         == source_queries_fhir_questionnaire
     )
+    # assert (
+    #     from_first_class_extension(multiple_type_aidbox_Questionnaire)
+    #     == multiple_type_fhir_Questionnaire
+    # )

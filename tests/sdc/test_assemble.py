@@ -358,7 +358,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -380,7 +380,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -487,7 +487,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                             "code": "LaunchPatient",
                         },
                     },
-                    {"url": "type", "valueCode": "patient"},
+                    {"url": "type", "valueCode": "Patient"},
                 ],
             },
             {

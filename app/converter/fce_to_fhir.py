@@ -21,10 +21,10 @@ def process_answer_to_fhir(items):
     if not items:
         return
 
-    def process_answer(answer):
-        if "value" not in answer:
+    def process_answer(answer_item):
+        if "value" not in answer_item:
             return
-        value = answer["value"]
+        value = answer_item["value"]
         value_mappings = {
             "string": "valueString",
             "integer": "valueInteger",
@@ -36,16 +36,16 @@ def process_answer_to_fhir(items):
         }
         for key, new_key in value_mappings.items():
             if key in value:
-                answer[new_key] = value[key]
-                del answer["value"]
+                answer_item[new_key] = value[key]
+                del answer_item["value"]
                 break
         if "Reference" in value:
-            answer["valueReference"] = {
+            answer_item["valueReference"] = {
                 "display": value["Reference"]["display"],
                 "resource": value["Reference"]["resource"],
                 "reference": f"{value['Reference']['resourceType']}/{value['Reference']['id']}",
             }
-            del answer["value"]
+            del answer_item["value"]
 
     for item in items:
         if "answer" in item:
@@ -298,7 +298,7 @@ def process_launch_context(questionnaire):
         extension = []
         for launchContext in questionnaire["launchContext"]:
             name = launchContext.get("name").get("code")
-            type_ = launchContext.get("type")
+            type_list = launchContext.get("type")
             description = launchContext.get("description")
 
             launch_context_extension = [
@@ -308,9 +308,11 @@ def process_launch_context(questionnaire):
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                         "code": name,
                     },
-                },
-                {"url": "type", "valueCode": type_},
+                }
             ]
+
+            for type in type_list:
+                launch_context_extension.append({"url": "type", "valueCode": type})
 
             if description is not None:
                 launch_context_extension.append({"url": "description", "valueString": description})
