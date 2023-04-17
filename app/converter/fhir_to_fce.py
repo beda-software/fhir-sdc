@@ -33,43 +33,37 @@ def to_first_class_extension(fhirResource):
 def process_answer_to_fce(items):
     if not items:
         return
-    for item in items:
-        if item.get("answer") and item.get("answer")[0].get("valueString"):
-            item["answer"][0]["value"] = {"string": item["answer"][0].get("valueString")}
-            del item["answer"][0]["valueString"]
-        elif item.get("answer") and item.get("answer")[0].get("valueInteger"):
-            item["answer"][0]["value"] = {"integer": item["answer"][0].get("valueInteger")}
-            del item["answer"][0]["valueInteger"]
-        elif item.get("answer") and item.get("answer")[0].get("valueBoolean"):
-            item["answer"][0]["value"] = {"boolean": item["answer"][0].get("valueBoolean")}
-            del item["answer"][0]["valueBoolean"]
-        elif item.get("answer") and item.get("answer")[0].get("valueCoding"):
-            item["answer"][0]["value"] = {"Coding": item["answer"][0].get("valueCoding")}
-            del item["answer"][0]["valueCoding"]
-        elif item.get("answer") and item.get("answer")[0].get("valueDate"):
-            item["answer"][0]["value"] = {"date": item["answer"][0].get("valueDate")}
-            del item["answer"][0]["valueDate"]
-        elif item.get("answer") and item.get("answer")[0].get("valueDateTime"):
-            item["answer"][0]["value"] = {"dateTime": item["answer"][0].get("valueDateTime")}
-            del item["answer"][0]["valueDateTime"]
-        elif item.get("answer") and item.get("answer")[0].get("valueReference"):
-            display = item["answer"][0]["valueReference"].get("display")
-            resource = item["answer"][0]["valueReference"].get("resource")
-            resourceType = resource.get("resourceType")
-            item["answer"][0]["value"] = {
+
+    def process_answer(answer):
+        value_handlers = {
+            "valueString": lambda value: {"string": value},
+            "valueInteger": lambda value: {"integer": value},
+            "valueBoolean": lambda value: {"boolean": value},
+            "valueCoding": lambda value: {"Coding": value},
+            "valueDate": lambda value: {"date": value},
+            "valueDateTime": lambda value: {"dateTime": value},
+            "valueReference": lambda value: {
                 "Reference": {
-                    "display": display,
-                    "id": resource.get("id"),
-                    "resource": resource,
-                    "resourceType": resourceType,
+                    "display": value["display"],
+                    "id": value["resource"]["id"],
+                    "resource": value["resource"],
+                    "resourceType": value["resource"]["resourceType"],
                 }
-            }
-            del item["answer"][0]["valueReference"]
-        elif item.get("answer") and item.get("answer")[0].get("valueTime"):
-            item["answer"][0]["value"] = {"time": item["answer"][0].get("valueTime")}
-            del item["answer"][0]["valueTime"]
-        elif item.get("item"):
-            process_answer_to_fce(item.get("item"))
+            },
+            "valueTime": lambda value: {"time": value},
+        }
+
+        for key, handler in value_handlers.items():
+            if key in answer:
+                value = answer.pop(key)
+                answer["value"] = handler(value)
+
+    for item in items:
+        if "answer" in item:
+            for answer in item["answer"]:
+                process_answer(answer)
+        if "item" in item:
+            process_answer_to_fce(item["item"])
 
 
 def processMetaToFCE(meta):

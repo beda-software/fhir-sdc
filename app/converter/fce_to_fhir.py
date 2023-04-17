@@ -17,75 +17,41 @@ def from_first_class_extension(fceResource):
     return fceResource
 
 
-def process_answer_to_fhir(itemList):
-    if not itemList:
+def process_answer_to_fhir(items):
+    if not items:
         return
-    for item in itemList:
-        if (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("string")
-        ):
-            item["answer"][0]["valueString"] = item["answer"][0]["value"]["string"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("integer")
-        ):
-            item["answer"][0]["valueInteger"] = item["answer"][0]["value"]["integer"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("boolean")
-        ):
-            item["answer"][0]["valueBoolean"] = item["answer"][0]["value"]["boolean"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("Coding")
-        ):
-            item["answer"][0]["valueCoding"] = item["answer"][0]["value"]["Coding"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("date")
-        ):
-            item["answer"][0]["valueDate"] = item["answer"][0]["value"]["date"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("dateTime")
-        ):
-            item["answer"][0]["valueDateTime"] = item["answer"][0]["value"]["dateTime"]
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("Reference")
-        ):
-            display = item["answer"][0]["value"]["Reference"].get("display")
-            resource = item["answer"][0]["value"]["Reference"].get("resource")
-            resourceType = item["answer"][0]["value"]["Reference"].get("resourceType")
-            id = item["answer"][0]["value"]["Reference"].get("id")
-            item["answer"][0]["valueReference"] = {
-                "display": display,
-                "resource": resource,
-                "reference": f"{resourceType}/{id}",
+
+    def process_answer(answer):
+        if "value" not in answer:
+            return
+        value = answer["value"]
+        value_mappings = {
+            "string": "valueString",
+            "integer": "valueInteger",
+            "boolean": "valueBoolean",
+            "Coding": "valueCoding",
+            "date": "valueDate",
+            "dateTime": "valueDateTime",
+            "time": "valueTime",
+        }
+        for key, new_key in value_mappings.items():
+            if key in value:
+                answer[new_key] = value[key]
+                del answer["value"]
+                break
+        if "Reference" in value:
+            answer["valueReference"] = {
+                "display": value["Reference"]["display"],
+                "resource": value["Reference"]["resource"],
+                "reference": f"{value['Reference']['resourceType']}/{value['Reference']['id']}",
             }
-            del item["answer"][0]["value"]
-        elif (
-            item.get("answer")
-            and item.get("answer")[0].get("value")
-            and item.get("answer")[0]["value"].get("time")
-        ):
-            item["answer"][0]["valueTime"] = item["answer"][0]["value"]["time"]
-            del item["answer"][0]["value"]
-        elif item.get("item"):
+            del answer["value"]
+
+    for item in items:
+        if "answer" in item:
+            for answer in item["answer"]:
+                process_answer(answer)
+        if "item" in item:
             process_answer_to_fhir(item["item"])
 
 
