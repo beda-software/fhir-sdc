@@ -27,12 +27,12 @@ sentry_sdk.init(integrations=[AioHttpIntegration(), sentry_logging])
 
 async def create_gunicorn_app():
     if os.getenv("USE_AIDBOX", "True").lower() == "true":
-        return create_aidbox_app()
+        return create_app()
     else:
         return create_fhir_app()
 
 
-def create_aidbox_app():
+def create_app():
     from app.aidbox import sdk
 
     app = web.Application()
