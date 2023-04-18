@@ -5,7 +5,6 @@ from aidbox_python_sdk.settings import Settings as AidboxSettings
 
 
 class Settings(AidboxSettings):
-    SDC_VERSION = Required(v_type=str)
     JUTE_SERVICE = Required(v_type=str)
 
 
@@ -19,11 +18,10 @@ class FHIRAppSettings:
 
 
 settings = Settings(
-    SDC_VERSION=os.getenv("SDC_VERSION", "2.7.0"), JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox")
+    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox")
 )
 
 fhir_app_settings = FHIRAppSettings(
-    SDC_VERSION=os.getenv("SDC_VERSION", "3.0.0"),
     JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
 )
