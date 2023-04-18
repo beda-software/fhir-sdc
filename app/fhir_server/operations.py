@@ -5,17 +5,17 @@ from fhirpy.lib import AsyncFHIRClient
 
 from app.converter.fce_to_fhir import from_first_class_extension
 from app.converter.fhir_to_fce import to_first_class_extension
+from app.sdc.exception import ConstraintCheckOperationOutcome
 
 from ..sdc import (
     assemble,
     constraint_check,
     extract,
-    extract_questionnaire_instance,
     get_questionnaire_context,
     populate,
     resolve_expression,
 )
-from ..sdc.utils import parameter_to_env
+from ..sdc.utils import parameter_to_env, validate_context
 
 routes = web.RouteTableDef()
 
@@ -107,31 +107,90 @@ async def extract_questionnaire_handler(request):
     return web.json_response(extraction_result)
 
 
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$extract"])
+@routes.post("/Questionnaire/{id}/$extract")
 async def extract_questionnaire_instance_operation(request):
-    resource = request["resource"]
+    resource = await resource.json()
     client = request["app"]["client"]
+    client.extra_headers = request["headers"]["Authorization"]
     jute_service = request["app"]["settings"].JUTE_SERVICE
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    client = (
-        request["app"]["client"]
-        if questionnaire.get("runOnBehalfOfRoot")
-        else get_user_sdk_client(request)
-    )
-    return web.json_response(
-        await extract_questionnaire_instance(client, questionnaire, resource, jute_service)
+    jute_templates = []
+    structure_map_extensions = [
+        ext
+        for ext in questionnaire["extension"]
+        if ext["url"]
+        == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
+    ]
+
+    for structure_map_extension in structure_map_extensions:
+        structure_map_id = structure_map_extension["valueCanonical"].splt("/")[-1]
+        structure_map = await client.resources("StructureMap").search(_id=structure_map_id).get()
+        template_string = structure_map.get_by_path(
+            [
+                "group",
+                {"name": "jute-group"},
+                "rule",
+                {"name": "apply-jute"},
+                "extension",
+                {"url": "http://beda.software/fhir-extensions/jute-body"},
+                "valueString",
+            ]
+        )
+        jute_templates.append(json.loads(template_string))
+
+    if resource["resourceType"] == "QuestionnaireResponse":
+        questionnaire_response = client.resource("QuestionnaireResponse", **resource)
+        context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
+        await constraint_check(client, context)
+        return web.json_response(await extract(client, jute_templates, context, jute_service))
+
+    if resource["resourceType"] == "Parameters":
+        env = parameter_to_env(resource)
+
+        questionnaire_response_data = env.get("QuestionnaireResponse")
+        if not questionnaire_response_data:
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "missing-parameter",
+                        "human": "`QuestionnaireResponse` parameter is required",
+                    }
+                ]
+            )
+
+        questionnaire_response = client.resource(
+            "QuestionnaireResponse", **questionnaire_response_data
+        )
+        if "launchContext" in questionnaire:
+            validate_context(questionnaire["launchContext"], env)
+        context = {
+            "QuestionnaireResponse": questionnaire_response,
+            "Questionnaire": questionnaire,
+            **env,
+        }
+        await constraint_check(client, context)
+        return web.json_response(await extract(client, jute_templates, context, jute_service))
+
+    raise ConstraintCheckOperationOutcome(
+        [
+            {
+                "severity": "error",
+                "key": "missing-parameter",
+                "human": "Either `QuestionnaireResponse` resource or Parameters containing "
+                "QuestionnaireResponse are required",
+            }
+        ]
     )
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$populate"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$populate"])
-async def populate_questionnaire(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
+@routes.post("/Questionnaire/$populate")
+async def populate_questionnaire_handler(request):
     client = request["app"]["client"]
-    env = parameter_to_env(request["resource"])
+    client.extra_headers = request["headers"]["Authorization"]
+    env = parameter_to_env(await request.json())
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
         # TODO: return OperationOutcome
@@ -143,43 +202,27 @@ async def populate_questionnaire(operation, request):
             status=422,
         )
 
-    if is_fhir:
-        converted = to_first_class_extension(questionnaire_data)
-        questionnaire = client.resource("Questionnaire", **converted)
-    else:
-        questionnaire = client.resource("Questionnaire", **questionnaire_data)
-
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-
-    populated_resource = await populate(
-        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
-    )
-    if is_fhir:
-        populated_resource = from_first_class_extension(populated_resource)
+    converted = to_first_class_extension(questionnaire_data)
+    questionnaire = client.resource("Questionnaire", **converted)
+    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$populate"])
+@routes.post("/Questionnaire/{id}/$populate")
 async def populate_questionnaire_instance(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
     client = request["app"]["client"]
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
     env = parameter_to_env(request["resource"])
     env["Questionnaire"] = questionnaire
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = from_first_class_extension(populated_resource)
 
-    populated_resource = await populate(
-        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
-    )
-    if is_fhir:
-        populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$resolve-expression"], public=True)
-def resolve_expression_operation(_operation, request):
-    return web.json_response(resolve_expression(request["resource"]))
+@routes.post("/Questionnaire/$resolve-expression")
+async def resolve_expression_operation_handler(request):
+    return web.json_response(resolve_expression(await request.json()))
