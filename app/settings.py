@@ -8,10 +8,15 @@ class Settings(AidboxSettings):
     SDC_VERSION = Required(v_type=str)
     JUTE_SERVICE = Required(v_type=str)
 
-class FHIRAppSettings():
-    SDC_VERSION = Required(v_type=str)
-    JUTE_SERVICE = Required(v_type=str)
-    BASE_URL = Required(v_type=str)
+
+class FHIRAppSettings:
+    def __init__(self, **custom_settings):
+        self._custom_settings = custom_settings
+        for name, value in custom_settings.items():
+            # if not hasattr(self, name):
+            #     raise TypeError('{} is not a valid setting name'.format(name))
+            setattr(self, name, value)
+
 
 settings = Settings(
     SDC_VERSION=os.getenv("SDC_VERSION", "2.7.0"), JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox")

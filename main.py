@@ -10,10 +10,6 @@ from fhirpy.lib import AsyncFHIRClient
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from app.aidbox import sdk
-from app.fhir_server import routes as fhir_routes, default_handler
-from app.settings import fhir_app_settings
-
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
@@ -37,6 +33,8 @@ async def create_gunicorn_app():
 
 
 def create_aidbox_app():
+    from app.aidbox import sdk
+
     app = web.Application()
     app.cleanup_ctx.append(init_aidbox_app)
     app.update(
@@ -48,14 +46,18 @@ def create_aidbox_app():
 
 
 async def fhir_app_on_startup(app: web.Application):
+    from app.settings import fhir_app_settings
+
     app["settings"] = fhir_app_settings
     app["client"] = AsyncFHIRClient(fhir_app_settings.BASE_URL)
 
 
 def create_fhir_app():
+    from app.fhir_server import routes as fhir_routes, default_handler
+
     app = web.Application()
     app.add_routes(fhir_routes)
-    app.add_routes([web.route("*", r'/{name:.*}', default_handler)])
+    app.add_routes([web.route("*", r"/{name:.*}", default_handler)])
     app.on_startup.append(fhir_app_on_startup)
 
     return app
