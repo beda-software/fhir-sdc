@@ -11,7 +11,7 @@ from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
 from app.aidbox import sdk
-from app.fhir_server import routes as fhir_routes
+from app.fhir_server import routes as fhir_routes, default_handler
 from app.settings import fhir_app_settings
 
 coloredlogs.install(level="DEBUG", fmt="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -55,6 +55,7 @@ async def fhir_app_on_startup(app: web.Application):
 def create_fhir_app():
     app = web.Application()
     app.add_routes(fhir_routes)
+    app.add_routes([web.route("*", r'/{name:.*}', default_handler)])
     app.on_startup.append(fhir_app_on_startup)
 
     return app

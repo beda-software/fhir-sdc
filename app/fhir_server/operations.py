@@ -23,7 +23,7 @@ routes = web.RouteTableDef()
 @routes.get("/Questionnaire/{id}/$assemble")
 async def assemble_handler(request):
     client: AsyncFHIRClient = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
@@ -38,7 +38,7 @@ async def assemble_handler(request):
 async def constraint_check_handler(request):
     env = parameter_to_env(await request.json())
     client = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
 
     return web.json_response(await constraint_check(client, env))
 
@@ -48,7 +48,7 @@ async def get_questionnaire_context_handler(request):
     client = request["app"]["client"]
     env = parameter_to_env(await request.json())
     client = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
 
     return web.json_response(await get_questionnaire_context(client, env))
 
@@ -57,7 +57,7 @@ async def get_questionnaire_context_handler(request):
 async def extract_questionnaire_handler(request):
     resource = await request.json()
     client = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
     jute_service = request["app"]["settings"].JUTE_SERVICE
 
     if resource["resourceType"] == "QuestionnaireResponse":
@@ -111,7 +111,7 @@ async def extract_questionnaire_handler(request):
 async def extract_questionnaire_instance_operation(request):
     resource = await resource.json()
     client = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
     jute_service = request["app"]["settings"].JUTE_SERVICE
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
@@ -189,7 +189,7 @@ async def extract_questionnaire_instance_operation(request):
 @routes.post("/Questionnaire/$populate")
 async def populate_questionnaire_handler(request):
     client = request["app"]["client"]
-    client.extra_headers = request["headers"]["Authorization"]
+    client.authorization = request["headers"]["Authorization"]
     env = parameter_to_env(await request.json())
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
@@ -212,6 +212,7 @@ async def populate_questionnaire_handler(request):
 @routes.post("/Questionnaire/{id}/$populate")
 async def populate_questionnaire_instance(operation, request):
     client = request["app"]["client"]
+    client.authorization = request["headers"]["Authorization"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
