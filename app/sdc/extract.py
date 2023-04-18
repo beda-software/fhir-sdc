@@ -141,7 +141,7 @@ async def extract(client, mappings, context, jute_service):
                 async with session.post(
                     jute_service,
                     json={
-                        "template": mapper["body"],
+                        "template": mapper,
                         "context": context,
                     },
                 ) as result:
