@@ -22,7 +22,7 @@ async def assemble(client, questionnaire):
         client, questionnaire, questionnaire["item"], root_elements
     )
     dict.update(questionnaire, root_elements)
-    questionnaire.assembledFrom = questionnaire["id"]
+    questionnaire["assembledFrom"] = questionnaire["id"]
     del questionnaire["id"]
     return questionnaire
 

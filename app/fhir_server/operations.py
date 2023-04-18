@@ -21,44 +21,42 @@ routes = web.RouteTableDef()
 
 
 @routes.get("/Questionnaire/{id}/$assemble")
-async def assemble_handler(request):
-    client: AsyncFHIRClient = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
+async def assemble_handler(request: web.BaseRequest):
+    client: AsyncFHIRClient = request.app["client"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
 
-    assembled_questionnaire_lazy = await assemble(client, questionnaire)
+    assembled_questionnaire_lazy = await assemble(client, to_first_class_extension(questionnaire))
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
 
-    return web.json_response(assembled_questionnaire)
+    return web.json_response(from_first_class_extension(assembled_questionnaire))
 
 
 @routes.post("/QuestionnaireResponse/$constraint-check")
-async def constraint_check_handler(request):
+async def constraint_check_handler(request: web.BaseRequest):
     env = parameter_to_env(await request.json())
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
+    env["Questionnaire"] = to_first_class_extension(env["Questionnaire"])
+    env["QuestionnaireResponse"] = to_first_class_extension(env["QuestionnaireResponse"])
+    client = request.app["client"]
 
     return web.json_response(await constraint_check(client, env))
 
 
 @routes.post("/Questionnaire/$context")
-async def get_questionnaire_context_handler(request):
+async def get_questionnaire_context_handler(request: web.BaseRequest):
     client = request["app"]["client"]
     env = parameter_to_env(await request.json())
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
+    client = request.app["client"]
 
     return web.json_response(await get_questionnaire_context(client, env))
 
 
 @routes.post("/Questionnaire/$extract")
-async def extract_questionnaire_handler(request):
+async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
+    client = request.app["client"]
+    jute_service = request.app["settings"].JUTE_SERVICE
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -97,8 +95,8 @@ async def extract_questionnaire_handler(request):
         jute_templates.append(json.loads(template_string))
 
     context = {
-        "Questionnaire": questionnaire,
-        "QuestionnaireResponse": questionnaire_response,
+        "Questionnaire": to_first_class_extension(questionnaire),
+        "QuestionnaireResponse": to_first_class_extension(questionnaire_response),
         **env,
     }
 
@@ -108,21 +106,22 @@ async def extract_questionnaire_handler(request):
 
 
 @routes.post("/Questionnaire/{id}/$extract")
-async def extract_questionnaire_instance_operation(request):
+async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     resource = await resource.json()
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
-    questionnaire = (
+    client = request.app["client"]
+    jute_service = request.app["settings"].JUTE_SERVICE
+    fhir_questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
     jute_templates = []
     structure_map_extensions = [
         ext
-        for ext in questionnaire["extension"]
+        for ext in fhir_questionnaire["extension"]
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
+
+    questionnaire = to_first_class_extension(fhir_questionnaire)
 
     for structure_map_extension in structure_map_extensions:
         structure_map_id = structure_map_extension["valueCanonical"].splt("/")[-1]
@@ -142,7 +141,7 @@ async def extract_questionnaire_instance_operation(request):
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
-        context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
+        context = {"Questionnaire": to_first_class_extension(questionnaire), "QuestionnaireResponse": questionnaire_response}
         await constraint_check(client, context)
         return web.json_response(await extract(client, jute_templates, context, jute_service))
 
@@ -187,9 +186,8 @@ async def extract_questionnaire_instance_operation(request):
 
 
 @routes.post("/Questionnaire/$populate")
-async def populate_questionnaire_handler(request):
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
+async def populate_questionnaire_handler(request: web.BaseRequest):
+    client = request.app["client"]
     env = parameter_to_env(await request.json())
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
@@ -202,28 +200,27 @@ async def populate_questionnaire_handler(request):
             status=422,
         )
 
-    converted = to_first_class_extension(questionnaire_data)
-    questionnaire = client.resource("Questionnaire", **converted)
+    questionnaire = to_first_class_extension(questionnaire_data)
     populated_resource = await populate(client, questionnaire, env)
     populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
 @routes.post("/Questionnaire/{id}/$populate")
-async def populate_questionnaire_instance(operation, request):
-    client = request["app"]["client"]
-    client.authorization = request["headers"]["Authorization"]
+async def populate_questionnaire_instance(operation, request: web.BaseRequest):
+    client = request.app["client"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
     env = parameter_to_env(request["resource"])
-    env["Questionnaire"] = questionnaire
-    populated_resource = await populate(client, questionnaire, env)
+    converted = to_first_class_extension(questionnaire)
+    env["Questionnaire"] = converted
+    populated_resource = await populate(client, converted, env)
     populated_resource = from_first_class_extension(populated_resource)
 
     return web.json_response(populated_resource)
 
 
 @routes.post("/Questionnaire/$resolve-expression")
-async def resolve_expression_operation_handler(request):
+async def resolve_expression_operation_handler(request: web.BaseRequest):
     return web.json_response(resolve_expression(await request.json()))
