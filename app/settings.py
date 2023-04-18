@@ -18,7 +18,7 @@ settings = Settings(
 )
 
 fhir_app_settings = FHIRAppSettings(
-    SDC_VERSION=os.getenv("SDC_VERSION", "2.7.0"),
-    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox"),
+    SDC_VERSION=os.getenv("SDC_VERSION", "3.0.0"),
+    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
 )
