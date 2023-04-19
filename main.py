@@ -11,7 +11,6 @@ from fhirpy.lib import AsyncFHIRClient
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
-from app.fhir_server import default_handler
 from app.fhir_server.operations import routes as fhir_routes
 from app.settings import fhir_app_settings
 
