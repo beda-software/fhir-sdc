@@ -3,8 +3,7 @@ RUN pip install pipenv
 RUN mkdir /app
 WORKDIR /app
 ENV PYTHONPATH /app
-ADD Pipfile /app
-ADD Pipfile.lock /app
+COPY Pipfile Pipfile.lock /app/
 RUN pipenv install
 ADD . /app
 CMD ["pipenv", "run", "gunicorn", "main:create_gunicorn_app", "--worker-class", "aiohttp.worker.GunicornWebWorker", "-b", "0.0.0.0:8081"]
