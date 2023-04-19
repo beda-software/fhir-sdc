@@ -16,3 +16,4 @@ env/
 htmlcov/
 .coverage
 .vscode
+.pytest_cache
