@@ -297,32 +297,33 @@ def process_launch_context(questionnaire):
     if "launchContext" in questionnaire:
         extension = []
         for launchContext in questionnaire["launchContext"]:
-            name = launchContext.get("name").get("code")
-            type_list = launchContext.get("type")
+            name = launchContext["name"]["code"]
+            type_list = launchContext["type"]
             description = launchContext.get("description")
 
-            launch_context_extension = [
-                {
-                    "url": "name",
-                    "valueCoding": {
-                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                        "code": name,
+            for type_code in type_list:
+                launch_context_extension = [
+                    {
+                        "url": "name",
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                            "code": name,
+                        },
                     },
-                }
-            ]
+                    {"url": "type", "valueCode": type_code},
+                ]
 
-            for type in type_list:
-                launch_context_extension.append({"url": "type", "valueCode": type})
+                if description is not None:
+                    launch_context_extension.append(
+                        {"url": "description", "valueString": description}
+                    )
 
-            if description is not None:
-                launch_context_extension.append({"url": "description", "valueString": description})
-
-            extension.append(
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": launch_context_extension,
-                }
-            )
+                extension.append(
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                        "extension": launch_context_extension,
+                    }
+                )
 
         questionnaire["extension"] = questionnaire.get("extension", [])
         questionnaire["extension"].extend(extension)

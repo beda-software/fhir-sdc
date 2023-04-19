@@ -239,10 +239,10 @@ def test_fhir_to_fce_Questionnaire():
         to_first_class_extension(source_queries_fhir_questionnaire)
         == source_queries_aidbox_questionnaire
     )
-    # assert (
-    #     to_first_class_extension(multiple_type_fhir_Questionnaire)
-    #     == multiple_type_aidbox_Questionnaire
-    # )
+    assert (
+        to_first_class_extension(multiple_type_fhir_Questionnaire)
+        == multiple_type_aidbox_Questionnaire
+    )
 
 
 def test_fce_to_fhir_Questionnaire():
@@ -302,7 +302,7 @@ def test_fce_to_fhir_Questionnaire():
         from_first_class_extension(source_queries_aidbox_questionnaire)
         == source_queries_fhir_questionnaire
     )
-    # assert (
-    #     from_first_class_extension(multiple_type_aidbox_Questionnaire)
-    #     == multiple_type_fhir_Questionnaire
-    # )
+    assert (
+        from_first_class_extension(multiple_type_aidbox_Questionnaire)
+        == multiple_type_fhir_Questionnaire
+    )
