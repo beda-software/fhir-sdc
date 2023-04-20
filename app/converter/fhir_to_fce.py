@@ -1,5 +1,6 @@
-from fhirpy.base.utils import get_by_path
 import copy
+
+from fhirpy.base.utils import get_by_path
 
 
 def to_first_class_extension(fhirResource):
@@ -152,8 +153,6 @@ def process_extension_to_fce(fhirQuestionnaire):
     launchContext = process_launch_context(fhirQuestionnaire)
     mapping = process_mapping(fhirQuestionnaire)
     source_queries = process_source_queries(fhirQuestionnaire)
-
-    print("source_queries=", source_queries)
 
     return {
         "launchContext": launchContext if launchContext else None,
