@@ -9,5 +9,6 @@ class Settings(AidboxSettings):
 
 
 settings = Settings(
-    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox")
+    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox"),
+    CREATE_MANIFEST_ATTRS=os.getenv("CREATE_MANIFEST_ATTRS", "True"),
 )

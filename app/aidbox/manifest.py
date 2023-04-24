@@ -1,4 +1,8 @@
-manifest = {
+from .settings import settings
+
+manifest = {}
+
+attributes = {
     "Attribute": {
         "Questionnaire.runOnBehalfOfRoot": {
             "type": {"resourceType": "Entity", "id": "boolean"},
@@ -31,6 +35,7 @@ manifest = {
             "path": ["launchContext", "type", "0"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "type",
+            "isCollection": True,
         },
         "Questionnaire.launchContext.description": {
             "type": {"resourceType": "Entity", "id": "string"},
@@ -268,3 +273,6 @@ manifest = {
         },
     },
 }
+
+if settings.CREATE_MANIFEST_ATTRS.lower() == "true":
+    manifest.update(attributes)
