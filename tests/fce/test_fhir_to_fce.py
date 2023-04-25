@@ -2,7 +2,6 @@ from app.converter.fhir_to_fce import to_first_class_extension
 from tests.fce.resources.fce import (
     patient_fhir_QuestionnaireResponse,
     patient_aidbox_QuestionnaireResponse,
-    practitioner_aidbox_QuestionnaireResponse,
     allergies_fhir_QuestionnaireResponse,
     allergies_aidbox_QuestionnaireResponse,
     gad7_fhir_QuestionnaireResponse,
@@ -25,45 +24,8 @@ from tests.fce.resources.fce import (
     allergies_inprogress_aidbox_QuestionnaireResponse,
     newappointment_fhir_QuestionnaireResponse,
     newappointment_aidbox_QuestionnaireResponse,
-    beverages_fhir_Questionnaire,
-    beverages_aidbox_Questionnaire,
-    allergies_fhir_Questionnaire,
-    allergies_aidbox_Questionnaire,
-    encounter_create_fhir_Questionnaire,
-    encounter_create_aidbox_Questionnaire,
-    gad7_fhir_Questionnaire,
-    gad7_aidbox_Questionnaire,
-    immunization_fhir_Questionnaire,
-    immunization_aidbox_Questionnaire,
-    medication_fhir_Questionnaire,
-    medication_aidbox_Questionnaire,
-    patient_create_fhir_Questionnaire,
-    patient_create_aidbox_Questionnaire,
-    patient_edit_fhir_Questionnaire,
-    patient_edit_aidbox_Questionnaire,
-    phq2phq9_fhir_Questionnaire,
-    phq2phq9_aidbox_Questionnaire,
-    physicalexam_fhir_Questionnaire,
-    physicalexam_aidbox_Questionnaire,
-    practitioner_create_fhir_Questionnaire,
-    practitioner_create_aidbox_Questionnaire,
-    practitioner_edit_fhir_Questionnaire,
-    practitioner_edit_aidbox_Questionnaire,
-    practitioner_role_create_fhir_Questionnaire,
-    practitioner_role_create_aidbox_Questionnaire,
-    public_appointment_fhir_Questionnaire,
-    public_appointment_aidbox_Questionnaire,
-    review_of_systems_fhir_Questionnaire,
-    review_of_systems_aidbox_Questionnaire,
-    vitals_fhir_Questionnaire,
-    vitals_aidbox_Questionnaire,
-    # practitioner_fhir_QuestionnaireResponse,
-    source_queries_aidbox_questionnaire,
-    source_queries_fhir_questionnaire,
     few_answers_fhir_questionnaire_response,
     few_answers_aidbox_questionnaire_response,
-    multiple_type_fhir_Questionnaire,
-    multiple_type_aidbox_Questionnaire,
 )
 
 import json
@@ -76,9 +38,12 @@ def load_json_file(file_path):
 
 
 def test_fhir_to_fce_QuestionnaireResponse():
-    fhir_file_path = 'tests/fce/resources/fhir_questionnaire_response/practitioner.json'
+    fhir_file_path = "tests/fce/resources/questionnaire_response_fhir/practitioner.json"
+    fce_file_path = "tests/fce/resources/questionnaire_response_fce/practitioner.json"
     fhir_practitioner = load_json_file(fhir_file_path)
-    assert to_first_class_extension(fhir_practitioner) == practitioner_aidbox_QuestionnaireResponse
+    fce_practitioner = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_practitioner) == fce_practitioner
+
     assert (
         to_first_class_extension(patient_fhir_QuestionnaireResponse)
         == patient_aidbox_QuestionnaireResponse
@@ -132,65 +97,121 @@ def test_fhir_to_fce_QuestionnaireResponse():
         == few_answers_aidbox_questionnaire_response
     )
 
+
 def test_fhir_to_fce_Questionnaire():
-    fhir_file_path = 'tests/fce/resources/fhir_questionnaire/choice_reference.json'
-    fce_file_path = 'tests/fce/resources/fce_questionnaire/choice_reference.json'
-    fhir_choice_refernce = load_json_file(fhir_file_path)
-    fce_choice_refernce = load_json_file(fce_file_path)
-    assert to_first_class_extension(fhir_choice_refernce) == fce_choice_refernce
-    assert to_first_class_extension(beverages_fhir_Questionnaire) == beverages_aidbox_Questionnaire
-    assert to_first_class_extension(allergies_fhir_Questionnaire) == allergies_aidbox_Questionnaire
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/choice_answer_option.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/choice_answer_option.json"
+    fhir_choice_answer_option = load_json_file(fhir_file_path)
+    fce_choice_answer_option = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_choice_answer_option) == fce_choice_answer_option
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/beverages.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/beverages.json"
+    fhir_beverages = load_json_file(fhir_file_path)
+    fce_beverages = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_beverages) == fce_beverages
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/allergies.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/allergies.json"
+    fhir_allergies = load_json_file(fhir_file_path)
+    fce_allergies = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_allergies) == fce_allergies
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/encounter_create.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/encounter_create.json"
+    fhir_encounter_create = load_json_file(fhir_file_path)
+    fce_encounter_create = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_encounter_create) == fce_encounter_create
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/gad_7.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/gad_7.json"
+    fhir_gad_7 = load_json_file(fhir_file_path)
+    fce_gad_7 = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_gad_7) == fce_gad_7
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/immunization.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/immunization.json"
+    fhir_immunization = load_json_file(fhir_file_path)
+    fce_immunization = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_immunization) == fce_immunization
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/medication.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/medication.json"
+    fhir_medication = load_json_file(fhir_file_path)
+    fce_medication = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_medication) == fce_medication
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/patient_create.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/patient_create.json"
+    fhir_patient_create = load_json_file(fhir_file_path)
+    fce_patient_create = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_patient_create) == fce_patient_create
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/patient_edit.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/patient_edit.json"
+    fhir_patient_edit = load_json_file(fhir_file_path)
+    fce_patient_edit = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_patient_edit) == fce_patient_edit
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/phq_2_phq_9.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/phq_2_phq_9.json"
+    fhir_phq_2_phq_9 = load_json_file(fhir_file_path)
+    fce_phq_2_phq_9 = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_phq_2_phq_9) == fce_phq_2_phq_9
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/physicalexam.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/physicalexam.json"
+    fhir_physicalexam = load_json_file(fhir_file_path)
+    fce_physicalexam = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_physicalexam) == fce_physicalexam
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/practitioner_create.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/practitioner_create.json"
+    fhir_practitioner_create = load_json_file(fhir_file_path)
+    fce_practitioner_create = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_practitioner_create) == fce_practitioner_create
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/practitioner_edit.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/practitioner_edit.json"
+    fhir_practitioner_edit = load_json_file(fhir_file_path)
+    fce_practitioner_edit = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_practitioner_edit) == fce_practitioner_edit
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/practitioner_role_create.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/practitioner_role_create.json"
+    fhir_practitioner_role_create = load_json_file(fhir_file_path)
+    fce_practitioner_role_create = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_practitioner_role_create) == fce_practitioner_role_create
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/public_appointment.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/public_appointment.json"
+    fhir_public_appointment = load_json_file(fhir_file_path)
+    fce_public_appointment = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_public_appointment) == fce_public_appointment
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/review_of_systems.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/review_of_systems.json"
+    fhir_review_of_systems = load_json_file(fhir_file_path)
+    fce_review_of_systems = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_review_of_systems) == fce_review_of_systems
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/vitals.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/vitals.json"
+    fhir_vitals = load_json_file(fhir_file_path)
+    fce_vitals = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_vitals) == fce_vitals
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/source_queries.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/source_queries.json"
+    fhir_source_queries = load_json_file(fhir_file_path)
+    fce_source_queries = load_json_file(fce_file_path)
+    assert to_first_class_extension(fhir_source_queries) == fce_source_queries
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/multiple_type_launch_context.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/multiple_type_launch_context.json"
+    fhir_multiple_type_launch_context = load_json_file(fhir_file_path)
+    fce_multiple_type_launch_context = load_json_file(fce_file_path)
     assert (
-        to_first_class_extension(encounter_create_fhir_Questionnaire)
-        == encounter_create_aidbox_Questionnaire
-    )
-    assert to_first_class_extension(gad7_fhir_Questionnaire) == gad7_aidbox_Questionnaire
-    assert (
-        to_first_class_extension(immunization_fhir_Questionnaire)
-        == immunization_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(medication_fhir_Questionnaire) == medication_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(patient_create_fhir_Questionnaire)
-        == patient_create_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(patient_edit_fhir_Questionnaire)
-        == patient_edit_aidbox_Questionnaire
-    )
-    assert to_first_class_extension(phq2phq9_fhir_Questionnaire) == phq2phq9_aidbox_Questionnaire
-    assert (
-        to_first_class_extension(physicalexam_fhir_Questionnaire)
-        == physicalexam_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(practitioner_create_fhir_Questionnaire)
-        == practitioner_create_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(practitioner_edit_fhir_Questionnaire)
-        == practitioner_edit_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(practitioner_role_create_fhir_Questionnaire)
-        == practitioner_role_create_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(public_appointment_fhir_Questionnaire)
-        == public_appointment_aidbox_Questionnaire
-    )
-    assert (
-        to_first_class_extension(review_of_systems_fhir_Questionnaire)
-        == review_of_systems_aidbox_Questionnaire
-    )
-    assert to_first_class_extension(vitals_fhir_Questionnaire) == vitals_aidbox_Questionnaire
-    assert (
-        to_first_class_extension(source_queries_fhir_questionnaire)
-        == source_queries_aidbox_questionnaire
-    )
-    assert (
-        to_first_class_extension(multiple_type_fhir_Questionnaire)
-        == multiple_type_aidbox_Questionnaire
+        to_first_class_extension(fhir_multiple_type_launch_context)
+        == fce_multiple_type_launch_context
     )
