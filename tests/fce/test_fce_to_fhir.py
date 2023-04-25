@@ -1,5 +1,5 @@
 from app.converter.fce_to_fhir import from_first_class_extension
-from tests.fce.data.fce import (
+from tests.fce.resources.fce import (
     patient_fhir_QuestionnaireResponse,
     patient_aidbox_QuestionnaireResponse,
     practitioner_aidbox_QuestionnaireResponse,
@@ -66,6 +66,14 @@ from tests.fce.data.fce import (
     multiple_type_aidbox_Questionnaire,
 )
 
+import json
+
+
+def load_json_file(file_path):
+    with open(file_path, "r") as f:
+        json_data = f.read()
+    return json.loads(json_data)
+
 
 def test_fce_to_fhir_QuestionnaireResponse():
     assert (
@@ -127,6 +135,11 @@ def test_fce_to_fhir_QuestionnaireResponse():
 
 
 def test_fce_to_fhir_Questionnaire():
+    fhir_file_path = 'tests/fce/resources/fhir_questionnaire/choice_reference.json'
+    fce_file_path = 'tests/fce/resources/fce_questionnaire/choice_reference.json'
+    fhir_choice_refernce = load_json_file(fhir_file_path)
+    fce_choice_refernce = load_json_file(fce_file_path)
+    assert from_first_class_extension(fce_choice_refernce) == fhir_choice_refernce
     assert (
         from_first_class_extension(beverages_aidbox_Questionnaire) == beverages_fhir_Questionnaire
     )

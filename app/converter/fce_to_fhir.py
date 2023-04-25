@@ -164,6 +164,31 @@ def process_items_to_fhir(items):
                 elif "value" in option and "string" in option["value"]:
                     option["valueString"] = option["value"]["string"]
                     del option["value"]
+                elif "value" in option and "Reference" in option["value"]:
+                    reference = option["value"]["Reference"]
+                    option["valueReference"] = {
+                        key: value
+                        for key, value in {
+                            "resourceType": reference.get("resourceType"),
+                            "display": reference.get("display"),
+                            "extension": reference.get("extension"),
+                            "localRef": reference.get("localRef"),
+                            "resource": reference.get("resource"),
+                            "type": reference.get("type"),
+                            "reference": reference.get("uri"),
+                        }.items()
+                        if value is not None
+                    }
+                    del option["value"]
+                elif "value" in option and "date" in option["value"]:
+                    option["valueDate"] = option["value"]["date"]
+                    del option["value"]
+                elif "value" in option and "integer" in option["value"]:
+                    option["valueInteger"] = option["value"]["integer"]
+                    del option["value"]
+                elif "value" in option and "time" in option["value"]:
+                    option["valueTime"] = option["value"]["time"]
+                    del option["value"]
 
         if item.get("hidden") is not None:
             hidden_extension = {

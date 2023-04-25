@@ -293,21 +293,51 @@ def get_updated_properties_from_item(item):
 
     if item_type == "choice":
         answer_option = item.get("answerOption", [])
-        updated_properties["answerOption"] = [
-            {"value": {"string": option["valueString"]}}
-            if "valueString" in option
-            else {
-                "value": {
-                    "Coding": {
-                        "code": option.get("valueCoding", {}).get("code"),
-                        "display": option.get("valueCoding", {}).get("display"),
-                        "system": option.get("valueCoding", {}).get("system"),
+        updated_properties["answerOption"] = []
+
+        for option in answer_option:
+            if "valueString" in option:
+                updated_properties["answerOption"].append(
+                    {"value": {"string": option["valueString"]}}
+                )
+            if "valueCoding" in option:
+                updated_properties["answerOption"].append(
+                    {
+                        "value": {
+                            "Coding": {
+                                "code": option.get("valueCoding", {}).get("code"),
+                                "display": option.get("valueCoding", {}).get("display"),
+                                "system": option.get("valueCoding", {}).get("system"),
+                            }
+                        }
                     }
-                }
-            }
-            for option in answer_option
-            if "valueCoding" in option or "valueString" in option
-        ]
+                )
+            if "valueReference" in option:
+                updated_properties["answerOption"].append(
+                    {
+                        "value": {
+                            "Reference": {
+                                "resourceType": option.get("valueReference", {}).get(
+                                    "resourceType"
+                                ),
+                                "display": option.get("valueReference", {}).get("display"),
+                                "extension": option.get("valueReference", {}).get("extension"),
+                                "localRef": option.get("valueReference", {}).get("localRef"),
+                                "resource": option.get("valueReference", {}).get("resource"),
+                                "type": option.get("valueReference", {}).get("type"),
+                                "uri": option.get("valueReference", {}).get("reference"),
+                            }
+                        }
+                    }
+                )
+            if "valueDate" in option:
+                updated_properties["answerOption"].append({"value": {"date": option["valueDate"]}})
+            if "valueInteger" in option:
+                updated_properties["answerOption"].append(
+                    {"value": {"integer": option["valueInteger"]}}
+                )
+            if "valueTime" in option:
+                updated_properties["answerOption"].append({"value": {"time": option["valueTime"]}})
 
         adjust_last_to_right = find_extension(
             item, "https://beda.software/fhir-emr-questionnaire/adjust-last-to-right"
