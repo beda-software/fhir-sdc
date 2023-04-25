@@ -271,6 +271,13 @@ attributes = {
             "extensionUrl": "forDisplay",
             "description": "Use for display ?",
         },
+        "Questionnaire.targetStructureMap": {
+            "path": ["targetStructureMap"],
+            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+            "isCollection": True,
+            "description": "List of StructureMap that can be used to create other artifacts from QuestionnaireResponses that are valid against this Questionnaire",
+        },
     },
 }
 
