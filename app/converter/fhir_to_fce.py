@@ -11,15 +11,7 @@ def to_first_class_extension(fhirResource):
         item = process_items_to_fce(fhirQuestionnaire)
         extensions = process_extension_to_fce(fhirQuestionnaire)
         questionnaire = trim_empty(
-            {
-                **fhirQuestionnaire,
-                "meta": meta,
-                "item": item,
-                "launchContext": extensions["launchContext"],
-                "mapping": extensions["mapping"],
-                "sourceQueries": extensions["sourceQueries"],
-                "extension": None,
-            }
+            {**fhirQuestionnaire, "meta": meta, "item": item, "extension": None, **extensions}
         )
         return questionnaire
     elif fhirResource.get("resourceType") == "QuestionnaireResponse":
@@ -153,11 +145,13 @@ def process_extension_to_fce(fhirQuestionnaire):
     launchContext = process_launch_context(fhirQuestionnaire)
     mapping = process_mapping(fhirQuestionnaire)
     source_queries = process_source_queries(fhirQuestionnaire)
+    target_structure_map = process_target_structure_map(fhirQuestionnaire)
 
     return {
         "launchContext": launchContext if launchContext else None,
         "mapping": mapping if mapping else None,
         "sourceQueries": source_queries if source_queries else None,
+        "targetStructureMap": target_structure_map if target_structure_map else None,
     }
 
 
@@ -260,6 +254,20 @@ def process_mapping(fhirQuestionnaire):
             mapperExtensions,
         )
     )
+
+
+def process_target_structure_map(fhirQuestionnaire):
+    extensions = [
+        extension
+        for extension in fhirQuestionnaire.get("extension", [])
+        if extension["url"]
+        == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
+    ]
+
+    if not extensions:
+        return None
+
+    return [extension["valueCanonical"] for extension in extensions]
 
 
 def get_updated_properties_from_item(item):

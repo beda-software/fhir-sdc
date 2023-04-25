@@ -122,6 +122,7 @@ def test_fhir_to_fce_QuestionnaireResponse():
         "vitals.json",
         "source_queries.json",
         "multiple_type_launch_context.json",
+        "practitioner_create_structure_map.json",
     ],
 )
 def test_fhir_to_fce_questionnaire(filename):
