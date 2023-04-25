@@ -1,34 +1,34 @@
+import json
+
 from app.converter.fce_to_fhir import from_first_class_extension
 from tests.fce.resources.fce import (
-    patient_fhir_QuestionnaireResponse,
-    patient_aidbox_QuestionnaireResponse,
-    allergies_fhir_QuestionnaireResponse,
     allergies_aidbox_QuestionnaireResponse,
-    gad7_fhir_QuestionnaireResponse,
-    gad7_aidbox_QuestionnaireResponse,
-    medication_fhir_QuestionnaireResponse,
-    medication_aidbox_QuestionnaireResponse,
-    physicalexam_fhir_QuestionnaireResponse,
-    physicalexam_aidbox_QuestionnaireResponse,
-    reviewofsystems_fhir_QuestionnaireResponse,
-    reviewofsystems_aidbox_QuestionnaireResponse,
-    vitals_fhir_QuestionnaireResponse,
-    vitals_aidbox_QuestionnaireResponse,
-    phq2phq9_fhir_QuestionnaireResponse,
-    phq2phq9_aidbox_QuestionnaireResponse,
-    immunization_fhir_QuestionnaireResponse,
-    immunization_aidbox_QuestionnaireResponse,
-    cardiology_fhir_QuestionnaireResponse,
-    cardiology_aidbox_QuestionnaireResponse,
-    allergies_inprogress_fhir_QuestionnaireResponse,
+    allergies_fhir_QuestionnaireResponse,
     allergies_inprogress_aidbox_QuestionnaireResponse,
-    newappointment_fhir_QuestionnaireResponse,
-    newappointment_aidbox_QuestionnaireResponse,
-    few_answers_fhir_questionnaire_response,
+    allergies_inprogress_fhir_QuestionnaireResponse,
+    cardiology_aidbox_QuestionnaireResponse,
+    cardiology_fhir_QuestionnaireResponse,
     few_answers_aidbox_questionnaire_response,
+    few_answers_fhir_questionnaire_response,
+    gad7_aidbox_QuestionnaireResponse,
+    gad7_fhir_QuestionnaireResponse,
+    immunization_aidbox_QuestionnaireResponse,
+    immunization_fhir_QuestionnaireResponse,
+    medication_aidbox_QuestionnaireResponse,
+    medication_fhir_QuestionnaireResponse,
+    newappointment_aidbox_QuestionnaireResponse,
+    newappointment_fhir_QuestionnaireResponse,
+    patient_aidbox_QuestionnaireResponse,
+    patient_fhir_QuestionnaireResponse,
+    phq2phq9_aidbox_QuestionnaireResponse,
+    phq2phq9_fhir_QuestionnaireResponse,
+    physicalexam_aidbox_QuestionnaireResponse,
+    physicalexam_fhir_QuestionnaireResponse,
+    reviewofsystems_aidbox_QuestionnaireResponse,
+    reviewofsystems_fhir_QuestionnaireResponse,
+    vitals_aidbox_QuestionnaireResponse,
+    vitals_fhir_QuestionnaireResponse,
 )
-
-import json
 
 
 def load_json_file(file_path):
@@ -214,4 +214,13 @@ def test_fce_to_fhir_Questionnaire():
     assert (
         from_first_class_extension(fce_multiple_type_launch_context)
         == fhir_multiple_type_launch_context
+    )
+
+    fhir_file_path = "tests/fce/resources/questionnaire_fhir/practitioner_create_structure_map.json"
+    fce_file_path = "tests/fce/resources/questionnaire_fce/practitioner_create_structure_map.json"
+    fhir_practitioner_create_structure_map = load_json_file(fhir_file_path)
+    fce_practitioner_create_structure_map = load_json_file(fce_file_path)
+    assert (
+        from_first_class_extension(fce_practitioner_create_structure_map)
+        == fhir_practitioner_create_structure_map
     )

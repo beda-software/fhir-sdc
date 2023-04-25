@@ -299,6 +299,7 @@ def process_extension_to_fhir(questionnaire):
     process_mapping(questionnaire)
     process_assebled_from(questionnaire)
     process_source_queries(questionnaire)
+    process_target_structure_map(questionnaire)
 
     def process_item(item):
         if "item" in item:
@@ -390,3 +391,19 @@ def process_source_queries(questionnaire):
             questionnaire["extension"] = questionnaire.get("extension", [])
             questionnaire["extension"].append(extension)
         del questionnaire["sourceQueries"]
+
+
+def process_target_structure_map(questionnaire):
+    if "targetStructureMap" not in questionnaire:
+        return
+
+    extensions = [
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+            "valueCanonical": structure_map_link,
+        }
+        for structure_map_link in questionnaire["targetStructureMap"]
+    ]
+
+    questionnaire.get("extension").extend(extensions)
+    del questionnaire["targetStructureMap"]

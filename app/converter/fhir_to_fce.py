@@ -13,6 +13,7 @@ def to_first_class_extension(fhirResource):
         questionnaire = trim_empty(
             {**fhirQuestionnaire, "meta": meta, "item": item, "extension": None, **extensions}
         )
+
         return questionnaire
     elif fhirResource.get("resourceType") == "QuestionnaireResponse":
         questionnaireResponse = copy.deepcopy(fhirResource)
@@ -20,6 +21,7 @@ def to_first_class_extension(fhirResource):
         if questionnaireResponse.get("meta"):
             processMetaToFCE(questionnaireResponse["meta"])
         processReferenceToFCE(questionnaireResponse)
+
         return questionnaireResponse
 
 
