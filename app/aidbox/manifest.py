@@ -272,6 +272,7 @@ attributes = {
             "description": "Use for display ?",
         },
         "Questionnaire.targetStructureMap": {
+            "type": {"resourceType": "Entity", "id": "canonical"},
             "path": ["targetStructureMap"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",

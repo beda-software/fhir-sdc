@@ -359,6 +359,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         {
             "status": "active",
             "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "targetStructureMap": ["StructureMap/create-patient"],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -381,6 +382,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         {
             "status": "active",
             "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "targetStructureMap": ["StructureMap/create-patient"],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -403,6 +405,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         {
             "status": "active",
             "resourceType": "Questionnaire",
+            "targetStructureMap": ["StructureMap/create-another-patient"],
             "item": [
                 {
                     "linkId": "demographics",
@@ -493,6 +496,14 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
             {
                 "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
                 "valueCanonical": q.id,
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+                "valueCanonical": "StructureMap/create-another-patient",
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+                "valueCanonical": "StructureMap/create-patient",
             },
         ],
     }

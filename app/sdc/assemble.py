@@ -11,6 +11,7 @@ WHITELISTED_ROOT_ELEMENTS = {
     "contained": lambda i: i["id"],
     "sourceQueries": lambda i: i.get("id", i["localRef"]),
     "cqf-library": lambda i: i["expression"],
+    "targetStructureMap": lambda i: i,
 }
 
 PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
