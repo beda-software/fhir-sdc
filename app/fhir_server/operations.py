@@ -79,7 +79,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
     jute_templates = []
 
     for structure_map_extension in structure_map_extensions:
-        structure_map_id = structure_map_extension["valueCanonical"].splt("/")[-1]
+        structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
         structure_map = await client.resources("StructureMap").search(_id=structure_map_id).get()
         template_string = structure_map.get_by_path(
             [
@@ -124,7 +124,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     questionnaire = to_first_class_extension(fhir_questionnaire)
 
     for structure_map_extension in structure_map_extensions:
-        structure_map_id = structure_map_extension["valueCanonical"].splt("/")[-1]
+        structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
         structure_map = await client.resources("StructureMap").search(_id=structure_map_id).get()
         template_string = structure_map.get_by_path(
             [
@@ -141,7 +141,10 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
-        context = {"Questionnaire": to_first_class_extension(questionnaire), "QuestionnaireResponse": questionnaire_response}
+        context = {
+            "Questionnaire": to_first_class_extension(questionnaire),
+            "QuestionnaireResponse": questionnaire_response,
+        }
         await constraint_check(client, context)
         return web.json_response(await extract(client, jute_templates, context, jute_service))
 
