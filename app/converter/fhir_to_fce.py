@@ -7,9 +7,9 @@ def to_first_class_extension(fhirResource):
     if fhirResource.get("resourceType") == "Questionnaire":
         fhirQuestionnaire = copy.deepcopy(fhirResource)
         check_fhir_questionnaire_profile(fhirQuestionnaire)
-        meta = processMeta(fhirQuestionnaire)
-        item = process_items_to_fce(fhirQuestionnaire)
-        extensions = process_extension_to_fce(fhirQuestionnaire)
+        meta = process_meta_questionnaire(fhirQuestionnaire)
+        item = process_items(fhirQuestionnaire)
+        extensions = process_extension(fhirQuestionnaire)
         questionnaire = trim_empty(
             {**fhirQuestionnaire, "meta": meta, "item": item, "extension": None, **extensions}
         )
@@ -17,15 +17,15 @@ def to_first_class_extension(fhirResource):
         return questionnaire
     elif fhirResource.get("resourceType") == "QuestionnaireResponse":
         questionnaireResponse = copy.deepcopy(fhirResource)
-        process_answer_to_fce(questionnaireResponse.get("item", []))
+        process_answer_qr(questionnaireResponse.get("item", []))
         if questionnaireResponse.get("meta"):
-            processMetaToFCE(questionnaireResponse["meta"])
-        processReferenceToFCE(questionnaireResponse)
+            process_meta_qr(questionnaireResponse["meta"])
+        process_reference(questionnaireResponse)
 
         return questionnaireResponse
 
 
-def process_answer_to_fce(items):
+def process_answer_qr(items):
     if not items:
         return
 
@@ -58,10 +58,10 @@ def process_answer_to_fce(items):
             for answer in item["answer"]:
                 process_answer(answer)
         if "item" in item:
-            process_answer_to_fce(item["item"])
+            process_answer_qr(item["item"])
 
 
-def processMetaToFCE(meta):
+def process_meta_qr(meta):
     if meta and meta.get("extension"):
         for ext in meta["extension"]:
             if ext.get("url") == "ex:createdAt":
@@ -80,7 +80,7 @@ def check_fhir_questionnaire_profile(fhir_questionnaire):
         raise ValueError("Only beda emr questionnaire supported")
 
 
-def processReferenceToFCE(fhirQuestionnaireResponse):
+def process_reference(fhirQuestionnaireResponse):
     if fhirQuestionnaireResponse.get("encounter", {}).get("reference"):
         resourceType, id = fhirQuestionnaireResponse["encounter"]["reference"].split("/")
         fhirQuestionnaireResponse["encounter"] = {
@@ -107,12 +107,12 @@ def get_created_at(fhir_questionnaire):
     return {"createdAt": meta_extension["valueInstant"]} if meta_extension else {}
 
 
-def processMeta(fhirQuestionnaire):
+def process_meta_questionnaire(fhirQuestionnaire):
     createdAt = get_created_at(fhirQuestionnaire)
     return {**fhirQuestionnaire.get("meta", {}), **createdAt, "extension": None}
 
 
-def process_items_to_fce(fhirQuestionnaire):
+def process_items(fhirQuestionnaire):
     return (
         list(map(process_item, fhirQuestionnaire.get("item", [])))
         if "item" in fhirQuestionnaire
@@ -143,7 +143,7 @@ def process_item(item):
     return new_item
 
 
-def process_extension_to_fce(fhirQuestionnaire):
+def process_extension(fhirQuestionnaire):
     launchContext = process_launch_context(fhirQuestionnaire)
     mapping = process_mapping(fhirQuestionnaire)
     source_queries = process_source_queries(fhirQuestionnaire)

@@ -4,20 +4,20 @@ import copy
 def from_first_class_extension(fceResource):
     if fceResource.get("resourceType") == "Questionnaire":
         questionnaire = copy.deepcopy(fceResource)
-        process_meta_to_fhir(questionnaire.get("meta"))
-        process_items_to_fhir(questionnaire.get("item"))
-        process_extension_to_fhir(questionnaire)
+        process_meta(questionnaire.get("meta"))
+        process_items(questionnaire.get("item"))
+        process_extensions(questionnaire)
         return questionnaire
     elif fceResource.get("resourceType") == "QuestionnaireResponse":
         questionnaireResponse = copy.deepcopy(fceResource)
-        process_answer_to_fhir(questionnaireResponse.get("item", []))
-        process_meta_to_fhir(questionnaireResponse.get("meta"))
-        process_reference_to_fhir(questionnaireResponse)
+        process_answer_qr(questionnaireResponse.get("item", []))
+        process_meta(questionnaireResponse.get("meta"))
+        process_reference(questionnaireResponse)
         return questionnaireResponse
     return fceResource
 
 
-def process_answer_to_fhir(items):
+def process_answer_qr(items):
     if not items:
         return
 
@@ -52,16 +52,16 @@ def process_answer_to_fhir(items):
             for answer in item["answer"]:
                 process_answer(answer)
         if "item" in item:
-            process_answer_to_fhir(item["item"])
+            process_answer_qr(item["item"])
 
 
-def process_meta_to_fhir(meta):
+def process_meta(meta):
     if meta and meta.get("createdAt"):
         meta["extension"] = [{"url": "ex:createdAt", "valueInstant": meta["createdAt"]}]
         del meta["createdAt"]
 
 
-def process_reference_to_fhir(fceQR):
+def process_reference(fceQR):
     if fceQR.get("encounter", {}).get("resourceType") and fceQR["encounter"].get("id"):
         fceQR["encounter"][
             "reference"
@@ -74,13 +74,13 @@ def process_reference_to_fhir(fceQR):
         del fceQR["source"]["id"]
 
 
-def process_items_to_fhir(items):
+def process_items(items):
     if not items:
         return
 
     for item in items:
         if item.get("item"):
-            process_items_to_fhir(item["item"])
+            process_items(item["item"])
 
         if item.get("macro"):
             macro_extension = {
@@ -294,7 +294,7 @@ def process_items_to_fhir(items):
             del item["enableWhenExpression"]
 
 
-def process_extension_to_fhir(questionnaire):
+def process_extensions(questionnaire):
     process_launch_context(questionnaire)
     process_mapping(questionnaire)
     process_assebled_from(questionnaire)
