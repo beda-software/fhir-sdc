@@ -40,9 +40,8 @@ def process_answer_qr(items):
             "valueReference": lambda value: {
                 "Reference": {
                     "display": value["display"],
-                    "id": value["resource"]["id"],
-                    "resource": value["resource"],
-                    "resourceType": value["resource"]["resourceType"],
+                    "id": value["reference"].split("/")[-1],
+                    "resourceType": value["reference"].split("/")[0],
                 }
             },
             "valueTime": lambda value: {"time": value},
