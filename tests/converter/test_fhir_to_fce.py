@@ -53,7 +53,7 @@ def test_fhir_to_fce_questionnaire(filename):
         "vitals.json",
     ],
 )
-def test_fce_to_fhir_QuestionnaireResponse(filename):
+def test_fhir_to_fce_questionnaire_response(filename):
     fhir_data = load_json_file(f"tests/converter/resources/questionnaire_response_fhir/{filename}")
     fce_data = load_json_file(f"tests/converter/resources/questionnaire_response_fce/{filename}")
     assert to_first_class_extension(fhir_data) == fce_data

@@ -42,7 +42,6 @@ def process_answer_qr(items):
         if "Reference" in value:
             answer_item["valueReference"] = {
                 "display": value["Reference"]["display"],
-                "resource": value["Reference"]["resource"],
                 "reference": f"{value['Reference']['resourceType']}/{value['Reference']['id']}",
             }
             del answer_item["value"]
