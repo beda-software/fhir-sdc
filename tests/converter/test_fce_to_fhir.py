@@ -29,7 +29,7 @@ from app.converter.utils import load_json_file
         "practitioner_create_structure_map.json",
     ],
 )
-def test_fce_to_fhir_Questionnaire(filename):
+def test_fce_to_fhir_questionnaire(filename):
     fce_data = load_json_file(f"tests/converter/resources/questionnaire_fce/{filename}")
     fhir_data = load_json_file(f"tests/converter/resources/questionnaire_fhir/{filename}")
     assert from_first_class_extension(fce_data) == fhir_data
@@ -51,9 +51,10 @@ def test_fce_to_fhir_Questionnaire(filename):
         "practitioner.json",
         "review_of_systems.json",
         "vitals.json",
+        "reference_answer_with_assoc.json",
     ],
 )
-def test_fce_to_fhir_QuestionnaireResponse(filename):
+def test_fce_to_fhir_questionnaireResponse(filename):
     fce_data = load_json_file(f"tests/converter/resources/questionnaire_response_fce/{filename}")
     fhir_data = load_json_file(f"tests/converter/resources/questionnaire_response_fhir/{filename}")
     assert from_first_class_extension(fce_data) == fhir_data
