@@ -209,22 +209,20 @@ def process_launch_context(fhir_questionnaire):
             None,
         )
 
-        name_code = get_by_path(name_extension, ["valueCoding", "code"])
+        name = get_by_path(name_extension, ["valueCoding"])
         type_code = get_by_path(type_extension, ["valueCode"])
         description = get_by_path(description_extension, ["valueString"])
 
         context_found = False
         for context in result:
-            if context["name"]["code"] == name_code:
+            if context["name"]["code"] == name["code"]:
                 context["type"].append(type_code)
                 context_found = True
                 break
 
         if not context_found:
             context = {
-                "name": {
-                    "code": name_code,
-                },
+                "name": name,
                 "type": [type_code],
             }
             if description:

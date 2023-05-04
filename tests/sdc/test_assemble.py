@@ -10,7 +10,15 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": "patient",
+                }
+            ],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -32,7 +40,15 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": "patient",
+                }
+            ],
             "itemContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
@@ -86,7 +102,15 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+        "launchContext": [
+            {
+                "name": {
+                    "code": "LaunchPatient",
+                    "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                },
+                "type": "patient",
+            }
+        ],
         "item": [
             {
                 "linkId": "demographics",
@@ -124,7 +148,15 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": "patient",
+                }
+            ],
             "assembleContext": [{"name": "prefix", "type": "string"}],
             "item": [
                 {
@@ -158,7 +190,15 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": "patient",
+                }
+            ],
             "item": [
                 {
                     "type": "group",
@@ -229,7 +269,15 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+        "launchContext": [
+            {
+                "name": {
+                    "code": "LaunchPatient",
+                    "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                },
+                "type": "patient",
+            }
+        ],
         "item": [
             {
                 "type": "group",
@@ -320,7 +368,15 @@ async def test_validate_assemble_context(aidbox_client):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": "patient",
+                }
+            ],
             "item": [
                 {
                     "type": "group",
@@ -358,7 +414,15 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
             "targetStructureMap": ["StructureMap/create-patient"],
             "itemContext": {
                 "language": "text/fhirpath",
@@ -381,7 +445,15 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
             "targetStructureMap": ["StructureMap/create-patient"],
             "itemContext": {
                 "language": "text/fhirpath",
@@ -488,6 +560,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                         "valueCoding": {
                             "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                             "code": "LaunchPatient",
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                         },
                     },
                     {"url": "type", "valueCode": "Patient"},

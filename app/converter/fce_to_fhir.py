@@ -322,7 +322,7 @@ def process_launch_context(questionnaire):
     if "launchContext" in questionnaire:
         extension = []
         for launchContext in questionnaire["launchContext"]:
-            name = launchContext["name"]["code"]
+            name = launchContext["name"]
             type_list = launchContext["type"]
             description = launchContext.get("description")
 
@@ -330,10 +330,7 @@ def process_launch_context(questionnaire):
                 launch_context_extension = [
                     {
                         "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": name,
-                        },
+                        "valueCoding": name,
                     },
                     {"url": "type", "valueCode": type_code},
                 ]
