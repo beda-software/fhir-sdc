@@ -353,12 +353,7 @@ def get_updated_properties_from_item(item):
             updated_properties["adjustLastToRight"] = adjust_last_to_right["valueBoolean"]
 
         enable_when = [
-            {
-                "question": condition["question"],
-                "operator": condition["operator"],
-                "answer": {"Coding": condition["answerCoding"]},
-            }
-            for condition in item.get("enableWhen", [])
+            process_enable_when_item(condition) for condition in item.get("enableWhen", [])
         ]
         if len(enable_when) > 0:
             updated_properties["enableWhen"] = enable_when
@@ -418,12 +413,7 @@ def get_updated_properties_from_item(item):
             updated_properties["enableWhenExpression"] = enable_when_expression["valueExpression"]
 
         enable_when = [
-            {
-                "question": condition["question"],
-                "operator": condition["operator"],
-                "answer": {"boolean": condition["answerBoolean"]},
-            }
-            for condition in item.get("enableWhen", [])
+            process_enable_when_item(condition) for condition in item.get("enableWhen", [])
         ]
         if len(enable_when) > 0:
             updated_properties["enableWhen"] = enable_when
@@ -438,12 +428,7 @@ def get_updated_properties_from_item(item):
                     nested_item["unit"] = unit["valueCoding"]
 
         enable_when = [
-            {
-                "question": condition["question"],
-                "operator": condition["operator"],
-                "answer": {"boolean": condition["answerBoolean"]},
-            }
-            for condition in item.get("enableWhen", [])
+            process_enable_when_item(condition) for condition in item.get("enableWhen", [])
         ]
         if len(enable_when) > 0:
             updated_properties["enableWhen"] = enable_when
@@ -484,6 +469,13 @@ def get_updated_properties_from_item(item):
         reference_resource = find_extension(
             item, "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource"
         )
+
+        enable_when = [
+            process_enable_when_item(condition) for condition in item.get("enableWhen", [])
+        ]
+        if len(enable_when) > 0:
+            updated_properties["enableWhen"] = enable_when
+
         if reference_resource is not None:
             reference_resource_array = [reference_resource["valueCode"]]
             updated_properties["referenceResource"] = reference_resource_array
@@ -538,3 +530,43 @@ def find_initial_value(item, property):
         if init.get(property) is not None:
             return init.get(property)
     return None
+
+
+def process_enable_when_item(item):
+    question = item.get("question")
+    operator = item.get("operator")
+    answer = {}
+
+    if "answerBoolean" in item:
+        answer["boolean"] = item["answerBoolean"]
+    elif "answerDecimal" in item:
+        answer["decimal"] = item["answerDecimal"]
+    elif "answerInteger" in item:
+        answer["integer"] = item["answerInteger"]
+    elif "answerDate" in item:
+        answer["date"] = item["answerDate"]
+    elif "answerDateTime" in item:
+        answer["dateTime"] = item["answerDateTime"]
+    elif "answerTime" in item:
+        answer["time"] = item["answerTime"]
+    elif "answerString" in item:
+        answer["string"] = item["answerString"]
+    elif "answerCoding" in item:
+        answer["Coding"] = item["answerCoding"]
+    elif "answerQuantity" in item:
+        answer["Quantity"] = item["answerQuantity"]
+    elif "answerReference" in item:
+        reference = item["answerReference"]["reference"]
+        split_reference = reference.split("/")
+        answer["Reference"] = {
+            **item["answerReference"],
+            "id": split_reference[1],
+            "resourceType": split_reference[0],
+        }
+        del answer["Reference"]["reference"]
+
+    return {
+        "question": question,
+        "operator": operator,
+        "answer": answer,
+    }

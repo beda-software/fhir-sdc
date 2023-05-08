@@ -28,6 +28,7 @@ from app.converter.utils import load_json_file
         "multiple_type_launch_context.json",
         "practitioner_create_structure_map.json",
         "consent.json",
+        "enable_when.json"
     ],
 )
 def test_fce_to_fhir_questionnaire(filename):

@@ -202,12 +202,44 @@ def process_items(items):
             for condition in item["enableWhen"]:
                 result = {"question": condition["question"], "operator": condition["operator"]}
                 if "answer" in condition:
-                    answer_coding = condition["answer"].get("Coding")
                     answer_boolean = condition["answer"].get("boolean")
+                    answer_decimal = condition["answer"].get("decimal")
+                    answer_integer = condition["answer"].get("integer")
+                    answer_date = condition["answer"].get("date")
+                    answer_dateTime = condition["answer"].get("dateTime")
+                    answer_time = condition["answer"].get("time")
+                    answer_string = condition["answer"].get("string")
+                    answer_coding = condition["answer"].get("Coding")
+                    answer_quantity = condition["answer"].get("Quantity")
+                    answer_reference = condition["answer"].get("Reference")
+
                     if answer_coding:
                         result["answerCoding"] = answer_coding
                     elif answer_boolean is not None:
                         result["answerBoolean"] = answer_boolean
+                    elif answer_decimal is not None:
+                        result["answerDecimal"] = answer_decimal
+                    elif answer_integer is not None:
+                        result["answerInteger"] = answer_integer
+                    elif answer_date is not None:
+                        result["answerDate"] = answer_date
+                    elif answer_dateTime is not None:
+                        result["answerDateTime"] = answer_dateTime
+                    elif answer_time is not None:
+                        result["answerTime"] = answer_time
+                    elif answer_string is not None:
+                        result["answerString"] = answer_string
+                    elif answer_quantity is not None:
+                        result["answerQuantity"] = answer_quantity
+                    elif answer_reference is not None:
+                        answer_reference_copy = answer_reference.copy()
+                        reference = (
+                            f"{answer_reference_copy['resourceType']}/{answer_reference_copy['id']}"
+                        )
+                        del answer_reference_copy["id"]
+                        del answer_reference_copy["resourceType"]
+                        answer_reference_copy["reference"] = reference
+                        result["answerReference"] = answer_reference_copy
                 enableWhen.append(result)
             item["enableWhen"] = enableWhen
 
