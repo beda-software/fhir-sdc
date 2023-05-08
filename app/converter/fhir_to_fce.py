@@ -280,6 +280,11 @@ def get_updated_properties_from_item(item):
     )
     if initial_expression is not None:
         initial_expression = initial_expression["valueExpression"]
+    item_population_context = find_extension(
+        item, "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
+    )
+    if item_population_context is not None:
+        item_population_context = item_population_context["valueExpression"]
     item_control = find_extension(
         item, "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl"
     )
@@ -288,6 +293,7 @@ def get_updated_properties_from_item(item):
 
     updated_properties["hidden"] = hidden
     updated_properties["initialExpression"] = initial_expression
+    updated_properties["itemPopulationContext"] = item_population_context
     updated_properties["itemControl"] = item_control
 
     item_type = item.get("type", "")
@@ -484,6 +490,12 @@ def get_updated_properties_from_item(item):
         updated_properties["initialExpression"] = {
             "expression": item["initialExpression"]["expression"],
             "language": item["initialExpression"]["language"],
+        }
+
+    if item.get("itemPopulationContext"):
+        updated_properties["itemPopulationContext"] = {
+            "expression": item["itemPopulationContext"]["expression"],
+            "language": item["itemPopulationContext"]["language"],
         }
 
     return updated_properties

@@ -1,0 +1,209 @@
+{
+  "meta": {
+    "profile": ["https://beda.software/beda-emr-questionnaire"],
+    "lastUpdated": "2023-05-08T05:15:49.469994Z",
+    "createdAt": "2023-05-07T12:43:04.628354Z",
+    "versionId": "8337"
+  },
+  "launchContext": [
+    {
+      "name": {
+        "code": "patient"
+      },
+      "type": ["Patient"],
+      "description": "Patient resource"
+    },
+    {
+      "name": {
+        "code": "practitionerRole"
+      },
+      "type": ["PractitionerRole"],
+      "description": "PractitionerRole resource"
+    },
+    {
+      "name": {
+        "code": "appointmentDraft"
+      },
+      "type": ["Basic"],
+      "description": "Appointment date passing from calendar"
+    }
+  ],
+  "item": [
+    {
+      "item": [
+        {
+          "text": "Predefined Practitioner role",
+          "type": "string",
+          "hidden": true,
+          "linkId": "predefined-practitioner-role-id",
+          "initialExpression": {
+            "language": "text/fhirpath",
+            "expression": "%PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='PractitionerRole').id"
+          }
+        },
+        {
+          "text": "Predefined practitioner role display",
+          "type": "string",
+          "hidden": true,
+          "linkId": "predefined-practitioner-role-display",
+          "initialExpression": {
+            "language": "text/fhirpath",
+            "expression": "name.given.first() + ' ' + name.family + ' - ' + %PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='PractitionerRole').specialty.first().coding.display"
+          },
+          "itemPopulationContext": {
+            "language": "text/fhirpath",
+            "expression": "%PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='Practitioner')"
+          }
+        },
+        {
+          "text": "Practitioner",
+          "type": "reference",
+          "linkId": "practitioner-role",
+          "required": true,
+          "enableWhen": [
+            {
+              "answer": {
+                "boolean": false
+              },
+              "operator": "exists",
+              "question": "predefined-practitioner-role-id"
+            }
+          ],
+          "choiceColumn": [
+            {
+              "path": "practitioner.resource.name.given.first() + ' ' +  practitioner.resource.name.family + ' - ' + specialty.first().coding.display",
+              "forDisplay": true
+            }
+          ],
+          "answerExpression": {
+            "language": "application/x-fhir-query",
+            "expression": "PractitionerRole?_assoc=practitioner"
+          },
+          "referenceResource": ["PractitionerRole"]
+        },
+        {
+          "text": "Predefined Patient Id",
+          "type": "string",
+          "hidden": true,
+          "linkId": "predefined-patient-id",
+          "initialExpression": {
+            "language": "text/fhirpath",
+            "expression": "%patient.where($this != 'undefined').id"
+          }
+        },
+        {
+          "text": "Patient",
+          "type": "reference",
+          "linkId": "patient",
+          "required": true,
+          "enableWhen": [
+            {
+              "answer": {
+                "boolean": false
+              },
+              "operator": "exists",
+              "question": "predefined-patient-id"
+            }
+          ],
+          "choiceColumn": [
+            {
+              "path": "name.given.first() + ' ' + name.family",
+              "forDisplay": true
+            }
+          ],
+          "answerExpression": {
+            "language": "application/x-fhir-query",
+            "expression": "Patient"
+          },
+          "referenceResource": ["Patient"]
+        },
+        {
+          "text": "Service",
+          "type": "choice",
+          "linkId": "service-type",
+          "required": true,
+          "enableWhen": [
+            {
+              "answer": {
+                "boolean": true
+              },
+              "operator": "exists",
+              "question": "predefined-practitioner-role-id"
+            },
+            {
+              "answer": {
+                "boolean": true
+              },
+              "operator": "exists",
+              "question": "practitioner-role"
+            }
+          ],
+          "answerOption": [
+            {
+              "value": {
+                "Coding": {
+                  "code": "consultation",
+                  "system": "http://fhir.org/guides/argonaut-scheduling/CodeSystem/visit-type",
+                  "display": "The first appointment"
+                }
+              }
+            },
+            {
+              "value": {
+                "Coding": {
+                  "code": "follow-up",
+                  "system": "http://fhir.org/guides/argonaut-scheduling/CodeSystem/visit-type",
+                  "display": "A follow up visit"
+                }
+              }
+            }
+          ],
+          "answerValueSet": "appointment-type",
+          "enableBehavior": "any"
+        },
+        {
+          "text": "Start time",
+          "type": "dateTime",
+          "linkId": "start-datetime",
+          "required": true,
+          "initialExpression": {
+            "language": "text/fhirpath",
+            "expression": "%appointmentDraft"
+          }
+        }
+      ],
+      "type": "group",
+      "linkId": "root-group"
+    }
+  ],
+  "mapping": [
+    {
+      "id": "new-appointment-extract",
+      "resourceType": "Mapping"
+    }
+  ],
+  "resourceType": "Questionnaire",
+  "contained": [
+    {
+      "id": "PractitionerRoleWithPractitioner",
+      "type": "transaction",
+      "entry": [
+        {
+          "request": {
+            "url": "/PractitionerRole?_id={{%practitionerRole.id}}&_include=practitioner",
+            "method": "GET"
+          }
+        }
+      ],
+      "resourceType": "Bundle"
+    }
+  ],
+  "sourceQueries": [
+    {
+      "localRef": "Bundle#PractitionerRoleWithPractitioner"
+    }
+  ],
+  "status": "active",
+  "id": "new-appointment",
+  "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/new-appointment"
+}

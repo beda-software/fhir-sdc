@@ -1,0 +1,301 @@
+{
+  "meta": {
+    "profile": ["https://beda.software/beda-emr-questionnaire"],
+    "lastUpdated": "2023-05-08T05:15:49.469994Z",
+    "versionId": "8337",
+    "extension": [
+      {
+        "url": "ex:createdAt",
+        "valueInstant": "2023-05-07T12:43:04.628354Z"
+      }
+    ]
+  },
+  "item": [
+    {
+      "item": [
+        {
+          "text": "Predefined Practitioner role",
+          "type": "string",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+              "valueBoolean": true
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+              "valueExpression": {
+                "language": "text/fhirpath",
+                "expression": "%PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='PractitionerRole').id"
+              }
+            }
+          ],
+          "linkId": "predefined-practitioner-role-id"
+        },
+        {
+          "text": "Predefined practitioner role display",
+          "type": "string",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+              "valueBoolean": true
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+              "valueExpression": {
+                "language": "text/fhirpath",
+                "expression": "name.given.first() + ' ' + name.family + ' - ' + %PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='PractitionerRole').specialty.first().coding.display"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+              "valueExpression": {
+                "language": "text/fhirpath",
+                "expression": "%PractitionerRoleWithPractitioner.entry.resource .entry.resource.where(resourceType='Practitioner')"
+              }
+            }
+          ],
+          "linkId": "predefined-practitioner-role-display"
+        },
+        {
+          "text": "Practitioner",
+          "type": "reference",
+          "linkId": "practitioner-role",
+          "required": true,
+          "enableWhen": [
+            {
+              "question": "predefined-practitioner-role-id",
+              "operator": "exists",
+              "answerBoolean": false
+            }
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-choiceColumn",
+              "extension": [
+                {
+                  "url": "path",
+                  "valueString": "practitioner.resource.name.given.first() + ' ' +  practitioner.resource.name.family + ' - ' + specialty.first().coding.display"
+                },
+                {
+                  "url": "forDisplay",
+                  "valueBoolean": true
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-answerExpression",
+              "valueExpression": {
+                "language": "application/x-fhir-query",
+                "expression": "PractitionerRole?_assoc=practitioner"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource",
+              "valueCode": "PractitionerRole"
+            }
+          ]
+        },
+        {
+          "text": "Predefined Patient Id",
+          "type": "string",
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden",
+              "valueBoolean": true
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+              "valueExpression": {
+                "language": "text/fhirpath",
+                "expression": "%patient.where($this != 'undefined').id"
+              }
+            }
+          ],
+          "linkId": "predefined-patient-id"
+        },
+        {
+          "text": "Patient",
+          "type": "reference",
+          "linkId": "patient",
+          "required": true,
+          "enableWhen": [
+            {
+              "question": "predefined-patient-id",
+              "operator": "exists",
+              "answerBoolean": false
+            }
+          ],
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-choiceColumn",
+              "extension": [
+                {
+                  "url": "path",
+                  "valueString": "name.given.first() + ' ' + name.family"
+                },
+                {
+                  "url": "forDisplay",
+                  "valueBoolean": true
+                }
+              ]
+            },
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-answerExpression",
+              "valueExpression": {
+                "language": "application/x-fhir-query",
+                "expression": "Patient"
+              }
+            },
+            {
+              "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource",
+              "valueCode": "Patient"
+            }
+          ]
+        },
+        {
+          "text": "Service",
+          "type": "choice",
+          "linkId": "service-type",
+          "required": true,
+          "enableWhen": [
+            {
+              "question": "predefined-practitioner-role-id",
+              "operator": "exists",
+              "answerBoolean": true
+            },
+            {
+              "question": "practitioner-role",
+              "operator": "exists",
+              "answerBoolean": true
+            }
+          ],
+          "answerOption": [
+            {
+              "valueCoding": {
+                "code": "consultation",
+                "system": "http://fhir.org/guides/argonaut-scheduling/CodeSystem/visit-type",
+                "display": "The first appointment"
+              }
+            },
+            {
+              "valueCoding": {
+                "code": "follow-up",
+                "system": "http://fhir.org/guides/argonaut-scheduling/CodeSystem/visit-type",
+                "display": "A follow up visit"
+              }
+            }
+          ],
+          "answerValueSet": "appointment-type",
+          "enableBehavior": "any"
+        },
+        {
+          "text": "Start time",
+          "type": "dateTime",
+          "linkId": "start-datetime",
+          "required": true,
+          "extension": [
+            {
+              "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+              "valueExpression": {
+                "language": "text/fhirpath",
+                "expression": "%appointmentDraft"
+              }
+            }
+          ]
+        }
+      ],
+      "type": "group",
+      "linkId": "root-group"
+    }
+  ],
+  "resourceType": "Questionnaire",
+  "extension": [
+    {
+      "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+      "extension": [
+        {
+          "url": "name",
+          "valueCoding": {
+            "code": "patient"
+          }
+        },
+        {
+          "url": "type",
+          "valueCode": "Patient"
+        },
+        {
+          "url": "description",
+          "valueString": "Patient resource"
+        }
+      ]
+    },
+    {
+      "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+      "extension": [
+        {
+          "url": "name",
+          "valueCoding": {
+            "code": "practitionerRole"
+          }
+        },
+        {
+          "url": "type",
+          "valueCode": "PractitionerRole"
+        },
+        {
+          "url": "description",
+          "valueString": "PractitionerRole resource"
+        }
+      ]
+    },
+    {
+      "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+      "extension": [
+        {
+          "url": "name",
+          "valueCoding": {
+            "code": "appointmentDraft"
+          }
+        },
+        {
+          "url": "type",
+          "valueCode": "Basic"
+        },
+        {
+          "url": "description",
+          "valueString": "Appointment date passing from calendar"
+        }
+      ]
+    },
+    {
+      "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+      "valueReference": {
+        "reference": "Mapping/new-appointment-extract"
+      }
+    },
+    {
+      "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+      "valueReference": {
+        "reference": "#Bundle#PractitionerRoleWithPractitioner"
+      }
+    }
+  ],
+  "contained": [
+    {
+      "id": "PractitionerRoleWithPractitioner",
+      "type": "transaction",
+      "entry": [
+        {
+          "request": {
+            "url": "/PractitionerRole?_id={{%practitionerRole.id}}&_include=practitioner",
+            "method": "GET"
+          }
+        }
+      ],
+      "resourceType": "Bundle"
+    }
+  ],
+  "status": "active",
+  "id": "new-appointment",
+  "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/new-appointment"
+}

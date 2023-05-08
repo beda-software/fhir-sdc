@@ -284,12 +284,20 @@ def process_items(items):
             del item["answerExpression"]
 
         if item.get("referenceResource"):
-            reference_resource_extension = {
+            extension = {
                 "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-referenceResource",
                 "valueCode": item["referenceResource"][0],
             }
-            item["extension"] = item.get("extension", []) + [reference_resource_extension]
+            item["extension"] = item.get("extension", []) + [extension]
             del item["referenceResource"]
+
+        if item.get("itemPopulationContext") is not None:
+            extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+                "valueExpression": item["itemPopulationContext"],
+            }
+            item["extension"] = item.get("extension", []) + [extension]
+            del item["itemPopulationContext"]
 
         if item.get("unit"):
             unitExtension = {
