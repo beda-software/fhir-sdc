@@ -40,10 +40,14 @@ def process_answer_qr(items):
                 del answer_item["value"]
                 break
         if "Reference" in value:
-            answer_item["valueReference"] = {
-                "display": value["Reference"].get("display"),
-                "reference": f"{value['Reference']['resourceType']}/{value['Reference']['id']}",
-            }
+            if "resourceType" and "id" in value["Reference"]:
+                answer_item["valueReference"] = {
+                    "display": value["Reference"].get("display"),
+                    "reference": f"{value['Reference']['resourceType']}/{value['Reference']['id']}",
+                }
+            else:
+                answer_item["valueReference"] = value["Reference"]
+
             del answer_item["value"]
 
     for item in items:

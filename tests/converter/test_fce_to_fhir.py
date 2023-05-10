@@ -55,6 +55,7 @@ def test_fce_to_fhir_questionnaire(filename):
         "review_of_systems.json",
         "vitals.json",
         "reference_answer_with_assoc.json",
+        "reference_answer_with_fhir_reference.json",
     ],
 )
 def test_fce_to_fhir_questionnaireResponse(filename):
