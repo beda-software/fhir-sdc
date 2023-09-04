@@ -16,6 +16,7 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.utils import parameter_to_env, validate_context
+from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
 
@@ -56,7 +57,6 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
 async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
-    jute_service = request.app["settings"].JUTE_SERVICE
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -101,15 +101,16 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
     }
 
     await constraint_check(client, context)
-    extraction_result = await extract(client, jute_templates, context, jute_service)
+    extraction_result = await extract(
+        client, jute_templates, context, get_extract_services(request.app)
+    )
     return web.json_response(extraction_result)
 
 
 @routes.post("/Questionnaire/{id}/$extract")
 async def extract_questionnaire_instance_operation(request: web.BaseRequest):
-    resource = await resource.json()
+    resource = await request.json()
     client = request.app["client"]
-    jute_service = request.app["settings"].JUTE_SERVICE
     fhir_questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
@@ -146,7 +147,9 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             "QuestionnaireResponse": questionnaire_response,
         }
         await constraint_check(client, context)
-        return web.json_response(await extract(client, jute_templates, context, jute_service))
+        return web.json_response(
+            await extract(client, jute_templates, context, get_extract_services(request.app))
+        )
 
     if resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
@@ -174,7 +177,9 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             **env,
         }
         await constraint_check(client, context)
-        return web.json_response(await extract(client, jute_templates, context, jute_service))
+        return web.json_response(
+            await extract(client, jute_templates, context, get_extract_services(request.app))
+        )
 
     raise ConstraintCheckOperationOutcome(
         [

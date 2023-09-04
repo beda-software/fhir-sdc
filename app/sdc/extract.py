@@ -5,75 +5,8 @@ from .exception import ConstraintCheckOperationOutcome
 from .utils import parameter_to_env, validate_context
 
 
-async def extract_questionnaire(client, resource, jute_service):
-    if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = client.resource("QuestionnaireResponse", **resource)
-        questionnaire = (
-            await client.resources("Questionnaire")
-            .search(id=questionnaire_response["questionnaire"])
-            .get()
-        )
-        context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
-        await constraint_check(client, context)
-        return await extract(client, questionnaire, context, jute_service)
-
-    if resource["resourceType"] == "Parameters":
-        env = parameter_to_env(resource)
-
-        questionnaire_data = env.get("Questionnaire")
-        if not questionnaire_data:
-            raise ConstraintCheckOperationOutcome(
-                [
-                    {
-                        "severity": "error",
-                        "key": "missing-parameter",
-                        "human": "Questionnaire parameter is required",
-                    }
-                ]
-            )
-
-        questionnaire = client.resource("Questionnaire", **questionnaire_data)
-
-        questionnaire_response_data = env.get("questionnaire_response") or env.get(
-            "QuestionnaireResponse"
-        )
-        if not questionnaire_response_data:
-            raise ConstraintCheckOperationOutcome(
-                [
-                    {
-                        "severity": "error",
-                        "key": "missing-parameter",
-                        "human": "QuestionnaireResponse parameter is required",
-                    }
-                ]
-            )
-
-        questionnaire_response = client.resource(
-            "QuestionnaireResponse", **questionnaire_response_data
-        )
-        if "launchContext" in questionnaire:
-            validate_context(questionnaire["launchContext"], env)
-        context = {
-            "QuestionnaireResponse": questionnaire_response,
-            "Questionnaire": questionnaire,
-            **env,
-        }
-        await constraint_check(client, context)
-        return await extract(client, questionnaire, context, jute_service)
-
-    raise ConstraintCheckOperationOutcome(
-        [
-            {
-                "severity": "error",
-                "key": "missing-parameter",
-                "human": "Either `QuestionnaireResponse` resource or Parameters containing "
-                "QuestionnaireResponse are required",
-            }
-        ]
-    )
-
-
-async def extract_questionnaire_instance(client, questionnaire, resource, jute_service):
+async def extract_questionnaire_instance(client, questionnaire, resource, extract_services):
+    # TODO move to Aidbox
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
@@ -82,7 +15,7 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
             for m in questionnaire.get("mapping", [])
         ]
         await constraint_check(client, context)
-        return await extract(client, mappings, context, jute_service)
+        return await extract(client, mappings, context, extract_services)
 
     if resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
@@ -114,7 +47,7 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
             for m in questionnaire.get("mapping", [])
         ]
         await constraint_check(client, context)
-        return await extract(client, mappings, context, jute_service)
+        return await extract(client, mappings, context, extract_services)
 
     raise ConstraintCheckOperationOutcome(
         [
@@ -128,24 +61,49 @@ async def extract_questionnaire_instance(client, questionnaire, resource, jute_s
     )
 
 
-async def extract(client, mappings, context, jute_service):
+async def external_service_extraction(client, service, template, context):
+    import logging
+
+    logging.info("extract %s -> %s", template, context)
+    async with ClientSession() as session:
+        async with session.post(
+            service,
+            json={
+                "template": template,
+                "context": context,
+            },
+        ) as result:
+            bundle = await result.json()
+            logging.info("result %s ", bundle)
+            return await client.execute("/", data=bundle)
+
+
+async def extract(client, mappings, context, extract_services):
+    """
+    mappings could be a list of Aidbox Mapping resources
+    or plain jute templates
+    """
     resp = []
-    if jute_service == "aidbox":
-        for mapper in mappings:
+
+    for mapper in mappings:
+        if "resourceType" in mapper and "body" in mapper:
+            # It is custome mapper resource
+            mapper_type = mapper.get("type", "JUTE")
+            if mapper_type == "JUTE" and extract_services["JUTE"] == "aidbox":
+                # Aidbox native extraction
+                resp.append(
+                    await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
+                )
+            else:
+                # Use 3rd party service FHIRPathMapping or JUTE
+                resp.append(
+                    await external_service_extraction(
+                        client, extract_services[mapper_type], mapper["body"], context
+                    )
+                )
+        else:
+            # legacy extraction
             resp.append(
-                await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
+                await external_service_extraction(client, extract_services["JUTE"], mapper, context)
             )
-    else:
-        for mapper in mappings:
-            template = mapper.get("body") or mapper
-            async with ClientSession() as session:
-                async with session.post(
-                    jute_service,
-                    json={
-                        "template": template,
-                        "context": context,
-                    },
-                ) as result:
-                    bundle = await result.json()
-                    resp.append(await client.execute("/", data=bundle))
     return resp

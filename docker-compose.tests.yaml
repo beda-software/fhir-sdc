@@ -9,6 +9,7 @@ services:
     environment:
       APP_FAST_START_MODE: ${APP_FAST_START_MODE}
       JUTE_SERVICE: http://jute:8090/parse-template
+      FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
     links:
       - devbox
     volumes:
@@ -18,6 +19,9 @@ services:
         condition:
           service_healthy
       jute:
+        condition:
+          service_started
+      fhirpath_mapping:
         condition:
           service_started
   devbox-healthcheck:
@@ -50,4 +54,7 @@ services:
       POSTGRES_DB:       devbox
   jute:
     image: bedasoftware/jute-microservice:latest
+  fhirpath_mapping:
+    image: bedasoftware/fhirpath-extract:main
+
 

@@ -1,9 +1,9 @@
 import json
 
 from aiohttp import web
-from app.converter.fhir_to_fce import to_first_class_extension
 
 from app.converter.fce_to_fhir import from_first_class_extension
+from app.converter.fhir_to_fce import to_first_class_extension
 
 from ..sdc import (
     assemble,
@@ -15,6 +15,7 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.utils import parameter_to_env
+from ..utils import get_extract_services
 from .sdk import sdk
 from .utils import get_aidbox_fhir_client, get_user_sdk_client
 
@@ -71,7 +72,6 @@ async def extract_questionnaire_operation(operation, request):
     is_fhir = operation["request"][1] == "fhir"
     resource = request["resource"]
     client = request["app"]["client"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
 
     run_on_behalf_of_root = False
     if resource["resourceType"] == "QuestionnaireResponse":
@@ -103,7 +103,9 @@ async def extract_questionnaire_operation(operation, request):
     }
 
     await constraint_check(get_aidbox_fhir_client(client) if is_fhir else client, context)
-    extraction_result = await extract(client, mappings, context, jute_service)
+    extraction_result = await extract(
+        client, mappings, context, get_extract_services(request["app"])
+    )
     return web.json_response(extraction_result)
 
 
@@ -112,7 +114,6 @@ async def extract_questionnaire_operation(operation, request):
 async def extract_questionnaire_instance_operation(_operation, request):
     resource = request["resource"]
     client = request["app"]["client"]
-    jute_service = request["app"]["settings"].JUTE_SERVICE
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
     )
@@ -122,7 +123,9 @@ async def extract_questionnaire_instance_operation(_operation, request):
         else get_user_sdk_client(request)
     )
     return web.json_response(
-        await extract_questionnaire_instance(client, questionnaire, resource, jute_service)
+        await extract_questionnaire_instance(
+            client, questionnaire, resource, get_extract_services(request["app"])
+        )
     )
 
 

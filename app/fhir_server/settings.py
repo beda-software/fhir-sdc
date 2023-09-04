@@ -1,5 +1,6 @@
 import os
 
+
 class FHIRAppSettings:
     def __init__(self, **custom_settings):
         self._custom_settings = custom_settings
@@ -12,5 +13,6 @@ class FHIRAppSettings:
 settings = FHIRAppSettings(
     JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
-    AUTH_TOKEN=os.getenv('AUTH_TOKEN')
+    AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
+    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
 )
