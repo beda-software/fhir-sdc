@@ -89,9 +89,7 @@ async def extract(client, mappings, context, extract_services):
             mapper_type = mapper.get("type", "JUTE")
             if mapper_type == "JUTE" and extract_services["JUTE"] == "aidbox":
                 # Aidbox native extraction
-                resp.append(
-                    await client.resource("Mapping", id=mapper.id).execute("$apply", data=context)
-                )
+                resp.append(await mapper.execute("$apply", data=context))
             else:
                 # Use 3rd party service FHIRPathMapping or JUTE
                 resp.append(

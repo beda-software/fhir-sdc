@@ -8,7 +8,6 @@ services:
     - env_tests
     environment:
       APP_FAST_START_MODE: ${APP_FAST_START_MODE}
-      JUTE_SERVICE: http://jute:8090/parse-template
       FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
     links:
       - devbox
