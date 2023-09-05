@@ -293,6 +293,7 @@ async def test_extract_with_fhirpathmapping(aidbox_client, safe_db):
                         "request": {"url": "/Patient", "method": "POST"},
                         "resource": {
                             "resourceType": "Patient",
+                            "deceasedBoolean": False,
                             "id": """{{ QuestionnaireResponse.item.where(linkId='patientId').answer.valueString }}""",
                         },
                     }

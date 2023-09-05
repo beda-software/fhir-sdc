@@ -94,7 +94,6 @@ async def extract_questionnaire_operation(operation, request):
         await client.resources("Mapping").search(_id=m["id"]).get()
         for m in questionnaire.get("mapping", [])
     ]
-    client = request["app"]["client"] if run_on_behalf_of_root else get_user_sdk_client(request)
 
     context = {
         "Questionnaire": questionnaire,
@@ -102,7 +101,10 @@ async def extract_questionnaire_operation(operation, request):
         **env,
     }
 
-    await constraint_check(get_aidbox_fhir_client(client) if is_fhir else client, context)
+    client = request["app"]["client"] if run_on_behalf_of_root else get_user_sdk_client(request)
+    client = get_aidbox_fhir_client(client) if is_fhir else client
+
+    await constraint_check(client, context)
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request["app"])
     )
@@ -111,7 +113,8 @@ async def extract_questionnaire_operation(operation, request):
 
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
 @sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$extract"])
-async def extract_questionnaire_instance_operation(_operation, request):
+async def extract_questionnaire_instance_operation(operation, request):
+    is_fhir = operation["request"][1] == "fhir"
     resource = request["resource"]
     client = request["app"]["client"]
     questionnaire = (
@@ -122,9 +125,10 @@ async def extract_questionnaire_instance_operation(_operation, request):
         if questionnaire.get("runOnBehalfOfRoot")
         else get_user_sdk_client(request)
     )
+    extract_client = get_aidbox_fhir_client(client) if is_fhir else client
     return web.json_response(
         await extract_questionnaire_instance(
-            client, questionnaire, resource, get_extract_services(request["app"])
+            client, extract_client, questionnaire, resource, get_extract_services(request["app"])
         )
     )
 

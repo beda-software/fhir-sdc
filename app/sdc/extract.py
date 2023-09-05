@@ -5,17 +5,19 @@ from .exception import ConstraintCheckOperationOutcome
 from .utils import parameter_to_env, validate_context
 
 
-async def extract_questionnaire_instance(client, questionnaire, resource, extract_services):
+async def extract_questionnaire_instance(
+    aidbox_client, extract_client, questionnaire, resource, extract_services
+):
     # TODO move to Aidbox
     if resource["resourceType"] == "QuestionnaireResponse":
-        questionnaire_response = client.resource("QuestionnaireResponse", **resource)
+        questionnaire_response = extract_client.resource("QuestionnaireResponse", **resource)
         context = {"Questionnaire": questionnaire, "QuestionnaireResponse": questionnaire_response}
         mappings = [
-            await client.resources("Mapping").search(_id=m["id"]).get()
+            await aidbox_client.resources("Mapping").search(_id=m["id"]).get()
             for m in questionnaire.get("mapping", [])
         ]
-        await constraint_check(client, context)
-        return await extract(client, mappings, context, extract_services)
+        await constraint_check(extract_client, context)
+        return await extract(extract_client, mappings, context, extract_services)
 
     if resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
@@ -32,7 +34,7 @@ async def extract_questionnaire_instance(client, questionnaire, resource, extrac
                 ]
             )
 
-        questionnaire_response = client.resource(
+        questionnaire_response = extract_client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
         if "launchContext" in questionnaire:
@@ -43,11 +45,11 @@ async def extract_questionnaire_instance(client, questionnaire, resource, extrac
             **env,
         }
         mappings = [
-            await client.resources("Mapping").search(_id=m["id"]).get()
+            await aidbox_client.resources("Mapping").search(_id=m["id"]).get()
             for m in questionnaire.get("mapping", [])
         ]
-        await constraint_check(client, context)
-        return await extract(client, mappings, context, extract_services)
+        await constraint_check(extract_client, context)
+        return await extract(extract_client, mappings, context, extract_services)
 
     raise ConstraintCheckOperationOutcome(
         [
@@ -62,9 +64,6 @@ async def extract_questionnaire_instance(client, questionnaire, resource, extrac
 
 
 async def external_service_extraction(client, service, template, context):
-    import logging
-
-    logging.info("extract %s -> %s", template, context)
     async with ClientSession() as session:
         async with session.post(
             service,
@@ -74,7 +73,6 @@ async def external_service_extraction(client, service, template, context):
             },
         ) as result:
             bundle = await result.json()
-            logging.info("result %s ", bundle)
             return await client.execute("/", data=bundle)
 
 
