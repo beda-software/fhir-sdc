@@ -16,7 +16,7 @@ jobs:
       - name: Run tests
         run: >-
           mkdir ./tests_zen_project/zen-packages/ &&
-          ls -la ./test_zen_project &&
+          ls -la ./tests_zen_project &&
           id &&
           chmod -R 0666 ./tests_zen_project && 
           ./run_test.sh
