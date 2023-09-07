@@ -14,12 +14,7 @@ jobs:
           docker build --cache-from ${{ env.CACHE_IMAGE }} 
           --tag ${{ env.BUILD_IMAGE }} .
       - name: Run tests
-        run: >-
-          mkdir ./tests_zen_project/zen-packages/ &&
-          ls -la ./tests_zen_project &&
-          id &&
-          chmod -R 0666 ./tests_zen_project && 
-          ./run_test.sh
+        run: ./run_test.sh
       - name: Show logs
         if: ${{ failure() }}
         run: docker-compose -f docker-compose.tests.yaml logs
