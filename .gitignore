@@ -17,3 +17,4 @@ htmlcov/
 .coverage
 .vscode
 .pytest_cache
+tests_zen_project/zen-packages

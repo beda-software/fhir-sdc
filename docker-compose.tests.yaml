@@ -5,16 +5,16 @@ services:
     build: .
     command: ${TEST_COMMAND}
     env_file:
-    - env_tests
+    - env.sdc.tests
     environment:
       APP_FAST_START_MODE: ${APP_FAST_START_MODE}
       FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
     links:
-      - devbox
+      - aidbox
     volumes:
       - .:/app
     depends_on:
-      devbox-healthcheck:
+      aidbox-healthcheck:
         condition:
           service_healthy
       jute:
@@ -23,29 +23,31 @@ services:
       fhirpath_mapping:
         condition:
           service_started
-  devbox-healthcheck:
+  aidbox-healthcheck:
     image: curlimages/curl
     entrypoint: /bin/sleep 10000
     links:
-      - devbox
+      - aidbox
     depends_on:
-      - devbox
+      - aidbox
     healthcheck:
-      test: curl --fail http://devbox:8080/__healthcheck || exit 1
+      test: curl --fail http://aidbox:8080/__healthcheck || exit 1
       interval: 1s
       timeout: 20s
       retries: 100
-  devbox:
+  aidbox:
     image: healthsamurai/aidboxone:stable
     depends_on:
-      - devbox-db
+      - aidbox-db
     links:
-      - "devbox-db:database"
+      - "aidbox-db:database"
     env_file:
-      - env_tests
+      - env.aidbox.tests
     environment:
       AIDBOX_LICENSE: ${TESTS_AIDBOX_LICENSE}
-  devbox-db:
+    volumes:
+      - "./tests_zen_project:/aidbox-project"
+  aidbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:
       POSTGRES_USER:     postgres
