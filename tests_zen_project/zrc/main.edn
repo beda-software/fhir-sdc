@@ -1,5 +1,6 @@
 {ns main
  import #{aidbox
-          config}
+          questionnaire-profile
+          aidbox.multitenancy.v1.fhir-r4}
  box
  {:zen/tags #{aidbox/system}}}
