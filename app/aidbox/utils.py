@@ -20,3 +20,11 @@ def get_aidbox_fhir_client(aidbox_client):
         authorization=aidbox_client.authorization,
         extra_headers=aidbox_client.extra_headers,
     )
+
+
+def get_organization_client(aidbox_client, organization):
+    return AsyncFHIRClient(
+        f"{aidbox_client.url}/Organization/{organization.id}/fhir/",
+        authorization=aidbox_client.authorization,
+        extra_headers=aidbox_client.extra_headers,
+    )
