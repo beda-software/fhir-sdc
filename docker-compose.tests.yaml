@@ -46,8 +46,7 @@ services:
     environment:
       AIDBOX_LICENSE: ${TESTS_AIDBOX_LICENSE}
     volumes:
-      - ./tests_zen_project:/aidbox-project
-      - zen-packages:/aidbox-project/zen-packages
+      - "./tests_zen_project:/aidbox-project"
   aidbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:
@@ -59,5 +58,4 @@ services:
   fhirpath_mapping:
     image: bedasoftware/fhirpath-extract:main
 
-volumes:
-  zen-packages:
+
