@@ -23,8 +23,12 @@ def get_aidbox_fhir_client(aidbox_client):
 
 
 def get_organization_client(aidbox_client, organization):
+    if isinstance(organization, str):
+        org_id = organization
+    else:
+        org_id = organization.id
     return AsyncFHIRClient(
-        f"{aidbox_client.url}/Organization/{organization.id}/fhir/",
+        f"{aidbox_client.url}/Organization/{org_id}/fhir/",
         authorization=aidbox_client.authorization,
         extra_headers=aidbox_client.extra_headers,
     )

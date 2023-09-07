@@ -17,7 +17,7 @@ from ..sdc import (
 from ..sdc.utils import parameter_to_env
 from ..utils import get_extract_services
 from .sdk import sdk
-from .utils import get_aidbox_fhir_client, get_user_sdk_client
+from .utils import get_aidbox_fhir_client, get_organization_client, get_user_sdk_client
 
 
 @sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -166,20 +166,32 @@ async def populate_questionnaire(operation, request):
     return web.json_response(populated_resource)
 
 
+@sdk.operation(
+    ["POST"],
+    ["Organization", {"name": "org_id"}, "fhir", "Questionnaire", {"name": "id"}, "$populate"],
+)
 @sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
 @sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$populate"])
 async def populate_questionnaire_instance(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-    client = request["app"]["client"]
+    aidbox_client = request["app"]["client"]
+    if operation["request"][1] == "Organization":
+        is_fhir = True
+        fhir_client = get_organization_client(aidbox_client, request["route-params"]["org_id"])
+    else:
+        is_fhir = operation["request"][1] == "fhir"
+        fhir_client = get_aidbox_fhir_client(aidbox_client)
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        await aidbox_client.resources("Questionnaire")
+        .search(_id=request["route-params"]["id"])
+        .get()
     )
     env = parameter_to_env(request["resource"])
     env["Questionnaire"] = questionnaire
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+    # TODO handle runOnBehalfOfRoot
+    # client = fhir_client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
 
     populated_resource = await populate(
-        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
+        fhir_client if is_fhir else aidbox_client, questionnaire, env
     )
     if is_fhir:
         populated_resource = from_first_class_extension(populated_resource)

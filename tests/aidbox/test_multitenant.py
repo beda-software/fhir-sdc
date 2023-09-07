@@ -99,7 +99,7 @@ async def test_populate(aidbox_client, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": patient1.id}
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    p = await q.execute("$populate", data=create_parameters(patient=launch_patient))
 
     assert (
         fhirpath(

@@ -81,6 +81,7 @@
   :zen.fhir/type "Questionnaire"
   :type zen/map
   :zen.fhir/version "0.6.23-1"
+  :confirms #{hl7-fhir-r4-core.Questionnaire/schema}
   :keys {:mapping {:type zen/vector
                    :every {:confirms #{hl7-fhir-r4-core.Reference/schema}
                            :fhir/extensionUri "http://beda.software/fhir-extensions/questionnaire-mapper"}}
