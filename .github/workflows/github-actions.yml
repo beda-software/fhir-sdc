@@ -15,8 +15,8 @@ jobs:
           --tag ${{ env.BUILD_IMAGE }} .
       - name: Run tests
         run: >-
-          mkdir -p ./tests_zen_project/zen-packages/ &&
-          chmod 0666 ./tests_zen_project/zen-packages/ && 
+          mkdir ./tests_zen_project/zen-packages/ &&
+          chmod -R 0666 ./tests_zen_project && 
           ./run_test.sh
       - name: Show logs
         if: ${{ failure() }}
