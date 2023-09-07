@@ -1,5 +1,5 @@
 name: github-actions
-on: [push, pull_request]
+on: [push]
 env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
