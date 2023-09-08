@@ -15,7 +15,7 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
         "Appointment",
         **{
             "status": "booked",
-            "start": "2020-01-01T00:00",
+            "start": "2020-01-01T00:00:00Z",
             "participant": [{"status": "accepted", "actor": p}],
         },
     )
@@ -34,7 +34,7 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "contained": [
                 {
                     "id": "Data1",
@@ -85,7 +85,7 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
         None,
     )
 
-    assert expected_appointment["resource"]["start"] == "2020-01-01T00:00"
+    assert expected_appointment["resource"]["start"] == "2020-01-01T00:00:00Z"
 
     expected_location = next(
         (
