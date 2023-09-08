@@ -18,8 +18,8 @@ async def constraint_check(client, env):
 
 
 def constraint_check_for_item(errors, questionnaire_item, env):
-    for constraint in questionnaire_item.get("constraint", []):
-        expression = constraint["expression"]["expression"]
+    for constraint in questionnaire_item.get("itemConstraint", []):
+        expression = constraint["expression"]
         result = fhirpath({}, expression, env)
 
         if result == [True]:

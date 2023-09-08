@@ -6,6 +6,7 @@
           hl7-fhir-r4-core.Questionnaire
           hl7-fhir-r4-core.string
           hl7-fhir-r4-core.Quantity
+          hl7-fhir-r4-core.questionnaire-constraint
           hl7-fhir-r4-core.questionnaire-referenceResource
           hl7-fhir-r4-core.questionnaire-itemControl
           hl7-fhir-r4-core.questionnaire-sliderStepValue
@@ -31,6 +32,9 @@
                     :confirms #{hl7-fhir-r4-core.Questionnaire/item-schema}
                     :keys {:item {:type zen/vector
                                   :every {:confirms #{QuestionnaireItem}}}
+                           :itemConstraint {:type zen/vector
+                                            :every {:confirms #{hl7-fhir-r4-core.questionnaire-constraint/schema}
+                                                    :fhir/extensionUri "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint"}}
                            :variable {:type zen/vector,
                                       :every {:confirms #{hl7-fhir-r4-core.variable/schema},
                                               :fhir/extensionUri "http://hl7.org/fhir/StructureDefinition/variable"}},
