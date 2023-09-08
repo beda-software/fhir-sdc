@@ -17,8 +17,8 @@ async def create_address_questionnaire(aidbox_client):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
-            "assembleContext": [{"name": "prefix", "type": "string"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "assembleContext": "prefix",
             "item": [
                 {
                     "linkId": "{{%prefix}}line-1",

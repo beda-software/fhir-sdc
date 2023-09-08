@@ -42,7 +42,7 @@ def get_type(item, data):
 def walk_dict(d, transform):
     for k, v in d.items():
         if is_list(v):
-            d[k] = [walk_dict(vi, transform) for vi in v]
+            d[k] = [walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v]
         elif is_mapping(v):
             d[k] = walk_dict(v, transform)
         else:
@@ -136,19 +136,11 @@ async def load_source_queries(client, questionnaire, env):
 
 
 def validate_context(context_definition, env):
-    all_vars = env.keys()
-    errors = []
-    for item in context_definition:
-        name = item["name"]
-        if not isinstance(name, str):
-            name = item["name"]["code"]
-        if name not in all_vars:
-            errors.append(
-                {
-                    "severity": "error",
-                    "key": "undefined-var",
-                    "human": "Context variable {} not defined".format(name),
-                }
-            )
-    if len(errors) > 0:
-        raise ConstraintCheckOperationOutcome(errors)
+    if context_definition not in env.keys():
+        raise ConstraintCheckOperationOutcome(
+            {
+                "severity": "error",
+                "key": "undefined-var",
+                "human": "Context variable {} not defined".format(context_definition),
+            }
+        )
