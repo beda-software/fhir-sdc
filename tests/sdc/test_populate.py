@@ -11,7 +11,7 @@ async def test_initial_expression_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "type": "string",
@@ -53,7 +53,7 @@ async def test_initial_expression_populate_using_list_endpoint(aidbox_client, sa
         "launchContext": [
             {
                 "name": "LaunchPatient",
-                "type": "Patient",
+                "type": ["Patient"],
             },
         ],
         "item": [
@@ -93,12 +93,12 @@ async def test_item_context_with_repeats_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "type": "group",
                     "linkId": "names",
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.name",
                     },
@@ -161,13 +161,13 @@ async def test_item_context_with_repeating_group_populate(aidbox_client, safe_db
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "type": "group",
                     "linkId": "addresses",
                     "repeats": True,
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
@@ -233,13 +233,13 @@ async def test_item_context_without_repeats_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "text": "Address",
                     "type": "group",
                     "linkId": "address",
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
@@ -344,7 +344,7 @@ async def test_source_queries_populate(aidbox_client, safe_db):
         "Appointment",
         **{
             "status": "booked",
-            "start": "2020-01-01T00:00",
+            "start": "2020-01-01T00:00:00Z",
             "participant": [{"status": "accepted", "actor": p}],
         },
     )
@@ -369,7 +369,7 @@ async def test_source_queries_populate(aidbox_client, safe_db):
                     ],
                 }
             ],
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
             "item": [
                 {
@@ -406,7 +406,7 @@ async def test_multiple_answers_populate(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "Diet"}, "type": "bundle"}],
+            "launchContext": [{"name": {"code": "Diet"}, "type": ["Bundle"]}],
             "item": [
                 {
                     "type": "choice",
@@ -511,7 +511,7 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
     q = aidbox_client.resource(
         "Questionnaire",
         **{
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "type": "string",
@@ -561,7 +561,7 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
     q = aidbox_client.resource(
         "Questionnaire",
         **{
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "type": "string",

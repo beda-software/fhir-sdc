@@ -26,7 +26,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     ],
                 }
             ],
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
             "item": [
                 {
@@ -45,7 +45,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         aidbox_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "item": [
                 {
                     "linkId": "patient-appointment-display",
@@ -56,7 +56,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
@@ -80,7 +80,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     "type": "group",
                     "linkId": "patient-contact",
                     "repeats": True,
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.contact",
                     },
@@ -88,7 +88,10 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                         {
                             "type": "group",
                             "linkId": "patient-contanct-address",
-                            "itemContext": {"language": "text/fhirpath", "expression": "address"},
+                            "itemPopulationContext": {
+                                "language": "text/fhirpath",
+                                "expression": "address",
+                            },
                             "item": [
                                 {
                                     "linkId": "patient-contact-address-display",
@@ -119,7 +122,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
         "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
         "contained": [
             {
@@ -148,7 +151,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
             {
                 "type": "group",
                 "linkId": "patient-address",
-                "itemContext": {
+                "itemPopulationContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.address",
                 },
@@ -182,7 +185,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                 "type": "group",
                 "linkId": "patient-contact",
                 "repeats": True,
-                "itemContext": {
+                "itemPopulationContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.contact",
                 },
@@ -190,7 +193,10 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     {
                         "type": "group",
                         "linkId": "patient-contanct-address",
-                        "itemContext": {"language": "text/fhirpath", "expression": "address"},
+                        "itemPopulationContext": {
+                            "language": "text/fhirpath",
+                            "expression": "address",
+                        },
                         "item": [
                             {
                                 "linkId": "patient-contact-address-line-1",
@@ -229,7 +235,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         "Appointment",
         **{
             "status": "booked",
-            "start": "2020-01-01T00:00",
+            "start": "2020-01-01T00:00:00Z",
             "participant": [{"status": "accepted", "actor": patient}],
         },
     )
@@ -242,7 +248,10 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
 
     assert p == {
         "item": [
-            {"answer": [{"value": {"string": "2020-01-01T00:00"}}], "linkId": "last-appointment"},
+            {
+                "answer": [{"value": {"string": "2020-01-01T00:00:00Z"}}],
+                "linkId": "last-appointment",
+            },
             {
                 "item": [
                     {"linkId": "patient-address-line-1"},

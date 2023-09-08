@@ -136,11 +136,31 @@ async def load_source_queries(client, questionnaire, env):
 
 
 def validate_context(context_definition, env):
-    if context_definition not in env.keys():
-        raise ConstraintCheckOperationOutcome(
-            {
-                "severity": "error",
-                "key": "undefined-var",
-                "human": "Context variable {} not defined".format(context_definition),
-            }
-        )
+    if isinstance(context_definition, str):
+        if context_definition not in env.keys():
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "undefined-var",
+                        "human": "Context variable {} not defined".format(context_definition),
+                    }
+                ]
+            )
+    else:
+        all_vars = env.keys()
+        errors = []
+        for item in context_definition:
+            name = item["name"]
+            if not isinstance(name, str):
+                name = item["name"]["code"]
+            if name not in all_vars:
+                errors.append(
+                    {
+                        "severity": "error",
+                        "key": "undefined-var",
+                        "human": "Context variable {} not defined".format(name),
+                    }
+                )
+        if len(errors) > 0:
+            raise ConstraintCheckOperationOutcome(errors)
