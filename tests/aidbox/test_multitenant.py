@@ -101,9 +101,6 @@ async def test_populate(aidbox_client, safe_db):
 
     p = await q.execute("$populate", data=create_parameters(patient=launch_patient))
 
-    assert (
-        fhirpath(
-            p, "QuestionnaireResponse.repeat(item).where(linkId='firstName').answer.valueString", {}
-        )
-        == given
-    )
+    assert fhirpath(
+        p, "QuestionnaireResponse.repeat(item).where(linkId='firstName').answer.valueString", {}
+    ) == [given]
