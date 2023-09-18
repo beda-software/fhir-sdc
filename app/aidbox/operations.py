@@ -2,11 +2,7 @@ import json
 
 from aiohttp import web
 
-from app.converter import (
-    env_from_first_class_extension,
-    from_first_class_extension,
-    to_first_class_extension,
-)
+from app.converter import from_first_class_extension, to_first_class_extension
 
 from ..sdc import (
     assemble,
@@ -64,7 +60,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     client = client if as_root else get_user_sdk_client(request.request, request.client)
     result = await get_questionnaire_context(client, env)
 
-    return web.json_response(env_from_first_class_extension(result) if request.is_fhir else result)
+    return web.json_response(result)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$extract"])
