@@ -4,9 +4,6 @@ from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
 from fhirpy import AsyncFHIRClient
 from fhirpy.base import AsyncClient
 
-from app.converter import env_to_first_class_extension
-
-from ..sdc.utils import parameter_to_env as parameter_to_env_original
 from .sdk import sdk
 
 
@@ -51,15 +48,6 @@ def get_clients(operation, request):
         is_fhir = operation["request"][1] == "fhir"
         fhir_client = get_aidbox_fhir_client(aidbox_client)
     return is_fhir, aidbox_client, fhir_client, fhir_client if is_fhir else aidbox_client
-
-
-def parameter_to_env(resource, is_fhir):
-    env = None
-    if is_fhir:
-        env = env_to_first_class_extension(resource)
-    else:
-        env = parameter_to_env_original(resource)
-    return env
 
 
 @dataclass
