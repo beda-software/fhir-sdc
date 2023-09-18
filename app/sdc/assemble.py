@@ -3,6 +3,8 @@ import asyncio
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
+from app.converter.fhir_to_fce import to_first_class_extension
+
 from .utils import prepare_link_ids, prepare_variables, validate_context
 
 WHITELISTED_ROOT_ELEMENTS = {
@@ -30,7 +32,11 @@ async def assemble(client, questionnaire):
 
 async def load_sub_questionnaire(client, root_elements, parent_item, item):
     if "subQuestionnaire" in item:
-        sub = await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
+        sub_fhir = (
+            await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
+        )
+        sub = to_first_class_extension(sub_fhir)
+        print(sub)
 
         variables = prepare_variables(item)
         if validate_assemble_context(sub, variables):
