@@ -283,7 +283,6 @@ def process_target_structure_map(fhirQuestionnaire):
 
 
 def get_updated_properties_from_item(item):
-    print("Process get_updated_properties_from_item")
     updated_properties = {}
 
     hidden = find_extension(item, "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden")
@@ -557,7 +556,6 @@ def find_initial_value(item, property):
 
 
 def process_enable_when_item(item):
-    print("process_enableWhen", item)
     question = item.get("question")
     operator = item.get("operator")
     answer = {}

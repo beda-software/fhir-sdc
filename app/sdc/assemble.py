@@ -36,7 +36,6 @@ async def load_sub_questionnaire(client, root_elements, parent_item, item):
             await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
         )
         sub = to_first_class_extension(sub_fhir)
-        print(sub)
 
         variables = prepare_variables(item)
         if validate_assemble_context(sub, variables):
