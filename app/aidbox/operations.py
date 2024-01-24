@@ -2,8 +2,7 @@ import json
 
 from aiohttp import web
 
-from app.converter.fce_to_fhir import from_first_class_extension
-from app.converter.fhir_to_fce import to_first_class_extension
+from app.converter import from_first_class_extension, to_first_class_extension
 
 from ..sdc import (
     assemble,
@@ -16,82 +15,81 @@ from ..sdc import (
 )
 from ..sdc.utils import parameter_to_env
 from ..utils import get_extract_services
-from .sdk import sdk
-from .utils import get_aidbox_fhir_client, get_user_sdk_client
+from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 
 
-@sdk.operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
-@sdk.operation(["GET"], ["fhir", "Questionnaire", {"name": "id"}, "$assemble"])
-async def assemble_op(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-
-    client = get_user_sdk_client(request)
+@aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
+@prepare_args
+async def assemble_op(request: AidboxSdcRequest):
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        await request.aidbox_client.resources("Questionnaire")
+        .search(_id=request.route_params["id"])
+        .get()
     )
 
-    assembled_questionnaire_lazy = await assemble(client, questionnaire)
+    assembled_questionnaire_lazy = await assemble(request.fhir_client, questionnaire)
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
-    if is_fhir:
+    if request.is_fhir:
         assembled_questionnaire = from_first_class_extension(assembled_questionnaire)
     return web.json_response(assembled_questionnaire)
 
 
-@sdk.operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
-@sdk.operation(["POST"], ["fhir", "QuestionnaireResponse", "$constraint-check"])
-async def constraint_check_operation(_operation, request):
-    env = parameter_to_env(request["resource"])
-    questionnaire = env["Questionnaire"]
-    client = (
-        request["app"]["client"]
-        if questionnaire.get("runOnBehalfOfRoot")
-        else get_user_sdk_client(request)
+@aidbox_operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
+@prepare_args
+async def constraint_check_operation(request: AidboxSdcRequest):
+    env = parameter_to_env(request.resource)
+
+    questionnaire = (
+        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
     )
+    as_root = questionnaire.get("runOnBehalfOfRoot")
+    client = client if as_root else get_user_sdk_client(request.request, request.client)
 
     return web.json_response(await constraint_check(client, env))
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$context"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$context"])
-async def get_questionnaire_context_operation(_operation, request):
-    client = request["app"]["client"]
-    env = parameter_to_env(request["resource"])
-    questionnaire = env["Questionnaire"]
-    client = (
-        request["app"]["client"]
-        if questionnaire.get("runOnBehalfOfRoot")
-        else get_user_sdk_client(request)
+@aidbox_operation(["POST"], ["Questionnaire", "$context"])
+@prepare_args
+async def get_questionnaire_context_operation(request: AidboxSdcRequest):
+    env = parameter_to_env(request.resource)
+
+    questionnaire = (
+        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
     )
+    as_root = questionnaire.get("runOnBehalfOfRoot")
+    client = client if as_root else get_user_sdk_client(request.request, request.client)
+    result = await get_questionnaire_context(client, env)
 
-    return web.json_response(await get_questionnaire_context(client, env))
+    return web.json_response(result)
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$extract"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$extract"])
-async def extract_questionnaire_operation(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-    resource = request["resource"]
-    client = request["app"]["client"]
+@aidbox_operation(["POST"], ["Questionnaire", "$extract"])
+@prepare_args
+async def extract_questionnaire_operation(request: AidboxSdcRequest):
+    resource = request.resource
 
-    run_on_behalf_of_root = False
+    as_root = False
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         questionnaire_response = resource
         questionnaire = (
-            await client.resources("Questionnaire").search(_id=resource["questionnaire"]).get()
+            await request.aidbox_client.resources("Questionnaire")
+            .search(_id=resource["questionnaire"])
+            .get()
         )
-        run_on_behalf_of_root = questionnaire.get("runOnBehalfOfRoot")
+        as_root = questionnaire.get("runOnBehalfOfRoot")
     elif resource["resourceType"] == "Parameters":
-        env = parameter_to_env(request["resource"])
-        questionnaire_data = env.get("Questionnaire")
+        env = parameter_to_env(request.resource)
         questionnaire = (
-            to_first_class_extension(questionnaire_data) if is_fhir else questionnaire_data
+            to_first_class_extension(env["Questionnaire"])
+            if request.is_fhir
+            else env["Questionnaire"]
         )
         questionnaire_response = env.get("QuestionnaireResponse")
-        run_on_behalf_of_root = questionnaire.get("runOnBehalfOfRoot")
+        as_root = questionnaire.get("runOnBehalfOfRoot")
 
     mappings = [
-        await client.resources("Mapping").search(_id=m["id"]).get()
+        await request.aidbox_client.resources("Mapping").search(_id=m["id"]).get()
         for m in questionnaire.get("mapping", [])
     ]
 
@@ -101,46 +99,44 @@ async def extract_questionnaire_operation(operation, request):
         **env,
     }
 
-    client = request["app"]["client"] if run_on_behalf_of_root else get_user_sdk_client(request)
-    client = get_aidbox_fhir_client(client) if is_fhir else client
-
+    client = client if as_root else get_user_sdk_client(request.request, request.client)
     await constraint_check(client, context)
     extraction_result = await extract(
-        client, mappings, context, get_extract_services(request["app"])
+        client, mappings, context, get_extract_services(request.request["app"])
     )
     return web.json_response(extraction_result)
 
 
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$extract"])
-async def extract_questionnaire_instance_operation(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-    resource = request["resource"]
-    client = request["app"]["client"]
+@aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
+@prepare_args
+async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
+    resource = request.resource
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        await request.aidbox_client.resources("Questionnaire")
+        .search(_id=request.route_params["id"])
+        .get()
     )
-    client = (
-        request["app"]["client"]
-        if questionnaire.get("runOnBehalfOfRoot")
-        else get_user_sdk_client(request)
+    as_root = questionnaire.get("runOnBehalfOfRoot")
+    extract_client = (
+        request.client if as_root else get_user_sdk_client(request.request, request.client)
     )
-    extract_client = get_aidbox_fhir_client(client) if is_fhir else client
     return web.json_response(
         await extract_questionnaire_instance(
-            client, extract_client, questionnaire, resource, get_extract_services(request["app"])
+            request.aidbox_client,
+            extract_client,
+            questionnaire,
+            resource,
+            get_extract_services(request.request["app"]),
         )
     )
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$populate"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$populate"])
-async def populate_questionnaire(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-    client = request["app"]["client"]
-    env = parameter_to_env(request["resource"])
-    questionnaire_data = env["Questionnaire"]
-    if not questionnaire_data:
+@aidbox_operation(["POST"], ["Questionnaire", "$populate"])
+@prepare_args
+async def populate_questionnaire(request: AidboxSdcRequest):
+    env = parameter_to_env(request.resource)
+
+    if "Questionnaire" not in env:
         # TODO: return OperationOutcome
         return web.json_response(
             {
@@ -150,43 +146,36 @@ async def populate_questionnaire(operation, request):
             status=422,
         )
 
-    if is_fhir:
-        converted = to_first_class_extension(questionnaire_data)
-        questionnaire = client.resource("Questionnaire", **converted)
-    else:
-        questionnaire = client.resource("Questionnaire", **questionnaire_data)
-
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
-
-    populated_resource = await populate(
-        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
-    )
-    if is_fhir:
-        populated_resource = from_first_class_extension(populated_resource)
-    return web.json_response(populated_resource)
-
-
-@sdk.operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
-@sdk.operation(["POST"], ["fhir", "Questionnaire", {"name": "id"}, "$populate"])
-async def populate_questionnaire_instance(operation, request):
-    is_fhir = operation["request"][1] == "fhir"
-    client = request["app"]["client"]
     questionnaire = (
-        await client.resources("Questionnaire").search(_id=request["route-params"]["id"]).get()
+        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
     )
-    env = parameter_to_env(request["resource"])
-    env["Questionnaire"] = questionnaire
-    client = client if questionnaire.get("runOnBehalfOfRoot") else get_user_sdk_client(request)
+    as_root = questionnaire.get("runOnBehalfOfRoot")
+    client = request.client if as_root else get_user_sdk_client(request.request, request.client)
 
-    populated_resource = await populate(
-        get_aidbox_fhir_client(client) if is_fhir else client, questionnaire, env
-    )
-    if is_fhir:
+    populated_resource = await populate(client, questionnaire, env)
+    if request.is_fhir:
         populated_resource = from_first_class_extension(populated_resource)
     return web.json_response(populated_resource)
 
 
-@sdk.operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
-@sdk.operation(["POST"], ["fhir", "Questionnaire", "$resolve-expression"], public=True)
+@aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
+@prepare_args
+async def populate_questionnaire_instance(request: AidboxSdcRequest):
+    questionnaire = (
+        await request.aidbox_client.resources("Questionnaire")
+        .search(_id=request.route_params["id"])
+        .get()
+    )
+    env = parameter_to_env(request.resource)
+    as_root = questionnaire.get("runOnBehalfOfRoot")
+    client = client if as_root else get_user_sdk_client(request.request, request.client)
+
+    populated_resource = await populate(client, questionnaire, env)
+    if request.is_fhir:
+        populated_resource = from_first_class_extension(populated_resource)
+    return web.json_response(populated_resource)
+
+
+@aidbox_operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
 def resolve_expression_operation(_operation, request):
     return web.json_response(resolve_expression(request["resource"]))

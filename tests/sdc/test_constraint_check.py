@@ -30,16 +30,13 @@ async def test_email_uniq(aidbox_client, safe_db):
                 {
                     "type": "string",
                     "linkId": "email",
-                    "constraint": [
+                    "itemConstraint": [
                         {
                             "key": "email-uniq",
                             "requirements": "Any email should present only once in the system",
                             "severity": "error",
                             "human": "Email already exists",
-                            "expression": {
-                                "language": "text/fhirpath",
-                                "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
-                            },
+                            "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
                         }
                     ],
                 },
@@ -55,7 +52,7 @@ async def test_email_uniq(aidbox_client, safe_db):
 
     valid = aidbox_client.resource(
         "QuestionnaireResponse",
-        status="final",
+        status="completed",
         item=[
             {
                 "linkId": "email-uniq",
@@ -67,7 +64,7 @@ async def test_email_uniq(aidbox_client, safe_db):
 
     invalid = aidbox_client.resource(
         "QuestionnaireResponse",
-        status="final",
+        status="completed",
         item=[
             {
                 "linkId": "email-uniq",

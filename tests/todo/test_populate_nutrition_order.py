@@ -15,7 +15,7 @@ async def test_populate_nutritio_order(aidbox_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": "patient"}],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
             "sourceQueries": [{"localRef": "Bundle#DietAndNutrition"}],
             "contained": [
                 {
@@ -62,7 +62,7 @@ async def test_populate_nutritio_order(aidbox_client, safe_db):
             "intent": "plan",
             "status": "active",
             "patient": {"id": launch_patient.id, "resourceType": "Patient"},
-            "dateTime": "2020-01-01T00:00",
+            "dateTime": "2020-01-01T00:00:00Z",
             "oralDiet": {
                 "type": [
                     {

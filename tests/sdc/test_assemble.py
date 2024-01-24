@@ -16,10 +16,10 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
                         "code": "LaunchPatient",
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                     },
-                    "type": "patient",
+                    "type": ["Patient"],
                 }
             ],
-            "itemContext": {
+            "itemPopulationContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
             },
@@ -46,10 +46,10 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
                         "code": "LaunchPatient",
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                     },
-                    "type": "patient",
+                    "type": ["Patient"],
                 }
             ],
-            "itemContext": {
+            "itemPopulationContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
             },
@@ -108,14 +108,14 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
                     "code": "LaunchPatient",
                     "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                 },
-                "type": "patient",
+                "type": ["Patient"],
             }
         ],
         "item": [
             {
                 "linkId": "demographics",
                 "type": "group",
-                "itemContext": {
+                "itemPopulationContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.name",
                 },
@@ -154,10 +154,10 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                         "code": "LaunchPatient",
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                     },
-                    "type": "patient",
+                    "type": ["Patient"],
                 }
             ],
-            "assembleContext": [{"name": "prefix", "type": "string"}],
+            "assembleContext": "prefix",
             "item": [
                 {
                     "linkId": "{{%prefix}}line-1",
@@ -196,14 +196,14 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                         "code": "LaunchPatient",
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                     },
-                    "type": "patient",
+                    "type": ["Patient"],
                 }
             ],
             "item": [
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
@@ -227,7 +227,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                     "type": "group",
                     "linkId": "patient-contact",
                     "repeats": True,
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.contact",
                     },
@@ -235,7 +235,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                         {
                             "type": "group",
                             "linkId": "patient-contanct-address",
-                            "itemContext": {
+                            "itemPopulationContext": {
                                 "language": "text/fhirpath",
                                 "expression": "address",
                             },
@@ -275,14 +275,14 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                     "code": "LaunchPatient",
                     "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                 },
-                "type": "patient",
+                "type": ["Patient"],
             }
         ],
         "item": [
             {
                 "type": "group",
                 "linkId": "patient-address",
-                "itemContext": {
+                "itemPopulationContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.address",
                 },
@@ -316,7 +316,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                 "type": "group",
                 "linkId": "patient-contact",
                 "repeats": True,
-                "itemContext": {
+                "itemPopulationContext": {
                     "language": "text/fhirpath",
                     "expression": "%LaunchPatient.contact",
                 },
@@ -324,7 +324,7 @@ async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
                     {
                         "type": "group",
                         "linkId": "patient-contanct-address",
-                        "itemContext": {
+                        "itemPopulationContext": {
                             "language": "text/fhirpath",
                             "expression": "address",
                         },
@@ -374,14 +374,14 @@ async def test_validate_assemble_context(aidbox_client):
                         "code": "LaunchPatient",
                         "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                     },
-                    "type": "patient",
+                    "type": ["Patient"],
                 }
             ],
             "item": [
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "itemContext": {
+                    "itemPopulationContext": {
                         "language": "text/fhirpath",
                         "expression": "%LaunchPatient.address",
                     },
@@ -424,7 +424,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                 }
             ],
             "targetStructureMap": ["StructureMap/create-patient"],
-            "itemContext": {
+            "itemPopulationContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
             },
@@ -455,7 +455,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                 }
             ],
             "targetStructureMap": ["StructureMap/create-patient"],
-            "itemContext": {
+            "itemPopulationContext": {
                 "language": "text/fhirpath",
                 "expression": "%LaunchPatient.name",
             },
@@ -540,7 +540,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                 "linkId": "demographics",
                 "extension": [
                     {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext",
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
                         "valueExpression": {
                             "language": "text/fhirpath",
                             "expression": "%LaunchPatient.name",

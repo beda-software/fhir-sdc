@@ -233,16 +233,13 @@ async def test_extract_fails_because_of_constraint_check(aidbox_client, safe_db)
                 {
                     "type": "string",
                     "linkId": "v2",
-                    "constraint": [
+                    "itemConstraint": [
                         {
                             "key": "v1eqv2",
                             "requirements": "v2 should be the same as v1",
                             "severity": "error",
                             "human": "v2 is not equal to v1",
-                            "expression": {
-                                "language": "text/fhirpath",
-                                "expression": "%QuestionnaireResponse.item.where(linkId='v1') != %QuestionnaireResponse.item.where(linkId='v2')",
-                            },
+                            "expression": "%QuestionnaireResponse.item.where(linkId='v1') != %QuestionnaireResponse.item.where(linkId='v2')",
                         },
                     ],
                 },

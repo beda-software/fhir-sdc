@@ -14,7 +14,15 @@ jobs:
           docker build --cache-from ${{ env.CACHE_IMAGE }} 
           --tag ${{ env.BUILD_IMAGE }} .
       - name: Run tests
-        run: ./run_test.sh
+        run: >-
+          mkdir ./tests_zen_project/zen-packages/ &&
+          ls -la ./tests_zen_project &&
+          id &&
+          chmod -R 0777 ./tests_zen_project && 
+          ./run_test.sh
+      - name: Show logs
+        if: ${{ failure() }}
+        run: docker-compose -f docker-compose.tests.yaml logs
       - name: Login to Docker Hub
         uses: docker/login-action@v1
         with:

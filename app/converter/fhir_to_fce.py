@@ -6,7 +6,7 @@ from fhirpy.base.utils import get_by_path
 def to_first_class_extension(fhirResource):
     if fhirResource.get("resourceType") == "Questionnaire":
         fhirQuestionnaire = copy.deepcopy(fhirResource)
-        check_fhir_questionnaire_profile(fhirQuestionnaire)
+        # check_fhir_questionnaire_profile(fhirQuestionnaire)
         meta = process_meta_questionnaire(fhirQuestionnaire)
         item = process_items(fhirQuestionnaire)
         extensions = process_extension(fhirQuestionnaire)
@@ -23,6 +23,7 @@ def to_first_class_extension(fhirResource):
         process_reference(questionnaireResponse)
 
         return questionnaireResponse
+    return fhirResource
 
 
 def process_answer_qr(items):
@@ -147,12 +148,24 @@ def process_extension(fhirQuestionnaire):
     mapping = process_mapping(fhirQuestionnaire)
     source_queries = process_source_queries(fhirQuestionnaire)
     target_structure_map = process_target_structure_map(fhirQuestionnaire)
+    item_population_context = find_extension(
+        fhirQuestionnaire,
+        "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+    )
+    assemble_context = find_extension(
+        fhirQuestionnaire,
+        "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
+    )
 
     return {
         "launchContext": launchContext if launchContext else None,
         "mapping": mapping if mapping else None,
         "sourceQueries": source_queries if source_queries else None,
         "targetStructureMap": target_structure_map if target_structure_map else None,
+        "itemPopulationContext": item_population_context["valueExpression"]
+        if item_population_context
+        else None,
+        "assembleContext": assemble_context["valueString"] if assemble_context else None,
     }
 
 
@@ -281,7 +294,8 @@ def get_updated_properties_from_item(item):
     if initial_expression is not None:
         initial_expression = initial_expression["valueExpression"]
     item_population_context = find_extension(
-        item, "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
+        item,
+        "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
     )
     if item_population_context is not None:
         item_population_context = item_population_context["valueExpression"]
@@ -357,17 +371,14 @@ def get_updated_properties_from_item(item):
         )
         if adjust_last_to_right is not None:
             updated_properties["adjustLastToRight"] = adjust_last_to_right["valueBoolean"]
-
-        enable_when = [
-            process_enable_when_item(condition) for condition in item.get("enableWhen", [])
-        ]
-        if len(enable_when) > 0:
-            updated_properties["enableWhen"] = enable_when
-
         updated_properties["initial"] = [
             {"value": {"Coding": init["valueCoding"]}} if "valueCoding" in init else init
             for init in item.get("initial", [])
         ]
+
+    enable_when = [process_enable_when_item(condition) for condition in item.get("enableWhen", [])]
+    if len(enable_when) > 0:
+        updated_properties["enableWhen"] = enable_when
 
     if item_type == "decimal":
         slider_start = find_extension(
