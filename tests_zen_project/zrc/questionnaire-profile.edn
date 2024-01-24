@@ -1,5 +1,6 @@
 {ns questionnaire-profile
- import #{beda-emr-core.questionnaire}
+ import #{beda-emr-core.questionnaire
+          hl7-fhir-r4-core.Questionnaire}
 
  QuestionnaireProfile
  {:zen/tags #{zen.fhir/base-schema zen/schema}
