@@ -518,7 +518,7 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
                     "linkId": "patientName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "%Patient.name.given.toQuantity()",
+                        "expression": "%LaunchPatient.name.given.toQuantity()",
                     },
                 }
             ],
