@@ -544,12 +544,12 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
                 {
                     "severity": "fatal",
                     "code": "invalid",
-                    "diagnostics": 'Error: Could not convert to quantity: input collection contains multiple items',
+                    "diagnostics": 'Error: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
                 }
             ],
             "text": {
                 "status": "generated",
-                "div": 'Error: Could not convert to quantity: input collection contains multiple items',
+                "div": 'Error: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
             },
         }
         return
