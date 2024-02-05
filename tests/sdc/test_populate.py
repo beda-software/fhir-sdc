@@ -518,7 +518,7 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
                     "linkId": "patientName",
                     "initialExpression": {
                         "language": "text/fhirpath",
-                        "expression": "%Patient.name.given[0] & ' ' & %Patient.name.family",
+                        "expression": "%Patient.name.given.toQuantity()",
                     },
                 }
             ],
@@ -544,12 +544,12 @@ async def test_fhirpath_failure_populate(aidbox_client, safe_db):
                 {
                     "severity": "fatal",
                     "code": "invalid",
-                    "diagnostics": 'Error: "%Patient.name.given[0] & \' \' & %Patient.name.family" - can only concatenate list (not "str") to list',
+                    "diagnostics": 'Error: Could not convert to quantity: input collection contains multiple items',
                 }
             ],
             "text": {
                 "status": "generated",
-                "div": 'Error: "%Patient.name.given[0] & \' \' & %Patient.name.family" - can only concatenate list (not "str") to list',
+                "div": 'Error: Could not convert to quantity: input collection contains multiple items',
             },
         }
         return
