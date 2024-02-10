@@ -333,20 +333,20 @@
         },
         "faker": {
             "hashes": [
-                "sha256:d12edbac08a82a75ecd588f299f44f12e33f000c15fe414abc417f0836cb51ae",
-                "sha256:f797529ebeb9bd9e1851106b99e156c9bebe67d2730c8393a1705ed1c864f1bf"
+                "sha256:60e89e5c0b584e285a7db05eceba35011a241954afdab2853cb246c8a56700a2",
+                "sha256:b7f76bb1b2ac4cdc54442d955e36e477c387000f31ce46887fb9722a041be60b"
             ],
             "markers": "python_version >= '3.8'",
-            "version": "==22.7.0"
+            "version": "==23.1.0"
         },
         "fhirpathpy": {
             "hashes": [
-                "sha256:2ab6604f074cdf7f7706936a4cd31b5cf502dee0fa410db24ccf35356829fbb6",
-                "sha256:cc323ff9186e2aa57534319b23abe365f853ae54da31f0596ad1c27fb4765712"
+                "sha256:38ca66ac7cfb058102ccc52166a7d09d8f60a75ebe4f2be5674cd41a4f18c44d",
+                "sha256:baf6f94f6677bb6965c72bc3cd393c96d9ef8c86ea90752100fc4a264fa92724"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==1.0.3"
+            "version": "==1.1.0"
         },
         "fhirpy": {
             "hashes": [
@@ -637,12 +637,12 @@
         },
         "pytest-asyncio": {
             "hashes": [
-                "sha256:2143d9d9375bf372a73260e4114541485e84fca350b0b6b92674ca56ff5f7ea2",
-                "sha256:b0079dfac14b60cd1ce4691fbfb1748fe939db7d0234b5aba97197d10fbe0fef"
+                "sha256:3a048872a9c4ba14c3e90cc1aa20cbc2def7d01c7c8db3777ec281ba9c057675",
+                "sha256:4e7093259ba018d58ede7d5315131d21923a60f8a6e9ee266ce1589685c89eac"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==0.23.4"
+            "version": "==0.23.5"
         },
         "pytest-cov": {
             "hashes": [
