@@ -380,7 +380,7 @@ def get_updated_properties_from_item(item):
     if len(enable_when) > 0:
         updated_properties["enableWhen"] = enable_when
 
-    if item_type == "decimal":
+    if item_type in ["decimal", "integer"]:
         slider_start = find_extension(
             item, "https://beda.software/fhir-emr-questionnaire/slider-start"
         )
