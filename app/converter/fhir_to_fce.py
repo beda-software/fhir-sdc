@@ -497,6 +497,11 @@ def get_updated_properties_from_item(item):
             reference_resource_array = [reference_resource["valueCode"]]
             updated_properties["referenceResource"] = reference_resource_array
 
+    if item_type == "display":
+        help_text = find_extension(item, "https://beda.software/fhir-emr-questionnaire/help-text")
+        if help_text is not None:
+            updated_properties["helpText"] = help_text["valueString"]
+
     if item.get("initialExpression"):
         updated_properties["initialExpression"] = {
             "expression": item["initialExpression"]["expression"],
