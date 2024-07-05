@@ -1,4 +1,4 @@
-FROM python:3.11
+FROM python:3.11-bullseye
 RUN pip install pipenv
 RUN mkdir /app
 WORKDIR /app
