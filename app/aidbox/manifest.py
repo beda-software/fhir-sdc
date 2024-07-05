@@ -158,50 +158,50 @@ attributes = {
         },
         # TODO: add support for root constraint definition
         # "Questionnaire.constraint": constraint_extension,
-        "Questionnaire.item.constraint": {
-            "path": ["item", "constraint"],
+        "Questionnaire.item.itemConstraint": {
+            "path": ["item", "itemConstraint"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
             "isCollection": True,
             "description": 'An invariant that must be satisfied before responses to the questionnaire can be considered "complete".',
         },
-        "Questionnaire.item.constraint.key": {
+        "Questionnaire.item.itemConstraint.key": {
             "type": {"resourceType": "Entity", "id": "id"},
-            "path": ["item", "constraint", "key"],
+            "path": ["item", "itemConstraint", "key"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "key",
             "isRequired": True,
         },
-        "Questionnaire.item.constraint.requirements": {
+        "Questionnaire.item.itemConstraint.requirements": {
             "type": {"resourceType": "Entity", "id": "string"},
-            "path": ["item", "constraint", "requirements"],
+            "path": ["item", "itemConstraint", "requirements"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "requirements",
         },
-        "Questionnaire.item.constraint.severity": {
+        "Questionnaire.item.itemConstraint.severity": {
             "type": {"resourceType": "Entity", "id": "code"},
-            "path": ["item", "constraint", "severity"],
+            "path": ["item", "itemConstraint", "severity"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "severity",
             "isRequired": True,
         },
-        "Questionnaire.item.constraint.human": {
+        "Questionnaire.item.itemConstraint.human": {
             "type": {"resourceType": "Entity", "id": "string"},
-            "path": ["item", "constraint", "human"],
+            "path": ["item", "itemConstraint", "human"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "human",
             "isRequired": True,
         },
-        "Questionnaire.item.constraint.location": {
+        "Questionnaire.item.itemConstraint.location": {
             "type": {"resourceType": "Entity", "id": "string"},
-            "path": ["item", "constraint", "location"],
+            "path": ["item", "itemConstraint", "location"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "location",
             "isCollection": True,
         },
-        "Questionnaire.item.constraint.expression": {
+        "Questionnaire.item.itemConstraint.expression": {
             "type": {"resourceType": "Entity", "id": "Expression"},
-            "path": ["item", "constraint", "expression"],
+            "path": ["item", "itemConstraint", "expression"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
             "extensionUrl": "expression",
             "isRequired": True,
