@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "ea42d2aa1440a3767ab7d896fc9a8faf2e7e04c991c1e38ab4e22c6554baa3cf"
+            "sha256": "9ab5733baab2fd42cc62994025d27ba226ba264e3123d628647bfbda04e3cbdb"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -341,12 +341,12 @@
         },
         "fhirpathpy": {
             "hashes": [
-                "sha256:38ca66ac7cfb058102ccc52166a7d09d8f60a75ebe4f2be5674cd41a4f18c44d",
-                "sha256:baf6f94f6677bb6965c72bc3cd393c96d9ef8c86ea90752100fc4a264fa92724"
+                "sha256:46149398002f9669bc4aa59d5f32dad7637dddc2c5b81ab8c0ddb09a1ceec9b9",
+                "sha256:d9247fc88234dc5dccdc4b1d814c1d7d7734001ae9825c7f444aade34bcfcd80"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==1.1.0"
+            "version": "==1.1.1"
         },
         "fhirpy": {
             "hashes": [
