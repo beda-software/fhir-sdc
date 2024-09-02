@@ -2,7 +2,7 @@ import json
 
 from aiohttp import web
 
-from app.converter import from_first_class_extension, to_first_class_extension
+from app.converter.aidbox import from_first_class_extension, to_first_class_extension
 
 from ..sdc import (
     assemble,
@@ -30,7 +30,9 @@ async def assemble_op(request: AidboxSdcRequest):
     assembled_questionnaire_lazy = await assemble(request.fhir_client, questionnaire)
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
     if request.is_fhir:
-        assembled_questionnaire = from_first_class_extension(assembled_questionnaire)
+        assembled_questionnaire = await from_first_class_extension(
+            assembled_questionnaire, request.aidbox_client
+        )
     return web.json_response(assembled_questionnaire)
 
 
@@ -40,7 +42,9 @@ async def constraint_check_operation(request: AidboxSdcRequest):
     env = parameter_to_env(request.resource)
 
     questionnaire = (
-        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
+        await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
+        if request.is_fhir
+        else env["Questionnaire"]
     )
     as_root = questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
@@ -54,7 +58,9 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     env = parameter_to_env(request.resource)
 
     questionnaire = (
-        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
+        await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
+        if request.is_fhir
+        else env["Questionnaire"]
     )
     as_root = questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
@@ -81,7 +87,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request.resource)
         questionnaire = (
-            to_first_class_extension(env["Questionnaire"])
+            await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
             if request.is_fhir
             else env["Questionnaire"]
         )
@@ -147,14 +153,18 @@ async def populate_questionnaire(request: AidboxSdcRequest):
         )
 
     questionnaire = (
-        to_first_class_extension(env["Questionnaire"]) if request.is_fhir else env["Questionnaire"]
+        await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
+        if request.is_fhir
+        else env["Questionnaire"]
     )
     as_root = questionnaire.get("runOnBehalfOfRoot")
     client = request.client if as_root else get_user_sdk_client(request.request, request.client)
 
     populated_resource = await populate(client, questionnaire, env)
     if request.is_fhir:
-        populated_resource = from_first_class_extension(populated_resource)
+        populated_resource = await from_first_class_extension(
+            populated_resource, request.aidbox_client
+        )
     return web.json_response(populated_resource)
 
 
@@ -172,7 +182,9 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
 
     populated_resource = await populate(client, questionnaire, env)
     if request.is_fhir:
-        populated_resource = from_first_class_extension(populated_resource)
+        populated_resource = await from_first_class_extension(
+            populated_resource, request.aidbox_client
+        )
     return web.json_response(populated_resource)
 
 
