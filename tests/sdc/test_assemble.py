@@ -551,7 +551,6 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         ],
         "status": "active",
         "resourceType": "Questionnaire",
-        "assembledFrom": q['id'],
         "extension": [
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
@@ -576,6 +575,10 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                         "valueCode": "Patient",
                     },
                 ],
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
+                 "valueCanonical": q['id']
             },
         ],
     }
