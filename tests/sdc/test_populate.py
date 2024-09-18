@@ -3,7 +3,6 @@ import json
 import pytest
 
 from app.test.utils import create_parameters
-from app.converter.aidbox import from_first_class_extension 
 
 
 @pytest.mark.asyncio
@@ -802,43 +801,4 @@ async def test_source_query_populate_fhir_from_api(aidbox_client, safe_db):
         "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
         "questionnaire": questionnaire.id,
         "resourceType": "QuestionnaireResponse",
-    }
-
-
-@pytest.mark.asyncio
-async def test_reference_populate(aidbox_client, safe_db):
-    q = aidbox_client.resource(
-        "Questionnaire",
-        **{
-            "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
-            "item": [
-                {
-                    "type": "reference",
-                    "linkId": "patientId",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "'Patient/' + %LaunchPatient.id",
-                    },
-                },
-            ],
-        },
-    )
-    await q.save()
-
-    assert q.id is not None
-
-    launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
-
-    p = await from_first_class_extension(await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient)), aidbox_client)
-
-    assert p == {
-        "resourceType": "QuestionnaireResponse",
-        "questionnaire": q.id,
-        "item": [
-            {
-                "linkId": "patientId",
-                "answer": [{"valueReference": {"reference": f"Patient/{launch_patient['id']}"}}],
-            }
-        ],
     }

@@ -60,10 +60,7 @@ def handle_item(item, env, context):
             )
             if data and len(data):
                 type = get_type(item, data)
-                if type == "Reference":
-                    answers.extend([{"value": {"Reference": {"reference": d}}} for d in data])
-                else:
-                    answers.extend([{"value": {type: d}} for d in data])
+                answers.extend([{"value": {type: d}} for d in data])
         if answers:
             root_item["answer"] = answers
     elif "initialExpression" in item:
@@ -74,16 +71,10 @@ def handle_item(item, env, context):
             raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
         if data and len(data):
             type = get_type(item, data)
-            if type == "Reference":
-                if item.get("repeats") is True:
-                    answers = [{"value": {"Reference": {"reference": d}}} for d in data]
-                else:
-                    answers = [{"value": {"Reference": {"reference": data[0]}}}]
+            if item.get("repeats") is True:
+                answers = [{"value": {type: d}} for d in data]
             else:
-                if item.get("repeats") is True:
-                    answers = [{"value": {type: d}} for d in data]
-                else:
-                    answers = [{"value": {type: data[0]}}]
+                answers = [{"value": {type: data[0]}}]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:
