@@ -232,3 +232,8 @@ async def populate_questionnaire_instance(request: web.BaseRequest):
 @routes.post("/Questionnaire/$resolve-expression")
 async def resolve_expression_operation_handler(request: web.BaseRequest):
     return web.json_response(resolve_expression(await request.json()))
+
+
+@routes.get("/healthcheck")
+async def healthcheck(request: web.BaseRequest):
+    return web.json_response({"status": "ok"})
