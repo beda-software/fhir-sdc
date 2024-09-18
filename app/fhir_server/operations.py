@@ -233,11 +233,16 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
 
 @routes.post("/Questionnaire/{id}/$populate")
 async def populate_questionnaire_instance(request: web.BaseRequest):
-    client = request.app["client"]
+    original_client = request.app["client"]
+    client = AsyncFHIRClient(
+        original_client.url,
+        authorization=request.headers["Authorization"],
+        extra_headers=original_client.extra_headers,
+    )
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    env = parameter_to_env(request["resource"])
+    env = parameter_to_env(await request.json())
     converted = to_first_class_extension(questionnaire)
     env["Questionnaire"] = converted
     populated_resource = await populate(client, converted, env)
