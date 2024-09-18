@@ -232,7 +232,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
 
 
 @routes.post("/Questionnaire/{id}/$populate")
-async def populate_questionnaire_instance(_operation, request: web.BaseRequest):
+async def populate_questionnaire_instance(request: web.BaseRequest):
     client = request.app["client"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
