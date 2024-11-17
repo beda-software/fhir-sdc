@@ -553,6 +553,14 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         "resourceType": "Questionnaire",
         "extension": [
             {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+                "valueCanonical": "StructureMap/create-another-patient",
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
+                "valueCanonical": "StructureMap/create-patient",
+            },
+            {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
                 "extension": [
                     {
@@ -560,23 +568,17 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
                         "valueCoding": {
                             "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                             "code": "LaunchPatient",
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
                         },
                     },
-                    {"url": "type", "valueCode": "Patient"},
+                    {
+                        "url": "type",
+                        "valueCode": "Patient",
+                    },
                 ],
             },
             {
-                "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
-                "valueCanonical": q.id,
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
-                "valueCanonical": "StructureMap/create-another-patient",
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
-                "valueCanonical": "StructureMap/create-patient",
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
+                 "valueCanonical": q['id']
             },
         ],
     }
