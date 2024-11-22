@@ -3,6 +3,11 @@
 
 The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
+## Using with Aidbox
+
+In order to use extraction on behalf of the user, the Aidbox should be configured with `box_features_mapping_enable__access__control=true` environment variable.
+
+
 ## Further plans:
 - JUTE-based population
 - Observation-based population
