@@ -1,4 +1,4 @@
-from aiohttp import ClientSession
+from aiohttp import ClientSession, web
 
 from .constraint_check import constraint_check
 from .exception import ConstraintCheckOperationOutcome
@@ -72,8 +72,11 @@ async def external_service_extraction(client, service, template, context):
                 "context": context,
             },
         ) as result:
-            bundle = await result.json()
-            return await client.execute("/", data=bundle)
+            if 200 <= result.status <= 299:
+                bundle = await result.json()
+                return await client.execute("/", data=bundle)
+            else:
+                raise web.HTTPBadRequest(body=await result.text())
 
 
 async def extract(client, mappings, context, extract_services):
