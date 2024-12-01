@@ -1,6 +1,6 @@
 import json
 
-from aiohttp import web
+from aiohttp import ClientSession, web
 from fhirpy.lib import AsyncFHIRClient
 
 from app.converter.fce_to_fhir import from_first_class_extension
@@ -16,7 +16,7 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.utils import parameter_to_env, validate_context
-from ..utils import get_extract_services
+from ..utils import get_extract_services, get_mapper_repository
 
 routes = web.RouteTableDef()
 
@@ -56,7 +56,12 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
 @routes.post("/Questionnaire/$extract")
 async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
-    client = request.app["client"]
+    original_client = request.app["client"]
+    client = AsyncFHIRClient(
+        original_client.url,
+        authorization=request.headers["Authorization"],
+        extra_headers=original_client.extra_headers,
+    )
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -76,7 +81,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
-    jute_templates = []
+    templates = []
 
     for structure_map_extension in structure_map_extensions:
         structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
@@ -92,7 +97,21 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
                 "valueString",
             ]
         )
-        jute_templates.append(json.loads(template_string))
+        templates.append(json.loads(template_string))
+
+    mapper_extensions = [
+        ext["valueReference"]["reference"]
+        for ext in questionnaire["extension"]
+        if ext["url"] == "http://beda.software/fhir-extensions/questionnaire-mapper"
+    ]
+
+    mapper_service_url = get_mapper_repository(request.app)
+    async with ClientSession() as session:
+        for mapper_ref in mapper_extensions:
+            query = f"{mapper_service_url}/{mapper_ref}"
+            async with session.get(query) as result:
+                data = await result.text()
+                templates.append(json.loads(data))
 
     context = {
         "Questionnaire": to_first_class_extension(questionnaire),
@@ -101,9 +120,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
     }
 
     await constraint_check(client, context)
-    extraction_result = await extract(
-        client, jute_templates, context, get_extract_services(request.app)
-    )
+    extraction_result = await extract(client, templates, context, get_extract_services(request.app))
     return web.json_response(extraction_result)
 
 
@@ -114,7 +131,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     fhir_questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    jute_templates = []
+    templates = []
     structure_map_extensions = [
         ext
         for ext in fhir_questionnaire["extension"]
@@ -138,7 +155,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
                 "valueString",
             ]
         )
-        jute_templates.append(json.loads(template_string))
+        templates.append(json.loads(template_string))
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
@@ -148,7 +165,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         }
         await constraint_check(client, context)
         return web.json_response(
-            await extract(client, jute_templates, context, get_extract_services(request.app))
+            await extract(client, templates, context, get_extract_services(request.app))
         )
 
     if resource["resourceType"] == "Parameters":
@@ -178,7 +195,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         }
         await constraint_check(client, context)
         return web.json_response(
-            await extract(client, jute_templates, context, get_extract_services(request.app))
+            await extract(client, templates, context, get_extract_services(request.app))
         )
 
     raise ConstraintCheckOperationOutcome(
@@ -216,11 +233,16 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
 
 @routes.post("/Questionnaire/{id}/$populate")
 async def populate_questionnaire_instance(request: web.BaseRequest):
-    client = request.app["client"]
+    original_client = request.app["client"]
+    client = AsyncFHIRClient(
+        original_client.url,
+        authorization=request.headers["Authorization"],
+        extra_headers=original_client.extra_headers,
+    )
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    env = parameter_to_env(request["resource"])
+    env = parameter_to_env(await request.json())
     converted = to_first_class_extension(questionnaire)
     env["Questionnaire"] = converted
     populated_resource = await populate(client, converted, env)
