@@ -409,7 +409,7 @@ async def test_validate_assemble_context(aidbox_client):
 
 
 @pytest.mark.asyncio
-async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
+async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_db):
     get_given_name = await create_questionnaire(
         aidbox_client,
         {
@@ -501,7 +501,7 @@ async def test_assemble_sub_questionnaire_fhir(aidbox_client, safe_db):
         },
     )
 
-    assembled = await aidbox_client.execute(f"fhir/Questionnaire/{q['id']}/$assemble", method="get")
+    assembled = await fhir_client.execute(f"Questionnaire/{q['id']}/$assemble", method="get")
 
     del assembled["meta"]
 

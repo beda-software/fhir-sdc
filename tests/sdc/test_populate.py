@@ -595,7 +595,7 @@ async def test_fhirpath_success_populate(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
+async def test_fhir_fhirpath_success_populate(fhir_client, safe_db):
     q = {
         "item": [
             {
@@ -640,8 +640,8 @@ async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
         "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
     }
 
-    p = await aidbox_client.execute(
-        "fhir/Questionnaire/$populate",
+    p = await fhir_client.execute(
+        "Questionnaire/$populate",
         data=create_parameters(LaunchPatient=launch_patient, Questionnaire=q),
     )
 
@@ -653,7 +653,7 @@ async def test_fhirpath_success_populate_fhir(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_source_query_populate_fhir(aidbox_client, safe_db):
+async def test_fhir_source_query_populate(fhir_client, safe_db):
     q = {
         "meta": {
             "profile": ["https://beda.software/beda-emr-questionnaire"],
@@ -709,14 +709,14 @@ async def test_source_query_populate_fhir(aidbox_client, safe_db):
     launch_patient = {
         "resourceType": "Patient",
         "id": "patient-id",
-        "deceased": {"dateTime": "2020"},
+        "deceasedDateTime": "2020",
     }
 
-    patient = aidbox_client.resource("Patient", **launch_patient)
+    patient = fhir_client.resource("Patient", **launch_patient)
     await patient.save()
 
-    p = await aidbox_client.execute(
-        "fhir/Questionnaire/$populate",
+    p = await fhir_client.execute(
+        "Questionnaire/$populate",
         data=create_parameters(
             LaunchPatient={"resourceType": "Patient", "id": patient["id"]}, Questionnaire=q
         ),
@@ -730,8 +730,8 @@ async def test_source_query_populate_fhir(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_source_query_populate_fhir_from_api(aidbox_client, safe_db):
-    q = {
+async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
+    q = fhir_client.resource("Questionnaire", **{
         "item": [
             {
                 "type": "dateTime",
@@ -778,27 +778,26 @@ async def test_source_query_populate_fhir_from_api(aidbox_client, safe_db):
                 "valueReference": {"reference": "#Bundle#PrePopQuery"},
             },
         ],
-    }
+    })
 
-    questionnaire = await aidbox_client.execute("fhir/Questionnaire", method="PUT", data=q)
-    assert questionnaire.id
+    await q.save()
 
     launch_patient = {
         "resourceType": "Patient",
         "id": "patient-id",
-        "deceased": {"dateTime": "2020"},
+        "deceasedDateTime": "2020",
     }
 
-    patient = aidbox_client.resource("Patient", **launch_patient)
+    patient = fhir_client.resource("Patient", **launch_patient)
     await patient.save()
 
-    p = await aidbox_client.execute(
-        f"fhir/Questionnaire/{questionnaire.id}/$populate",
+    p = await q.execute(
+        "$populate",
         data=create_parameters(LaunchPatient={"resourceType": "Patient", "id": patient["id"]}),
     )
 
     assert p == {
         "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
-        "questionnaire": questionnaire.id,
+        "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
     }
