@@ -18,3 +18,17 @@ class ConstraintCheckOperationOutcome(OperationOutcome):
                 ],
             },
         )
+
+
+class MissingParamOperationOutcome(ConstraintCheckOperationOutcome):
+    def __init__(self, reason):
+        ConstraintCheckOperationOutcome.__init__(
+            self,
+            validation_errors=[
+                {
+                    "severity": "error",
+                    "key": "missing-parameter",
+                    "human": reason,
+                }
+            ],
+        )

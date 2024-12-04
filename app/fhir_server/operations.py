@@ -37,11 +37,12 @@ async def assemble_handler(request: web.BaseRequest):
 @routes.post("/QuestionnaireResponse/$constraint-check")
 async def constraint_check_handler(request: web.BaseRequest):
     env = parameter_to_env(await request.json())
+    # TODO: I believe there's a bug, it should be in FHIR format
     env["Questionnaire"] = to_first_class_extension(env["Questionnaire"])
     env["QuestionnaireResponse"] = to_first_class_extension(env["QuestionnaireResponse"])
     client = request.app["client"]
 
-    return web.json_response(await constraint_check(client, env))
+    return web.json_response(await constraint_check(client, env["Questionnaire"], env))
 
 
 @routes.post("/Questionnaire/$context")
@@ -50,7 +51,13 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
     env = parameter_to_env(await request.json())
     client = request.app["client"]
 
-    return web.json_response(await get_questionnaire_context(client, env))
+    return web.json_response(
+        await get_questionnaire_context(
+            client, 
+            to_first_class_extension(env["Questionnaire"]),
+            env
+        )
+    )
 
 
 @routes.post("/Questionnaire/$extract")
@@ -93,14 +100,14 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
             ]
         )
         jute_templates.append(json.loads(template_string))
-
+    # TODO: I believe there's a bug, it should be in FHIR
     context = {
         "Questionnaire": to_first_class_extension(questionnaire),
         "QuestionnaireResponse": to_first_class_extension(questionnaire_response),
         **env,
     }
 
-    await constraint_check(client, context)
+    await constraint_check(client, to_first_class_extension(questionnaire), context)
     extraction_result = await extract(
         client, jute_templates, context, get_extract_services(request.app)
     )
@@ -142,11 +149,12 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
+        # TODO: I believe there's a bug, it should be in FHIR
         context = {
             "Questionnaire": to_first_class_extension(questionnaire),
             "QuestionnaireResponse": questionnaire_response,
         }
-        await constraint_check(client, context)
+        await constraint_check(client, questionnaire, context)
         return web.json_response(
             await extract(client, jute_templates, context, get_extract_services(request.app))
         )
@@ -176,7 +184,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             "Questionnaire": questionnaire,
             **env,
         }
-        await constraint_check(client, context)
+        await constraint_check(client, questionnaire, context)
         return web.json_response(
             await extract(client, jute_templates, context, get_extract_services(request.app))
         )

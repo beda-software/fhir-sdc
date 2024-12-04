@@ -19,59 +19,59 @@ WHITELISTED_ROOT_ELEMENTS = {
 PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 
-async def assemble(client, questionnaire):
-    root_elements = project(dict(questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
-    questionnaire["item"] = await assemble_questionnaire(
-        client, questionnaire, questionnaire["item"], root_elements
+async def assemble(client, fce_questionnaire):
+    root_elements = project(dict(fce_questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
+    fce_questionnaire["item"] = await _assemble_questionnaire(
+        client, fce_questionnaire, fce_questionnaire["item"], root_elements
     )
-    dict.update(questionnaire, root_elements)
-    questionnaire["assembledFrom"] = questionnaire["id"]
-    del questionnaire["id"]
-    return questionnaire
+    dict.update(fce_questionnaire, root_elements)
+    fce_questionnaire["assembledFrom"] = fce_questionnaire["id"]
+    del fce_questionnaire["id"]
+    return fce_questionnaire
 
 
-async def load_sub_questionnaire(client, root_elements, parent_item, item):
+async def _load_sub_questionnaire(client, root_elements, parent_item, item):
     if "subQuestionnaire" in item:
-        sub_fhir = (
+        fhir_subq = (
             await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
         )
-        sub = to_first_class_extension(sub_fhir)
+        fce_subq = to_first_class_extension(fhir_subq)
 
         variables = prepare_variables(item)
-        if validate_assemble_context(sub, variables):
-            sub = prepare_link_ids(sub, variables)
+        if _validate_assemble_context(fce_subq, variables):
+            fce_subq = prepare_link_ids(fce_subq, variables)
 
-        propagate = project(dict(sub), PROPAGATE_ELEMENTS)
+        propagate = project(dict(fce_subq), PROPAGATE_ELEMENTS)
         dict.update(parent_item, propagate)
 
-        root = project(dict(sub), WHITELISTED_ROOT_ELEMENTS.keys())
+        root = project(dict(fce_subq), WHITELISTED_ROOT_ELEMENTS.keys())
         for key, value in root.items():
             uniqueness = WHITELISTED_ROOT_ELEMENTS[key]
             current = root_elements.get(key, [])
             new = concat(current, value)
             root_elements[key] = distinct(new, uniqueness)
-        return sub["item"]
+        return fce_subq["item"]
 
     return item
 
 
-async def assemble_questionnaire(client, parent, questionnaire_items, root_elements):
+async def _assemble_questionnaire(client, parent, questionnaire_items, root_elements):
     with_sub_items = questionnaire_items
     while len([i for i in with_sub_items if "subQuestionnaire" in i]) > 0:
         with_sub_items_futures = (
-            load_sub_questionnaire(client, root_elements, parent, i) for i in with_sub_items
+            _load_sub_questionnaire(client, root_elements, parent, i) for i in with_sub_items
         )
         with_sub_items = list(flatten(await asyncio.gather(*with_sub_items_futures)))
 
     resp = []
     for i in with_sub_items:
         if "item" in i:
-            i["item"] = await assemble_questionnaire(client, i, i["item"], root_elements)
+            i["item"] = await _assemble_questionnaire(client, i, i["item"], root_elements)
         resp.append(i)
     return resp
 
 
-def validate_assemble_context(questionnaire, variables: dict):
+def _validate_assemble_context(questionnaire, variables: dict):
     if "assembleContext" not in questionnaire:
         return False
 

@@ -5,24 +5,24 @@ from funcy import is_list
 from .utils import get_type, load_source_queries, validate_context
 
 
-async def populate(client, questionnaire, env):
-    if "launchContext" in questionnaire:
-        validate_context(questionnaire["launchContext"], env)
+async def populate(client, fce_questionnaire, env):
+    if "launchContext" in fce_questionnaire:
+        validate_context(fce_questionnaire["launchContext"], env)
 
-    await load_source_queries(client, questionnaire, env)
+    await load_source_queries(client, fce_questionnaire, env)
 
     root = {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": questionnaire.get("id"),
+        "questionnaire": fce_questionnaire.get("id"),
         "item": [],
     }
-    for item in questionnaire["item"]:
-        root["item"].extend(handle_item(item, env, {}))
+    for item in fce_questionnaire["item"]:
+        root["item"].extend(_handle_item(item, env, {}))
 
     return root
 
 
-def handle_item(item, env, context):
+def _handle_item(item, env, context):
     def init_item():
         new_item = {"linkId": item["linkId"]}
         if "text" in item:
@@ -41,7 +41,7 @@ def handle_item(item, env, context):
         for c in context:
             populated_items = []
             for i in item["item"]:
-                populated_items.extend(handle_item(i, env, c))
+                populated_items.extend(_handle_item(i, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 
@@ -83,7 +83,7 @@ def handle_item(item, env, context):
     if "item" in item:
         populated_items = []
         for i in item["item"]:
-            populated_items.extend(handle_item(i, env, context))
+            populated_items.extend(_handle_item(i, env, context))
 
         root_item["item"] = populated_items
 

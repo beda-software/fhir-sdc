@@ -42,7 +42,10 @@ def get_type(item, data):
 def walk_dict(d, transform):
     for k, v in d.items():
         if is_list(v):
-            d[k] = [walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v]
+            d[k] = [
+                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k)
+                for vi in v
+            ]
         elif is_mapping(v):
             d[k] = walk_dict(v, transform)
         else:
@@ -65,7 +68,9 @@ def prepare_link_ids(questionnaire, variables):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
+    return walk_dict(
+        raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True)
+    )
 
 
 def resolve_string_template(i, env, encode_result=False):
@@ -117,12 +122,13 @@ def parameter_to_env(resource):
     return env
 
 
-async def load_source_queries(client, questionnaire, env):
+async def load_source_queries(client, fce_questionnaire, env):
     contained = {
-        f"{item['resourceType']}#{item['id']}": item for item in questionnaire.get("contained", [])
+        f"{item['resourceType']}#{item['id']}": item
+        for item in fce_questionnaire.get("contained", [])
     }
 
-    source_queries = questionnaire.get("sourceQueries", {})
+    source_queries = fce_questionnaire.get("sourceQueries", {})
 
     if isinstance(source_queries, dict):
         source_queries = [source_queries]
