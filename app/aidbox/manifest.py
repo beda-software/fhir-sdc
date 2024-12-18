@@ -282,5 +282,5 @@ attributes = {
     },
 }
 
-if settings.CREATE_MANIFEST_ATTRS.lower() == "true":
+if settings.CREATE_MANIFEST_ATTRS:
     manifest.update(attributes)

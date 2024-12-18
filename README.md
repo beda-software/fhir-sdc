@@ -7,6 +7,13 @@ The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
 In order to use extraction on behalf of the user, the Aidbox should be configured with `box_features_mapping_enable__access__control=true` environment variable.
 
+## New projects setup
+
+For new installations, you must specify the following environment variables:
+```
+CONSTRAINT_LEGACY_BEHAVIOR=False
+CREATE_MANIFEST_ATTRS=False
+```
 
 ## Further plans:
 - JUTE-based population

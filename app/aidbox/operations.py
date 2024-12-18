@@ -15,10 +15,8 @@ from ..sdc import (
 from ..sdc.utils import parameter_to_env, validate_context
 from ..utils import get_extract_services
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
-from ..sdc.exception import (
-    ConstraintCheckOperationOutcome,
-    MissingParamOperationOutcome,
-)
+from .settings import settings
+from ..sdc.exception import MissingParamOperationOutcome
 
 
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -54,7 +52,14 @@ async def constraint_check_operation(request: AidboxSdcRequest):
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
 
-    return web.json_response(await constraint_check(client, fce_questionnaire, env))
+    return web.json_response(
+        await constraint_check(
+            client,
+            fce_questionnaire,
+            env,
+            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+        )
+    )
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$context"])
@@ -122,7 +127,12 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
 
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
-    await constraint_check(client, fce_questionnaire, context)
+    await constraint_check(
+        client,
+        fce_questionnaire,
+        context,
+        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+    )
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request.request["app"])
     )
@@ -198,7 +208,12 @@ async def extract_questionnaire_instance(
         await aidbox_client.resources("Mapping").search(_id=m["id"]).get()
         for m in fce_questionnaire.get("mapping", [])
     ]
-    await constraint_check(extract_client, fce_questionnaire, context)
+    await constraint_check(
+        extract_client,
+        fce_questionnaire,
+        context,
+        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+    )
 
     return await extract(extract_client, mappings, context, extract_services)
 

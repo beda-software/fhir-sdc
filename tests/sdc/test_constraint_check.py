@@ -36,7 +36,7 @@ async def test_fce_email_uniq(aidbox_client, safe_db):
                             "requirements": "Any email should present only once in the system",
                             "severity": "error",
                             "human": "Email already exists",
-                            "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string",
+                            "expression": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string).not()",
                         }
                     ],
                 },
@@ -120,7 +120,7 @@ async def test_fhir_email_uniq(fhir_client, safe_db):
                             "requirements": "Any email should present only once in the system",
                             "severity": "error",
                             "human": "Email already exists",
-                            "expression": "%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString",
+                            "expression": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not()",
                         }
                     ],
                 },
