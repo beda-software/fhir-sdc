@@ -242,7 +242,8 @@ async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe
                             "requirements": "v2 should be the same as v1",
                             "severity": "error",
                             "human": "v2 is not equal to v1",
-                            "expression": "%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
+                            # TODO: remove not() when legacy behaviour is disabled
+                            "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
                         },
                     ],
                 },
@@ -292,7 +293,8 @@ async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check
                             "requirements": "v2 should be the same as v1",
                             "severity": "error",
                             "human": "v2 is not equal to v1",
-                            "expression": "%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
+                            # TODO: remove not() when legacy behaviour is disabled
+                            "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
                         },
                     ],
                 },
@@ -661,7 +663,8 @@ async def test_fhir_extract_fails_because_of_constraint_check(
                                     "requirements": "v2 should be the same as v1",
                                     "severity": "error",
                                     "human": "v2 is not equal to v1",
-                                    "expression": "%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
+                                    # TODO: remove not() when legacy behaviour is disabled
+                                    "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
                                 },
                             ],
                         },
@@ -718,7 +721,8 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
                                     "requirements": "v2 should be the same as v1",
                                     "severity": "error",
                                     "human": "v2 is not equal to v1",
-                                    "expression": "%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
+                                    # TODO: remove not() when legacy behaviour is disabled
+                                    "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
                                 },
                             ],
                         },

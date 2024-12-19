@@ -29,4 +29,4 @@ def _constraint_check_for_item(
             errors.append(constraint)
 
     for item in questionnaire_item.get("item", []):
-        _constraint_check_for_item(errors, item, env)
+        _constraint_check_for_item(errors, item, env, legacy_behavior=legacy_behavior)
