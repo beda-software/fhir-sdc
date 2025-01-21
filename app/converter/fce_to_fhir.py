@@ -105,6 +105,15 @@ def process_items(items):
             item["extension"].append(item_control_extension)
             del item["itemControl"]
 
+        if item.get("inlineChoiceDirection"):
+            inline_choice_direction_extension = {
+                "url": "https://beda.software/fhir-emr-questionnaire/inline-choice-direction",
+                "valueString": item["inlineChoiceDirection"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(inline_choice_direction_extension)
+            del item["inlineChoiceDirection"]
+
         if item.get("start") is not None:
             start_extension = {
                 "url": "https://beda.software/fhir-emr-questionnaire/slider-start",
@@ -257,9 +266,11 @@ def process_items(items):
 
         if item.get("initial"):
             item["initial"] = [
-                {"valueBoolean": entry["value"]["boolean"]}
-                if "boolean" in entry["value"]
-                else {"valueCoding": entry["value"]["Coding"]}
+                (
+                    {"valueBoolean": entry["value"]["boolean"]}
+                    if "boolean" in entry["value"]
+                    else {"valueCoding": entry["value"]["Coding"]}
+                )
                 for entry in item["initial"]
             ]
 

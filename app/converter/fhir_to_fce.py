@@ -8,10 +8,11 @@ def to_first_class_extension(fhirResource):
         fhirQuestionnaire = copy.deepcopy(fhirResource)
         # check_fhir_questionnaire_profile(fhirQuestionnaire)
         meta = process_meta_questionnaire(fhirQuestionnaire)
-        item = process_items(fhirQuestionnaire)
-        extensions = process_extension(fhirQuestionnaire)
+        itemWithExtensions = process_extensions(fhirQuestionnaire)
+        item = process_items(itemWithExtensions)
+
         questionnaire = trim_empty(
-            {**fhirQuestionnaire, "meta": meta, "item": item, "extension": None, **extensions}
+            {**fhirQuestionnaire, "meta": meta, "item": item, "extension": None}
         )
 
         return questionnaire
@@ -143,6 +144,17 @@ def process_item(item):
     return new_item
 
 
+def process_extensions(fhirQuestionnaire):
+    extensions = process_extension(fhirQuestionnaire)
+
+    result = {**fhirQuestionnaire, **extensions}
+
+    if result.get("item"):
+        result["item"] = [process_extensions(item) for item in result["item"]]
+
+    return result
+
+
 def process_extension(fhirQuestionnaire):
     launchContext = process_launch_context(fhirQuestionnaire)
     mapping = process_mapping(fhirQuestionnaire)
@@ -156,16 +168,21 @@ def process_extension(fhirQuestionnaire):
         fhirQuestionnaire,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
     )
+    sub_questionnaire = find_extension(
+        fhirQuestionnaire,
+        "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
+    )
 
     return {
         "launchContext": launchContext if launchContext else None,
         "mapping": mapping if mapping else None,
         "sourceQueries": source_queries if source_queries else None,
         "targetStructureMap": target_structure_map if target_structure_map else None,
-        "itemPopulationContext": item_population_context["valueExpression"]
-        if item_population_context
-        else None,
+        "itemPopulationContext": (
+            item_population_context["valueExpression"] if item_population_context else None
+        ),
         "assembleContext": assemble_context["valueString"] if assemble_context else None,
+        "subQuestionnaire": sub_questionnaire["valueCanonical"] if sub_questionnaire else None,
     }
 
 
@@ -305,10 +322,17 @@ def get_updated_properties_from_item(item):
     if item_control is not None:
         item_control = item_control["valueCodeableConcept"]
 
+    item_inline_choice_direction = find_extension(
+        item, "https://beda.software/fhir-emr-questionnaire/inline-choice-direction"
+    )
+    if item_inline_choice_direction is not None:
+        item_inline_choice_direction = item_inline_choice_direction["valueString"]
+
     updated_properties["hidden"] = hidden
     updated_properties["initialExpression"] = initial_expression
     updated_properties["itemPopulationContext"] = item_population_context
     updated_properties["itemControl"] = item_control
+    updated_properties["inlineChoiceDirection"] = item_inline_choice_direction
 
     item_type = item.get("type", "")
 
