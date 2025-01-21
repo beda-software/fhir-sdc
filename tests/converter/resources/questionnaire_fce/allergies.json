@@ -66,6 +66,7 @@
                     }
                 ]
             },
+            "inlineChoiceDirection": "horizontal",
             "answerOption": [
                 {
                     "value": {

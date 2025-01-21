@@ -143,6 +143,144 @@ async def test_assemble_sub_questionnaire(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
+async def test_assemble_double_nested_sub_questionnaire(aidbox_client, safe_db):
+    get_family_name = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
+            "itemPopulationContext": {
+                "language": "text/fhirpath",
+                "expression": "%LaunchPatient.name",
+            },
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "familyName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "family",
+                    },
+                },
+            ],
+        },
+    )
+
+    get_given_name = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
+            "itemPopulationContext": {
+                "language": "text/fhirpath",
+                "expression": "%LaunchPatient.name",
+            },
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "firstName",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "given.first()",
+                    },
+                },
+                {
+                    "type": "display",
+                    "linkId": "familyNameGroup",
+                    "text": "Sub questionnaire is not supported",
+                    "subQuestionnaire": get_family_name.id,
+                },
+            ],
+        },
+    )
+
+    q = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "resourceType": "Questionnaire",
+            "item": [
+                {
+                    "linkId": "demographics",
+                    "type": "group",
+                    "item": [
+                        {
+                            "type": "display",
+                            "linkId": "givenNameGroup",
+                            "text": "Sub questionnaire is not supported",
+                            "subQuestionnaire": get_given_name.id,
+                        },
+                    ],
+                }
+            ],
+        },
+    )
+
+    assembled = await q.execute("$assemble", method="get")
+
+    del assembled["meta"]
+
+    assert assembled == {
+        "assembledFrom": q.id,
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "launchContext": [
+            {
+                "name": {
+                    "code": "LaunchPatient",
+                    "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                },
+                "type": ["Patient"],
+            }
+        ],
+        "item": [
+            {
+                "linkId": "demographics",
+                "type": "group",
+                "itemPopulationContext": {
+                    "language": "text/fhirpath",
+                    "expression": "%LaunchPatient.name",
+                },
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "firstName",
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "given.first()",
+                        },
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "familyName",
+                        "initialExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "family",
+                        },
+                    },
+                ],
+            }
+        ],
+    }
+
+
+@pytest.mark.asyncio
 async def test_assemble_reuse_questionnaire(aidbox_client, safe_db):
     address = await create_questionnaire(
         aidbox_client,
@@ -578,7 +716,7 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
             },
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
-                 "valueCanonical": q['id']
+                "valueCanonical": q["id"],
             },
         ],
     }

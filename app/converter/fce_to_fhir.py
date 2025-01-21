@@ -94,6 +94,15 @@ def process_items(items):
             item["extension"].append(macro_extension)
             del item["macro"]
 
+        if item.get("subQuestionnaire"):
+            sub_questionnaire_extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
+                "valueCanonical": item["subQuestionnaire"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(sub_questionnaire_extension)
+            del item["subQuestionnaire"]
+
         if item.get("itemControl"):
             item_control_extension = {
                 "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
