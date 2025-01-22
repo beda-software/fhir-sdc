@@ -17,14 +17,14 @@ WHITELISTED_ROOT_ELEMENTS = {
 PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 
-async def assemble(client, fce_questionnaire, to_first_class_extension):
+async def assemble(client, fce_questionnaire, to_first_class_extension_async):
     root_elements = project(dict(fce_questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
     fce_questionnaire["item"] = await _assemble_questionnaire(
         client,
         fce_questionnaire,
         fce_questionnaire["item"],
         root_elements,
-        to_first_class_extension,
+        to_first_class_extension_async,
     )
     dict.update(fce_questionnaire, root_elements)
     fce_questionnaire["assembledFrom"] = fce_questionnaire["id"]
@@ -33,13 +33,13 @@ async def assemble(client, fce_questionnaire, to_first_class_extension):
 
 
 async def _load_sub_questionnaire(
-    client, root_elements, parent_item, item, to_first_class_extension
+    client, root_elements, parent_item, item, to_first_class_extension_async
 ):
     if "subQuestionnaire" in item:
         fhir_subq = (
             await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
         )
-        fce_subq = await to_first_class_extension(fhir_subq)
+        fce_subq = await to_first_class_extension_async(fhir_subq)
 
         variables = prepare_variables(item)
         if _validate_assemble_context(fce_subq, variables):
@@ -60,12 +60,14 @@ async def _load_sub_questionnaire(
 
 
 async def _assemble_questionnaire(
-    client, parent, questionnaire_items, root_elements, to_first_class_extension
+    client, parent, questionnaire_items, root_elements, to_first_class_extension_async
 ):
     with_sub_items = questionnaire_items
     while len([i for i in with_sub_items if "subQuestionnaire" in i]) > 0:
         with_sub_items_futures = (
-            _load_sub_questionnaire(client, root_elements, parent, i, to_first_class_extension)
+            _load_sub_questionnaire(
+                client, root_elements, parent, i, to_first_class_extension_async
+            )
             for i in with_sub_items
         )
         with_sub_items = list(flatten(await asyncio.gather(*with_sub_items_futures)))
@@ -74,7 +76,7 @@ async def _assemble_questionnaire(
     for i in with_sub_items:
         if "item" in i:
             i["item"] = await _assemble_questionnaire(
-                client, i, i["item"], root_elements, to_first_class_extension
+                client, i, i["item"], root_elements, to_first_class_extension_async
             )
         resp.append(i)
     return resp
