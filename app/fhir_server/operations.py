@@ -30,7 +30,7 @@ async def assemble_handler(request: web.BaseRequest):
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
 
-    def get_to_first_class_extension(fhir_resource):
+    async def get_to_first_class_extension(fhir_resource):
         return to_first_class_extension(fhir_resource, aidbox_client)
 
     assembled_questionnaire_lazy = await assemble(
