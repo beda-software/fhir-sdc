@@ -94,6 +94,15 @@ def process_items(items):
             item["extension"].append(macro_extension)
             del item["macro"]
 
+        if item.get("subQuestionnaire"):
+            sub_questionnaire_extension = {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
+                "valueCanonical": item["subQuestionnaire"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(sub_questionnaire_extension)
+            del item["subQuestionnaire"]
+
         if item.get("itemControl"):
             item_control_extension = {
                 "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl",
@@ -104,6 +113,15 @@ def process_items(items):
             item["extension"] = item.get("extension", [])
             item["extension"].append(item_control_extension)
             del item["itemControl"]
+
+        if item.get("inlineChoiceDirection"):
+            inline_choice_direction_extension = {
+                "url": "https://beda.software/fhir-emr-questionnaire/inline-choice-direction",
+                "valueString": item["inlineChoiceDirection"],
+            }
+            item["extension"] = item.get("extension", [])
+            item["extension"].append(inline_choice_direction_extension)
+            del item["inlineChoiceDirection"]
 
         if item.get("start") is not None:
             start_extension = {
@@ -257,9 +275,11 @@ def process_items(items):
 
         if item.get("initial"):
             item["initial"] = [
-                {"valueBoolean": entry["value"]["boolean"]}
-                if "boolean" in entry["value"]
-                else {"valueCoding": entry["value"]["Coding"]}
+                (
+                    {"valueBoolean": entry["value"]["boolean"]}
+                    if "boolean" in entry["value"]
+                    else {"valueCoding": entry["value"]["Coding"]}
+                )
                 for entry in item["initial"]
             ]
 

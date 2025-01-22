@@ -24,11 +24,18 @@ routes = web.RouteTableDef()
 @routes.get("/Questionnaire/{id}/$assemble")
 async def assemble_handler(request: web.BaseRequest):
     client: AsyncFHIRClient = request.app["client"]
+    aidbox_client = request.aidbox_client
+
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
 
-    assembled_questionnaire_lazy = await assemble(client, to_first_class_extension(questionnaire))
+    async def get_to_first_class_extension(fhir_resource):
+        return to_first_class_extension(fhir_resource, aidbox_client)
+
+    assembled_questionnaire_lazy = await assemble(
+        client, to_first_class_extension(questionnaire), get_to_first_class_extension
+    )
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
 
     return web.json_response(from_first_class_extension(assembled_questionnaire))
@@ -52,11 +59,7 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
     client = request.app["client"]
 
     return web.json_response(
-        await get_questionnaire_context(
-            client, 
-            to_first_class_extension(env["Questionnaire"]),
-            env
-        )
+        await get_questionnaire_context(client, to_first_class_extension(env["Questionnaire"]), env)
     )
 
 

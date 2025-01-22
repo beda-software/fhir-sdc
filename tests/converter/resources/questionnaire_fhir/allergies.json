@@ -110,6 +110,10 @@
                             }
                         ]
                     }
+                },
+                {
+                    "url": "https://beda.software/fhir-emr-questionnaire/inline-choice-direction",
+                    "valueString": "horizontal"
                 }
             ]
         },

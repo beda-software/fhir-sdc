@@ -162,9 +162,9 @@ def process_extension(fhirQuestionnaire):
         "mapping": mapping if mapping else None,
         "sourceQueries": source_queries if source_queries else None,
         "targetStructureMap": target_structure_map if target_structure_map else None,
-        "itemPopulationContext": item_population_context["valueExpression"]
-        if item_population_context
-        else None,
+        "itemPopulationContext": (
+            item_population_context["valueExpression"] if item_population_context else None
+        ),
         "assembleContext": assemble_context["valueString"] if assemble_context else None,
     }
 
@@ -288,27 +288,44 @@ def get_updated_properties_from_item(item):
     hidden = find_extension(item, "http://hl7.org/fhir/StructureDefinition/questionnaire-hidden")
     if hidden is not None:
         hidden = hidden["valueBoolean"]
+
     initial_expression = find_extension(
         item, "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression"
     )
     if initial_expression is not None:
         initial_expression = initial_expression["valueExpression"]
+
     item_population_context = find_extension(
         item,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
     )
     if item_population_context is not None:
         item_population_context = item_population_context["valueExpression"]
+
+    sub_questionnaire = find_extension(
+        item, "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire"
+    )
+    if sub_questionnaire is not None:
+        sub_questionnaire = sub_questionnaire["valueCanonical"]
+
     item_control = find_extension(
         item, "http://hl7.org/fhir/StructureDefinition/questionnaire-itemControl"
     )
     if item_control is not None:
         item_control = item_control["valueCodeableConcept"]
 
+    item_inline_choice_direction = find_extension(
+        item, "https://beda.software/fhir-emr-questionnaire/inline-choice-direction"
+    )
+    if item_inline_choice_direction is not None:
+        item_inline_choice_direction = item_inline_choice_direction["valueString"]
+
     updated_properties["hidden"] = hidden
     updated_properties["initialExpression"] = initial_expression
     updated_properties["itemPopulationContext"] = item_population_context
+    updated_properties["subQuestionnaire"] = sub_questionnaire
     updated_properties["itemControl"] = item_control
+    updated_properties["inlineChoiceDirection"] = item_inline_choice_direction
 
     item_type = item.get("type", "")
 

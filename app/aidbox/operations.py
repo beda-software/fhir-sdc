@@ -22,16 +22,21 @@ from ..sdc.exception import MissingParamOperationOutcome
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
 @prepare_args
 async def assemble_op(request: AidboxSdcRequest):
+    aidbox_client = request.aidbox_client
+
     questionnaire = (
         await request.aidbox_client.resources("Questionnaire")
         .search(_id=request.route_params["id"])
         .get()
     )
 
-    assembled_questionnaire_lazy = await assemble(request.fhir_client, questionnaire)
-    assembled_questionnaire = json.loads(
-        json.dumps(assembled_questionnaire_lazy, default=list)
+    def get_to_first_class_extension(fhir_resource):
+        return to_first_class_extension(fhir_resource, aidbox_client)
+
+    assembled_questionnaire_lazy = await assemble(
+        request.fhir_client, questionnaire, get_to_first_class_extension
     )
+    assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
     if request.is_fhir:
         assembled_questionnaire = await from_first_class_extension(
             assembled_questionnaire, request.aidbox_client
@@ -102,9 +107,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
         if "Questionnaire" not in env:
             raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
         if "QuestionnaireResponse" not in env:
-            raise MissingParamOperationOutcome(
-                "`QuestionnaireResponse` parameter is required"
-            )
+            raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
         fce_questionnaire = (
             await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
@@ -155,9 +158,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     )
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     extract_client = (
-        request.client
-        if as_root
-        else get_user_sdk_client(request.request, request.client)
+        request.client if as_root else get_user_sdk_client(request.request, request.client)
     )
     return web.json_response(
         await extract_questionnaire_instance(
@@ -181,15 +182,11 @@ async def extract_questionnaire_instance(
 ):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
-        env_questionnaire_response = extract_client.resource(
-            "QuestionnaireResponse", **resource
-        )
+        env_questionnaire_response = extract_client.resource("QuestionnaireResponse", **resource)
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
         if "QuestionnaireResponse" not in env:
-            raise MissingParamOperationOutcome(
-                "`QuestionnaireResponse` parameter is required"
-            )
+            raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
         env_questionnaire_response = env["QuestionnaireResponse"]
     else:
@@ -232,17 +229,11 @@ async def populate_questionnaire(request: AidboxSdcRequest):
         else env["Questionnaire"]
     )
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = (
-        request.client
-        if as_root
-        else get_user_sdk_client(request.request, request.client)
-    )
+    client = request.client if as_root else get_user_sdk_client(request.request, request.client)
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
     if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(
-            fce_populated_qr, request.aidbox_client
-        )
+        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
     return web.json_response(fce_populated_qr)
 
 
@@ -265,9 +256,7 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
     if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(
-            fce_populated_qr, request.aidbox_client
-        )
+        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
     return web.json_response(fce_populated_qr)
 
 
