@@ -1,5 +1,4 @@
-import json
-
+import simplejson as json
 from aiohttp import web
 
 from app.converter.aidbox import from_first_class_extension, to_first_class_extension
@@ -12,11 +11,11 @@ from ..sdc import (
     populate,
     resolve_expression,
 )
+from ..sdc.exception import MissingParamOperationOutcome
 from ..sdc.utils import parameter_to_env, validate_context
 from ..utils import get_extract_services
-from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 from .settings import settings
-from ..sdc.exception import MissingParamOperationOutcome
+from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 
 
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -41,7 +40,7 @@ async def assemble_op(request: AidboxSdcRequest):
         assembled_questionnaire = await from_first_class_extension(
             assembled_questionnaire, request.aidbox_client
         )
-    return web.json_response(assembled_questionnaire)
+    return web.json_response(assembled_questionnaire, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
@@ -63,7 +62,8 @@ async def constraint_check_operation(request: AidboxSdcRequest):
             fce_questionnaire,
             env,
             legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-        )
+        ),
+        dumps=json.dumps,
     )
 
 
@@ -81,7 +81,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     client = client if as_root else get_user_sdk_client(request.request, request.client)
     result = await get_questionnaire_context(client, fce_questionnaire, env)
 
-    return web.json_response(result)
+    return web.json_response(result, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$extract"])
@@ -139,7 +139,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request.request["app"])
     )
-    return web.json_response(extraction_result)
+    return web.json_response(extraction_result, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
@@ -168,7 +168,8 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
             env_questionnaire,
             resource,
             get_extract_services(request.request["app"]),
-        )
+        ),
+        dumps=json.dumps,
     )
 
 
@@ -234,7 +235,7 @@ async def populate_questionnaire(request: AidboxSdcRequest):
     fce_populated_qr = await populate(client, fce_questionnaire, env)
     if request.is_fhir:
         fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
-    return web.json_response(fce_populated_qr)
+    return web.json_response(fce_populated_qr, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
@@ -255,11 +256,12 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
     client = client if as_root else get_user_sdk_client(request.request, request.client)
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
+
     if request.is_fhir:
         fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
-    return web.json_response(fce_populated_qr)
+    return web.json_response(fce_populated_qr, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
 def resolve_expression_operation(_operation, request):
-    return web.json_response(resolve_expression(request["resource"]))
+    return web.json_response(resolve_expression(request["resource"]), dumps=json.dumps)

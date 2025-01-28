@@ -1,6 +1,8 @@
 import json
+from decimal import Decimal
 
 import pytest
+from fhirpathpy import evaluate
 
 from app.test.utils import create_parameters
 
@@ -731,54 +733,57 @@ async def test_fhir_source_query_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
-    q = fhir_client.resource("Questionnaire", **{
-        "item": [
-            {
-                "type": "dateTime",
-                "linkId": "deceased",
-                "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
+            "item": [
+                {
+                    "type": "dateTime",
+                    "linkId": "deceased",
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                            "valueExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
+                            },
+                        }
+                    ],
+                }
+            ],
+            "status": "active",
+            "resourceType": "Questionnaire",
+            "contained": [
+                {
+                    "id": "PrePopQuery",
+                    "type": "batch",
+                    "entry": [
+                        {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
+                    ],
+                    "resourceType": "Bundle",
+                }
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                    "extension": [
+                        {
+                            "url": "name",
+                            "valueCoding": {
+                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                                "code": "LaunchPatient",
+                            },
                         },
-                    }
-                ],
-            }
-        ],
-        "status": "active",
-        "resourceType": "Questionnaire",
-        "contained": [
-            {
-                "id": "PrePopQuery",
-                "type": "batch",
-                "entry": [
-                    {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
-                ],
-                "resourceType": "Bundle",
-            }
-        ],
-        "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": "LaunchPatient",
-                        },
-                    },
-                    {"url": "type", "valueCode": "Patient"},
-                ],
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                "valueReference": {"reference": "#Bundle#PrePopQuery"},
-            },
-        ],
-    })
+                        {"url": "type", "valueCode": "Patient"},
+                    ],
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {"reference": "#Bundle#PrePopQuery"},
+                },
+            ],
+        },
+    )
 
     await q.save()
 
@@ -801,3 +806,65 @@ async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
     }
+
+
+@pytest.mark.asyncio
+async def test_money_populate(fhir_client, safe_db):
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
+            "item": [
+                {
+                    "type": "quantity",
+                    "linkId": "charge-amount",
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                            "valueExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "%ChargeItemDefinition.extension('charge-item-definition-price').valueQuantity",
+                            },
+                        }
+                    ],
+                }
+            ],
+            "status": "active",
+            "resourceType": "Questionnaire",
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                    "extension": [
+                        {
+                            "url": "name",
+                            "valueCoding": {
+                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                                "code": "ChargeItemDefinition",
+                            },
+                        },
+                        {"url": "type", "valueCode": "ChargeItemDefinition"},
+                    ],
+                }
+            ],
+        },
+    )
+
+    await q.save()
+
+    charge_item_definition = {
+        "resourceType": "ChargeItemDefinition",
+        "extension": [
+            {
+                "url": "charge-item-definition-price",
+                "valueQuantity": {"code": "USD", "value": 33.3, "system": "urn:iso:std:iso:4217"},
+            }
+        ],
+    }
+
+    p = await q.execute(
+        "$populate",
+        data=create_parameters(ChargeItemDefinition=charge_item_definition),
+    )
+
+    assert evaluate(
+        p, "QuestionnaireResponse.item.where(linkId='charge-amount').answer.valueQuantity"
+    ) == [{"code": "USD", "system": "urn:iso:std:iso:4217", "value": Decimal("33.3")}]
