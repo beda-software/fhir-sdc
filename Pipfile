@@ -39,6 +39,7 @@ sqlalchemy = ">=1.4.44"
 fhirpy = "==1.4.2"
 pytest-asyncio = "*"
 aiohttp-cors = "~=0.7.0"
+simplejson = "*"
 
 [requires]
 python_version = "3.12"
