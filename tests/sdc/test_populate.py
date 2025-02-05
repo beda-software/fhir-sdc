@@ -1,7 +1,6 @@
 import json
-from decimal import Decimal
-
 import pytest
+from decimal import Decimal
 from fhirpathpy import evaluate
 
 from app.test.utils import create_parameters
@@ -218,6 +217,107 @@ async def test_item_context_with_repeating_group_populate(aidbox_client, safe_db
                         "linkId": "city",
                         "answer": [
                             {"value": {"string": "San Diego"}},
+                        ],
+                    }
+                ],
+                "linkId": "addresses",
+            },
+        ],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
+@pytest.mark.asyncio
+async def test_item_context_with_repeating_group_populate_from_nonlocal_context(aidbox_client, safe_db):
+    q = aidbox_client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "launchContext": [
+                {"name": {"code": "LaunchPatient"}, "type": ["Patient"]},
+                {"name": {"code": "LaunchEncounter"}, "type": ["Encounter"]}
+            ],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "addresses",
+                    "repeats": True,
+                    "itemPopulationContext": {
+                        "language": "text/fhirpath",
+                        "expression": "%LaunchPatient.address",
+                    },
+                    "item": [
+                        {
+                            "type": "string",
+                            "linkId": "city",
+                            "initialExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "city.first()",
+                            },
+                        },
+                        {
+                            "type": "string",
+                            "linkId": "encounter-id",
+                            "initialExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "%Encounter.id",
+                            },
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+    await q.save()
+
+    assert q.id is not None
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patienit-id",
+        "address": [{"city": "San Francisco"}, {"city": "San Diego"}],
+    }
+
+    launch_encounter = {
+        "resourceType": "Encounter",
+        "id": "encounter-example"
+    }
+
+    p = await q.execute("$populate",
+                        data=create_parameters(LaunchPatient=launch_patient, LaunchEncounter=launch_encounter))
+
+    assert p == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "linkId": "city",
+                        "answer": [
+                            {"value": {"string": "San Francisco"}},
+                        ],
+                    },
+                    {
+                        "linkId": "encounter-id",
+                        "answer": [
+                            {"value": {"string": "enxounter-example"}},
+                        ],
+                    }
+                ],
+                "linkId": "addresses",
+            },
+            {
+                "item": [
+                    {
+                        "linkId": "city",
+                        "answer": [
+                            {"value": {"string": "San Diego"}},
+                        ],
+                    },
+                    {
+                        "linkId": "encounter-id",
+                        "answer": [
+                            {"value": {"string": "enxounter-example"}},
                         ],
                     }
                 ],
