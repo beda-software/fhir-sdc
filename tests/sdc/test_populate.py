@@ -258,10 +258,11 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         },
                         {
                             "type": "string",
+                            "repeats": True,
                             "linkId": "encounter-id",
                             "initialExpression": {
                                 "language": "text/fhirpath",
-                                "expression": "%Encounter.id",
+                                "expression": "%LaunchEncounter.id",
                             },
                         },
                     ],
@@ -300,7 +301,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                     {
                         "linkId": "encounter-id",
                         "answer": [
-                            {"value": {"string": "enxounter-example"}},
+                            {"value": {"string": "encounter-example"}},
                         ],
                     }
                 ],
@@ -317,7 +318,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                     {
                         "linkId": "encounter-id",
                         "answer": [
-                            {"value": {"string": "enxounter-example"}},
+                            {"value": {"string": "encounter-example"}},
                         ],
                     }
                 ],

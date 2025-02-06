@@ -52,10 +52,10 @@ def _handle_item(item, env, context):
 
     if context and "initialExpression" in item and item.get("repeats", False) is True:
         answers = []
-        for index, _item in enumerate(context):
+        for item_context in context:
             data = fhirpath(
-                context,
-                "%context[{}].{}".format(index, item["initialExpression"]["expression"]),
+                item_context,
+                item["initialExpression"]["expression"],
                 env,
             )
             if data and len(data):
