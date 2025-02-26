@@ -926,9 +926,9 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
         },
     )
 
-    try:
+    with pytest.raises(OperationOutcome):
         await q.execute("$extract", data=qr)
-    except OperationOutcome:
+
         p = await aidbox_client.resources("Patient").search(id=patientId).fetch_all()
         o = await aidbox_client.resources("Observation").search(code=observationCode).fetch_all()
 
