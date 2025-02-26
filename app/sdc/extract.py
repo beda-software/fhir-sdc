@@ -71,6 +71,9 @@ async def extract(client, mappings, context, extract_services):
                 )
 
         if len(mappers_bundles) > 0:
-            resp.append(await execute_mappers_bundles(client, mappers_bundles))
+            execution_response = await execute_mappers_bundles(client, mappers_bundles)
+
+            for entry in execution_response["entry"]:
+                resp.append(entry["resource"])
 
         return resp

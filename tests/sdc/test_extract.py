@@ -867,8 +867,9 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
 
     extraction = await q.execute("$extract", data=qr)
 
-    assert extraction[0]["resourceType"] == "Bundle"
-    assert len(extraction[0]["entry"]) == 2
+    assert len(extraction) == 2
+    for bundle in extraction:
+        assert bundle["resourceType"] == "Bundle"
 
     p = await aidbox_client.resources("Patient").search(id=patientId).fetch_all()
     o = await aidbox_client.resources("Observation").search(code=observationCode).fetch_all()
