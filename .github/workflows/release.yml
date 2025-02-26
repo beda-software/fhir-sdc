@@ -1,5 +1,8 @@
 name: release
-on: [release]
+on: 
+  push:
+    tags: 
+      - "v*.*.*"
 env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
@@ -10,7 +13,10 @@ jobs:
       tests_aidbox_license: ${{ secrets.TESTS_AIDBOX_LICENSE }}
   Release:
     runs-on: ubuntu-latest
+    needs: [BuildAndTest]
     steps:
+      - uses: actions/checkout@v2
+      - run: docker pull ${{ env.CACHE_IMAGE }} || true
       - name: Extract branch name
         shell: bash
         run: echo "branch=$(echo ${GITHUB_REF#refs/tags/v})" >>$GITHUB_OUTPUT
