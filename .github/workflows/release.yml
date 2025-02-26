@@ -1,15 +1,12 @@
 name: release
-on:
-  workflow_run:
-    workflows: [test]
-    branches:
-      - v*.*.*
-    types: [completed]
+on: [release]
 env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
 jobs:
   Build:
+    uses: ./.github/workflows/test
+  Release:
     runs-on: ubuntu-latest
     steps:
       - name: Extract branch name
