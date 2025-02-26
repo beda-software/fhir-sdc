@@ -1,0 +1,26 @@
+name: release
+on:
+  workflow_run:
+    workflows: [test]
+    branches:
+      - v*.*.*
+    types: [completed]
+env:
+  BUILD_IMAGE: bedasoftware/fhir-sdc
+  CACHE_IMAGE: bedasoftware/fhir-sdc:latest
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        shell: bash
+        run: echo "branch=$(echo ${GITHUB_REF#refs/tags/v})" >>$GITHUB_OUTPUT
+        id: extract_branch
+      - name: Set up Docker Buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v1
+      - run: docker run --rm --privileged tonistiigi/binfmt --install all
+      - run: >-
+          docker buildx build --platform linux/arm64,linux/amd64
+          --cache-from ${{ env.CACHE_IMAGE }} --push
+          --tag ${{ env.BUILD_IMAGE }}:${{ steps.extract_branch.outputs.branch }} --tag ${{ env.CACHE_IMAGE }} .

@@ -1,0 +1,25 @@
+name: test
+on: [push]
+env:
+  BUILD_IMAGE: bedasoftware/fhir-sdc
+  CACHE_IMAGE: bedasoftware/fhir-sdc:latest
+  TESTS_AIDBOX_LICENSE: ${{ secrets.TESTS_AIDBOX_LICENSE }}
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: docker pull ${{ env.CACHE_IMAGE }} || true
+      - run: >-
+          docker build --cache-from ${{ env.CACHE_IMAGE }} 
+          --tag ${{ env.BUILD_IMAGE }} .
+      - name: Run tests
+        run: >-
+          mkdir ./tests_zen_project/zen-packages/ &&
+          ls -la ./tests_zen_project &&
+          id &&
+          chmod -R 0777 ./tests_zen_project && 
+          ./run_test.sh
+      - name: Show logs
+        if: ${{ failure() }}
+        run: docker-compose -f docker-compose.tests.yaml logs
