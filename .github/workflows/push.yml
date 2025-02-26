@@ -1,5 +1,8 @@
 name: push
-on: [push]
+on: 
+  push:
+    tags-ignore:
+      - "v*.*.*"
 env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
