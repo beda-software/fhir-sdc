@@ -1,9 +1,13 @@
-name: test
-on: [push]
+name: build-and-test
+on: 
+  workflow_call:
+    secrets:
+      tests_aidbox_license:
+        required: true
 env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
-  TESTS_AIDBOX_LICENSE: ${{ secrets.TESTS_AIDBOX_LICENSE }}
+  TESTS_AIDBOX_LICENSE: ${{ secrets.tests_aidbox_license }}
 jobs:
   Build:
     runs-on: ubuntu-latest

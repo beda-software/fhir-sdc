@@ -4,8 +4,10 @@ env:
   BUILD_IMAGE: bedasoftware/fhir-sdc
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
 jobs:
-  Build:
-    uses: ./.github/workflows/test.yml
+  BuildAndTest:
+    uses: ./.github/workflows/build-and-test.yml
+    secrets:
+      tests_aidbox_license: ${{ secrets.TESTS_AIDBOX_LICENSE }}
   Release:
     runs-on: ubuntu-latest
     steps:

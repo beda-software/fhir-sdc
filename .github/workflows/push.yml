@@ -1,0 +1,10 @@
+name: push
+on: [push]
+env:
+  BUILD_IMAGE: bedasoftware/fhir-sdc
+  CACHE_IMAGE: bedasoftware/fhir-sdc:latest
+jobs:
+  BuildAndTest:
+    uses: ./.github/workflows/build-and-test.yml
+    secrets:
+      tests_aidbox_license: ${{ secrets.TESTS_AIDBOX_LICENSE }}
