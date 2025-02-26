@@ -5,7 +5,7 @@ env:
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
 jobs:
   Build:
-    uses: ./.github/workflows/test
+    uses: ./.github/workflows/test.yml
   Release:
     runs-on: ubuntu-latest
     steps:
