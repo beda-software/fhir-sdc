@@ -1,4 +1,5 @@
 from aiohttp import ClientSession, web
+from funcy.seqs import flatten
 
 
 async def get_external_service_bundle(session, service, template, context):
@@ -21,16 +22,7 @@ async def execute_mappers_bundles(client, mappers_bundles):
     result_bundle = {
         "resourceType": "Bundle",
         "type": "batch" if not_transaction else "transaction",
-        "entry": [
-            {
-                "request": {
-                    "method": "POST",
-                    "url": "/",
-                },
-                "resource": bundle,
-            }
-            for bundle in mappers_bundles
-        ],
+        "entry": list(flatten(bundle["entry"] for bundle in mappers_bundles)),
     }
 
     return await client.execute("/", data=result_bundle)
@@ -71,9 +63,6 @@ async def extract(client, mappings, context, extract_services):
                 )
 
         if len(mappers_bundles) > 0:
-            execution_response = await execute_mappers_bundles(client, mappers_bundles)
-
-            for entry in execution_response["entry"]:
-                resp.append(entry["resource"])
+            resp.append(await execute_mappers_bundles(client, mappers_bundles))
 
         return resp
