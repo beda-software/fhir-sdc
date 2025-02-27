@@ -170,3 +170,26 @@ def validate_context(context_definition, env):
                 )
         if len(errors) > 0:
             raise ConstraintCheckOperationOutcome(errors)
+
+
+def check_mappers_bundles_full_url_duplicates(flatted_mappers_bundles):
+    full_urls_set = set()
+
+    for bundle in flatted_mappers_bundles:
+        full_url = bundle.get("fullUrl")
+
+        if full_url is None:
+            continue
+
+        if full_url in full_urls_set:
+            raise ConstraintCheckOperationOutcome(
+                [
+                    {
+                        "severity": "error",
+                        "key": "duplicate-full-url",
+                        "human": f"Duplicate fullUrl '{full_url}' in mappers bundles",
+                    }
+                ]
+            )
+
+        full_urls_set.add(full_url)
