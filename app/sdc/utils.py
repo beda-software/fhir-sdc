@@ -42,10 +42,7 @@ def get_type(item, data):
 def walk_dict(d, transform):
     for k, v in d.items():
         if is_list(v):
-            d[k] = [
-                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k)
-                for vi in v
-            ]
+            d[k] = [walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v]
         elif is_mapping(v):
             d[k] = walk_dict(v, transform)
         else:
@@ -68,9 +65,7 @@ def prepare_link_ids(questionnaire, variables):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(
-        raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True)
-    )
+    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
 
 
 def resolve_string_template(i, env, encode_result=False):
@@ -172,10 +167,10 @@ def validate_context(context_definition, env):
             raise ConstraintCheckOperationOutcome(errors)
 
 
-def check_mappers_bundles_full_url_duplicates(flatted_mappers_bundles):
+def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
     full_urls_set = set()
 
-    for bundle in flatted_mappers_bundles:
+    for bundle in flattened_mappers_bundles:
         full_url = bundle.get("fullUrl")
 
         if full_url is None:

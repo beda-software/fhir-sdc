@@ -19,16 +19,16 @@ async def get_external_service_bundle(session, service, template, context):
 
 
 async def execute_mappers_bundles(client, mappers_bundles):
-    flatted_mappers_bundles = list(flatten(bundle["entry"] for bundle in mappers_bundles))
+    flattened_mappers_bundles = list(flatten(bundle["entry"] for bundle in mappers_bundles))
 
-    check_mappers_bundles_full_url_duplicates(flatted_mappers_bundles)
+    check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles)
 
     not_transaction = any(bundle.get("type") != "transaction" for bundle in mappers_bundles)
 
     result_bundle = {
         "resourceType": "Bundle",
         "type": "batch" if not_transaction else "transaction",
-        "entry": flatted_mappers_bundles,
+        "entry": flattened_mappers_bundles,
     }
 
     return await client.execute("/", data=result_bundle)

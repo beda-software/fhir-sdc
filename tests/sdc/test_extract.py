@@ -1,5 +1,7 @@
 import pytest
+
 from fhirpy.base.lib import OperationOutcome
+from fhirpy.base.utils import get_by_path
 
 from app.converter.aidbox import from_first_class_extension
 from app.test.utils import create_parameters
@@ -748,9 +750,9 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
         )
 
 
-PATINET_1_ID = "patient1"
-PATINET_1_FULL_URL = "urn:multiple-mappers-test-patient"
-PATINET_2_ID = "patient2"
+PATIENT_1_ID = "patient1"
+PATIENT_1_FULL_URL = "urn:multiple-mappers-test-patient"
+PATIENT_2_ID = "patient2"
 OBSERVATION_CODE = "obs1"
 
 PATIENT_BUNDLE_DATA = {
@@ -760,7 +762,7 @@ PATIENT_BUNDLE_DATA = {
         "entry": [
             {
                 "request": {"url": "/Patient", "method": "POST"},
-                "fullUrl": PATINET_1_FULL_URL,
+                "fullUrl": PATIENT_1_FULL_URL,
                 "resource": {
                     "resourceType": "Patient",
                     "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
@@ -777,7 +779,7 @@ PATIENT_WITH_DUPLICATED_FULL_URL_DATA = {
         "entry": [
             {
                 "request": {"url": "/Patient", "method": "POST"},
-                "fullUrl": PATINET_1_FULL_URL,
+                "fullUrl": PATIENT_1_FULL_URL,
                 "resource": {
                     "resourceType": "Patient",
                     "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId2').answer.children().string").0""",
@@ -844,7 +846,7 @@ OBSERVATION_WITH_SUBJECT_DATA = {
                             }
                         ]
                     },
-                    "subject": {"uri": PATINET_1_FULL_URL},
+                    "subject": {"uri": PATIENT_1_FULL_URL},
                     "status": "final",
                 },
             }
@@ -889,7 +891,7 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATINET_1_ID}}]},
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
                 {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
             ],
         },
@@ -900,13 +902,13 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     assert extraction[0]["resourceType"] == "Bundle"
     assert len(extraction[0]["entry"]) == 2
 
-    p = await aidbox_client.resources("Patient").search(id=PATINET_1_ID).fetch_all()
+    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
     o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert len(p) == 1
     assert len(o) == 1
 
-    assert p[0].id == PATINET_1_ID
+    assert p[0].id == PATIENT_1_ID
     assert o[0].code["coding"][0]["code"] == OBSERVATION_CODE
     assert o[0].status == "final"
 
@@ -947,16 +949,18 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATINET_1_ID}}]},
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
                 {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
             ],
         },
     )
 
-    with pytest.raises(OperationOutcome):
+    with pytest.raises(OperationOutcome) as excinfo:
         await q.execute("$extract", data=qr)
 
-    p = await aidbox_client.resources("Patient").search(id=PATINET_1_ID).fetch_all()
+    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "invalid"
+
+    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
     o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert p == []
@@ -1007,18 +1011,20 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(aidbox_clien
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATINET_1_ID}}]},
-                {"linkId": "patientId2", "answer": [{"value": {"string": PATINET_2_ID}}]},
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
+                {"linkId": "patientId2", "answer": [{"value": {"string": PATIENT_2_ID}}]},
                 {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
             ],
         },
     )
 
-    with pytest.raises(OperationOutcome):
+    with pytest.raises(OperationOutcome) as excinfo:
         await q.execute("$extract", data=qr)
 
-    p1 = await aidbox_client.resources("Patient").search(id=PATINET_1_ID).fetch_all()
-    p2 = await aidbox_client.resources("Patient").search(id=PATINET_2_ID).fetch_all()
+    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "duplicate-full-url"
+
+    p1 = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    p2 = await aidbox_client.resources("Patient").search(id=PATIENT_2_ID).fetch_all()
     o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert p1 == []
