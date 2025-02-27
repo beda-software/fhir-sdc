@@ -1,5 +1,7 @@
 import pytest
+
 from fhirpy.base.lib import OperationOutcome
+from fhirpy.base.utils import get_by_path
 
 from app.converter.aidbox import from_first_class_extension
 from app.test.utils import create_parameters
@@ -207,9 +209,7 @@ async def test_fce_extract_using_list_endpoint_with_context(aidbox_client, safe_
 
     extraction = await aidbox_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(
-            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
-        ),
+        data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
@@ -274,7 +274,9 @@ async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check(aidbox_client, safe_db):
+async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check(
+    aidbox_client, safe_db
+):
     q = aidbox_client.resource(
         "Questionnaire",
         **{
@@ -323,9 +325,7 @@ async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check
     with pytest.raises(OperationOutcome):
         await aidbox_client.execute(
             "Questionnaire/$extract",
-            data=create_parameters(
-                Questionnaire=q.serialize(), QuestionnaireResponse=qr
-            ),
+            data=create_parameters(Questionnaire=q.serialize(), QuestionnaireResponse=qr),
         )
 
 
@@ -394,9 +394,7 @@ async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
         },
     )
 
-    extraction = await aidbox_client.execute(
-        f"fhir/Questionnaire/{q.id}/$extract", data=qr
-    )
+    extraction = await aidbox_client.execute(f"fhir/Questionnaire/{q.id}/$extract", data=qr)
 
     assert len(extraction) == 1
 
@@ -560,9 +558,7 @@ async def test_fhir_extract_with_context(aidbox_client, fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_using_list_endpoint_with_context(
-    aidbox_client, fhir_client, safe_db
-):
+async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir_client, safe_db):
     m = aidbox_client.resource(
         "Mapping",
         **{
@@ -624,9 +620,7 @@ async def test_fhir_extract_using_list_endpoint_with_context(
 
     extraction = await fhir_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(
-            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
-        ),
+        data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
@@ -640,9 +634,7 @@ async def test_fhir_extract_using_list_endpoint_with_context(
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_fails_because_of_constraint_check(
-    aidbox_client, fhir_client, safe_db
-):
+async def test_fhir_extract_fails_because_of_constraint_check(aidbox_client, fhir_client, safe_db):
     q = fhir_client.resource(
         "Questionnaire",
         **(
@@ -754,69 +746,112 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
     with pytest.raises(OperationOutcome):
         await fhir_client.execute(
             "Questionnaire/$extract",
-            data=create_parameters(
-                Questionnaire=q.serialize(), QuestionnaireResponse=qr
-            ),
+            data=create_parameters(Questionnaire=q.serialize(), QuestionnaireResponse=qr),
         )
 
 
-MULTIPLE_MAPPERS_TEST_DATA = {
-    "m1_data": {
-        "body": {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"url": "/Patient", "method": "POST"},
-                    "resource": {
-                        "resourceType": "Patient",
-                        "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+PATIENT_1_ID = "patient1"
+PATIENT_1_FULL_URL = "urn:multiple-mappers-test-patient"
+PATIENT_2_ID = "patient2"
+OBSERVATION_CODE = "obs1"
+
+PATIENT_BUNDLE_DATA = {
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"url": "/Patient", "method": "POST"},
+                "fullUrl": PATIENT_1_FULL_URL,
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+                },
+            }
+        ],
+    }
+}
+
+PATIENT_WITH_DUPLICATED_FULL_URL_DATA = {
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"url": "/Patient", "method": "POST"},
+                "fullUrl": PATIENT_1_FULL_URL,
+                "resource": {
+                    "resourceType": "Patient",
+                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId2').answer.children().string").0""",
+                },
+            }
+        ],
+    }
+}
+
+OBSERVATION_BUNDLE_DATA = {
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"url": "/Observation", "method": "POST"},
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "coding": [
+                            {
+                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0"""
+                            }
+                        ]
                     },
-                }
-            ],
-        }
-    },
-    "m2_data": {
-        "body": {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"url": "/Observation", "method": "POST"},
-                    "resource": {
-                        "resourceType": "Observation",
-                        "code": {
-                            "coding": [
-                                {
-                                    "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0"""
-                                }
-                            ]
-                        },
-                        "status": "final",
+                    "status": "final",
+                },
+            }
+        ],
+    }
+}
+
+OBSERVATION_WITH_ERROR_DATA = {
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"url": "/Observation", "method": "POST"},
+                "resource": {
+                    "resourceType": "Observation",
+                    # Wrong data to test that multiple mappers extract is atomic
+                    "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0""",
+                    "status": "final",
+                },
+            }
+        ],
+    }
+}
+
+OBSERVATION_WITH_SUBJECT_DATA = {
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"url": "/Observation", "method": "POST"},
+                "resource": {
+                    "resourceType": "Observation",
+                    "code": {
+                        "coding": [
+                            {
+                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0"""
+                            }
+                        ]
                     },
-                }
-            ],
-        }
-    },
-    "m3_data": {
-        "body": {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"url": "/Observation", "method": "POST"},
-                    "resource": {
-                        "resourceType": "Observation",
-                        # Wrong data to test that multiple mappers extract is atomic
-                        "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0""",
-                        "status": "final",
-                    },
-                }
-            ],
-        }
-    },
-    "patientId": "newPatient",
-    "observationCode": "obs1",
+                    "subject": {"uri": PATIENT_1_FULL_URL},
+                    "status": "final",
+                },
+            }
+        ],
+    }
 }
 
 
@@ -824,12 +859,12 @@ MULTIPLE_MAPPERS_TEST_DATA = {
 async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     m1 = aidbox_client.resource(
         "Mapping",
-        **MULTIPLE_MAPPERS_TEST_DATA["m1_data"],
+        **PATIENT_BUNDLE_DATA,
     )
 
     m2 = aidbox_client.resource(
         "Mapping",
-        **MULTIPLE_MAPPERS_TEST_DATA["m2_data"],
+        **OBSERVATION_BUNDLE_DATA,
     )
 
     await m1.save()
@@ -851,16 +886,13 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     )
     await q.save()
 
-    patientId = MULTIPLE_MAPPERS_TEST_DATA["patientId"]
-    observationCode = MULTIPLE_MAPPERS_TEST_DATA["observationCode"]
-
     qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": patientId}}]},
-                {"linkId": "observationCode", "answer": [{"value": {"string": observationCode}}]},
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
+                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
             ],
         },
     )
@@ -870,14 +902,14 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     assert extraction[0]["resourceType"] == "Bundle"
     assert len(extraction[0]["entry"]) == 2
 
-    p = await aidbox_client.resources("Patient").search(id=patientId).fetch_all()
-    o = await aidbox_client.resources("Observation").search(code=observationCode).fetch_all()
+    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert len(p) == 1
     assert len(o) == 1
 
-    assert p[0].id == patientId
-    assert o[0].code["coding"][0]["code"] == observationCode
+    assert p[0].id == PATIENT_1_ID
+    assert o[0].code["coding"][0]["code"] == OBSERVATION_CODE
     assert o[0].status == "final"
 
 
@@ -885,12 +917,12 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
 async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
     m1 = aidbox_client.resource(
         "Mapping",
-        **MULTIPLE_MAPPERS_TEST_DATA["m1_data"],
+        **PATIENT_BUNDLE_DATA,
     )
 
     m2 = aidbox_client.resource(
         "Mapping",
-        **MULTIPLE_MAPPERS_TEST_DATA["m3_data"],
+        **OBSERVATION_WITH_ERROR_DATA,
     )
 
     await m1.save()
@@ -912,25 +944,89 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
     )
     await q.save()
 
-    patientId = MULTIPLE_MAPPERS_TEST_DATA["patientId"]
-    observationCode = MULTIPLE_MAPPERS_TEST_DATA["observationCode"]
+    qr = aidbox_client.resource(
+        "QuestionnaireResponse",
+        **{
+            "questionnaire": q.id,
+            "item": [
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
+                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
+            ],
+        },
+    )
+
+    with pytest.raises(OperationOutcome) as excinfo:
+        await q.execute("$extract", data=qr)
+
+    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "invalid"
+
+    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
+
+    assert p == []
+    assert o == []
+
+
+@pytest.mark.asyncio
+async def test_fce_extract_multiple_mappers_checks_unique_full_urls(aidbox_client, safe_db):
+    m1 = aidbox_client.resource(
+        "Mapping",
+        **PATIENT_BUNDLE_DATA,
+    )
+
+    m2 = aidbox_client.resource(
+        "Mapping",
+        **PATIENT_WITH_DUPLICATED_FULL_URL_DATA,
+    )
+
+    m3 = aidbox_client.resource(
+        "Mapping",
+        **OBSERVATION_WITH_SUBJECT_DATA,
+    )
+
+    await m1.save()
+    await m2.save()
+    await m3.save()
+
+    q = aidbox_client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "mapping": [
+                {"resourceType": "Mapping", "id": m1.id},
+                {"resourceType": "Mapping", "id": m2.id},
+                {"resourceType": "Mapping", "id": m3.id},
+            ],
+            "item": [
+                {"type": "string", "linkId": "patientId"},
+                {"type": "string", "linkId": "patientId2"},
+                {"type": "string", "linkId": "observationCode"},
+            ],
+        },
+    )
+    await q.save()
 
     qr = aidbox_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": patientId}}]},
-                {"linkId": "observationCode", "answer": [{"value": {"string": observationCode}}]},
+                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
+                {"linkId": "patientId2", "answer": [{"value": {"string": PATIENT_2_ID}}]},
+                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
             ],
         },
     )
 
-    with pytest.raises(OperationOutcome):
+    with pytest.raises(OperationOutcome) as excinfo:
         await q.execute("$extract", data=qr)
 
-        p = await aidbox_client.resources("Patient").search(id=patientId).fetch_all()
-        o = await aidbox_client.resources("Observation").search(code=observationCode).fetch_all()
+    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "duplicate-full-url"
 
-        assert p == []
-        assert o == []
+    p1 = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    p2 = await aidbox_client.resources("Patient").search(id=PATIENT_2_ID).fetch_all()
+    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
+
+    assert p1 == []
+    assert p2 == []
+    assert o == []
