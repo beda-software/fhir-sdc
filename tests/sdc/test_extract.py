@@ -1,5 +1,4 @@
 import pytest
-
 from fhirpy.base.lib import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
