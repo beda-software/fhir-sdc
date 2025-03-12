@@ -105,6 +105,13 @@
                         "code": "time-range-picker"
                     }
                 ]
+            },
+            "readonlyItemControl": {
+                "coding": [
+                    {
+                        "code": "time-range-viewer"
+                    }
+                ]
             }
         }
     ],

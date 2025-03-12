@@ -131,6 +131,16 @@
                             }
                         ]
                     }
+                },
+                {
+                    "url": "https://beda.software/fhir-emr-questionnaire/readonlyItemControl",
+                    "valueCodeableConcept": {
+                        "coding": [
+                            {
+                                "code": "time-range-viewer"
+                            }
+                        ]
+                    }
                 }
             ]
         }
