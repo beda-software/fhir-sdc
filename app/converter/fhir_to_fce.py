@@ -314,6 +314,12 @@ def get_updated_properties_from_item(item):
     if item_control is not None:
         item_control = item_control["valueCodeableConcept"]
 
+    readonly_item_control = find_extension(
+        item, "https://beda.software/fhir-emr-questionnaire/readonlyItemControl"
+    )
+    if readonly_item_control is not None:
+        readonly_item_control = readonly_item_control["valueCodeableConcept"]
+
     item_inline_choice_direction = find_extension(
         item, "https://beda.software/fhir-emr-questionnaire/inline-choice-direction"
     )
@@ -325,6 +331,7 @@ def get_updated_properties_from_item(item):
     updated_properties["itemPopulationContext"] = item_population_context
     updated_properties["subQuestionnaire"] = sub_questionnaire
     updated_properties["itemControl"] = item_control
+    updated_properties["readonlyItemControl"] = readonly_item_control
     updated_properties["inlineChoiceDirection"] = item_inline_choice_direction
 
     item_type = item.get("type", "")
