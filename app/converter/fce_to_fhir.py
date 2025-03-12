@@ -118,7 +118,7 @@ def process_items(items):
             readonly_extensions_extension = {
                 "url": "https://beda.software/fhir-emr-questionnaire/readonlyItemControl",
                 "valueCodeableConcept": {
-                    "coding": item["itemControl"]["coding"],
+                    "coding": item["readonlyItemControl"]["coding"],
                 },
             }
             item["extension"] = item.get("extension", [])
