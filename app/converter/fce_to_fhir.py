@@ -114,16 +114,16 @@ def process_items(items):
             item["extension"].append(item_control_extension)
             del item["itemControl"]
 
-        if item.get("readonlyItemControl"):
+        if item.get("readOnlyItemControl"):
             readonly_extensions_extension = {
-                "url": "https://beda.software/fhir-emr-questionnaire/readonlyItemControl",
+                "url": "https://beda.software/fhir-emr-questionnaire/readOnlyItemControl",
                 "valueCodeableConcept": {
-                    "coding": item["readonlyItemControl"]["coding"],
+                    "coding": item["readOnlyItemControl"]["coding"],
                 },
             }
             item["extension"] = item.get("extension", [])
             item["extension"].append(readonly_extensions_extension)
-            del item["readonlyItemControl"]
+            del item["readOnlyItemControl"]
 
         if item.get("inlineChoiceDirection"):
             inline_choice_direction_extension = {

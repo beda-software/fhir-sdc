@@ -106,7 +106,7 @@
                     }
                 ]
             },
-            "readonlyItemControl": {
+            "readOnlyItemControl": {
                 "coding": [
                     {
                         "code": "time-range-viewer"
