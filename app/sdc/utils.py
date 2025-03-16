@@ -1,12 +1,16 @@
 from urllib.parse import quote
 
 from fhirpathpy import evaluate as fhirpath
+from fhirpathpy.models import models
 from fhirpy.base.utils import get_by_path
+from fpml import resolve_template
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
 from .exception import ConstraintCheckOperationOutcome
+
+r4 = models["r4"]
 
 
 def get_type(item, data):
@@ -188,3 +192,33 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
             )
 
         full_urls_set.add(full_url)
+
+
+def answers(inputs, link_id):
+    return fhirpath(
+        inputs,
+        f"repeat(item).where(linkId='{link_id}').answer.value",
+        None,
+        r4,
+    )
+
+
+fp_options = {
+    "userInvocationTable": {
+        "answers": {
+            "fn": answers,
+            "arity": {0: [], 1: ["String"]},
+        },
+    },
+    "model": r4,
+}
+
+
+def resolve_fpml_template(template, context):
+    return resolve_template(
+        context.get("QuestionniareResponse", context),
+        template,
+        context,
+        fp_options,
+        True,
+    )

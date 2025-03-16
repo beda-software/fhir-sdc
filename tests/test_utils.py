@@ -1,6 +1,23 @@
 import pytest
 
-from app.sdc.utils import prepare_bundle, prepare_link_ids, resolve_string_template
+from app.sdc.utils import (
+    prepare_bundle,
+    prepare_link_ids,
+    resolve_fpml_template,
+    resolve_string_template,
+)
+
+
+def test_prepare_bundle_undefined_context():
+    bundle_entry = {
+        "request": {
+            "method": "GET",
+            "url": "/QuestionnaireResponse?subject={{%CurrentAppointmentId}}",
+        }
+    }
+
+    with pytest.raises(ValueError):
+        prepare_bundle(bundle_entry, {})
 
 
 def test_prepare_bundle():
@@ -11,10 +28,10 @@ def test_prepare_bundle():
         }
     }
 
-    assert prepare_bundle(bundle_entry, {}) == {
+    assert prepare_bundle(bundle_entry, {"CurrentAppointmentId": "123"}) == {
         "request": {
             "method": "GET",
-            "url": "/QuestionnaireResponse?subject=",
+            "url": "/QuestionnaireResponse?subject=123",
         }
     }
 
@@ -145,3 +162,26 @@ def test_resolve_string_template(answer_type, values, expected):
         template_input, {"QuestionnaireResponse": questionnaire_response}
     )
     assert result == expected
+
+
+def test_fpml():
+    questionnaire_response = {
+        "resourceType": "QuestionnaireResponse",
+        "item": [
+            {
+                "linkId": "patients-group",
+                "item": [
+                    {
+                        "linkId": "patientId",
+                        "answer": [{"valueString": "1"}],
+                    }
+                ],
+            }
+        ],
+    }
+    template = {
+        "resourceType": "Patient",
+        "id": "{{ %QuestionnaireResponse.answers('patientId') }}",
+    }
+    result = resolve_fpml_template(template, {"QuestionnaireResponse": questionnaire_response})
+    assert result == {"resourceType": "Patient", "id": "1"}
