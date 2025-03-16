@@ -34,19 +34,11 @@ async def create_gunicorn_app():
 # TODO: Add config param for aidbox-python-sdk pytest plugin
 # to select create_app
 def create_app():
-    from aidbox_python_sdk.main import init as init_aidbox_app
-    from aidbox_python_sdk.main import setup_routes as setup_aidbox_app_routes
+    from aidbox_python_sdk.main import create_app as create_aidbox_app
 
     from app.aidbox import sdk
 
-    app = web.Application()
-    app.cleanup_ctx.append(init_aidbox_app)
-    app.update(
-        settings=sdk.settings,
-        sdk=sdk,
-    )
-    setup_aidbox_app_routes(app)
-    return app
+    return create_aidbox_app(sdk)
 
 
 async def fhir_app_on_startup(app: web.Application):
