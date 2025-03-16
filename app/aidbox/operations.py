@@ -1,5 +1,6 @@
 import simplejson as json
 from aiohttp import web
+from fhirpathpy import evaluate as fhirpath
 
 from app.converter.aidbox import from_first_class_extension, to_first_class_extension
 
@@ -117,9 +118,18 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
         env_questionnaire = env["Questionnaire"]
         env_questionnaire_response = env["QuestionnaireResponse"]
 
+    from_ig = fhirpath(
+        fce_questionnaire,
+        "Questionnaire.extension('https://emr.beda.software/StructureDefinition/questionnaire-mapper').value.Reference",
+    )
+    from_legacy = fhirpath(
+        fce_questionnaire,
+        "Questionnaire.extension('http://beda.software/fhir-extensions/questionnaire-mapper').value.Reference",
+    )
+    from_fce = fce_questionnaire.get("mapping", [])
     mappings = [
         await request.aidbox_client.resources("Mapping").search(_id=m["id"]).get()
-        for m in fce_questionnaire.get("mapping", [])
+        for m in (from_ig + from_legacy + from_fce)
     ]
 
     context = {
