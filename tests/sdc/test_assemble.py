@@ -610,6 +610,66 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
         },
     )
 
+    get_line2_address = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
+            "targetStructureMap": ["StructureMap/create-patient"],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "address-line-2",
+                },
+            ],
+        },
+    )
+
+    get_address = await create_questionnaire(
+        aidbox_client,
+        {
+            "status": "active",
+            "launchContext": [
+                {
+                    "name": {
+                        "code": "LaunchPatient",
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                    },
+                    "type": ["Patient"],
+                }
+            ],
+            "targetStructureMap": ["StructureMap/create-patient"],
+            "itemPopulationContext": {
+                "language": "text/fhirpath",
+                "expression": "%LaunchPatient.address",
+            },
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "line-1",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "line[0]",
+                    },
+                },
+                {
+                    "type": "display",
+                    "linkId": "sub-questionnaire-address-line-2",
+                    "text": "Sub questionnaire is not supported",
+                    "subQuestionnaire": get_line2_address.id,
+                },
+            ],
+        },
+    )
+
     q = await create_questionnaire(
         aidbox_client,
         {
@@ -632,6 +692,12 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                             "linkId": "familyNameGroup",
                             "text": "Sub questionnaire is not supported",
                             "subQuestionnaire": get_family_name.id,
+                        },
+                        {
+                            "type": "display",
+                            "linkId": "address",
+                            "text": "Sub questionnaire",
+                            "subQuestionnaire": get_address.id,
                         },
                     ],
                 }
@@ -672,6 +738,23 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                                 },
                             }
                         ],
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "line-1",
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                                "valueExpression": {
+                                    "language": "text/fhirpath",
+                                    "expression": "line[0]",
+                                },
+                            }
+                        ],
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "address-line-2",
                     },
                 ],
                 "type": "group",
