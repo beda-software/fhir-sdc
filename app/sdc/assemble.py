@@ -70,11 +70,16 @@ async def _load_sub_questionnaires(
 
     subqs = await client.resources("Questionnaire").search(_id=id_query).fetch_all()
 
-    subqs_all_items = []
-    for sq in subqs:
-        sq_map_value = sub_questionnaire_ids_map.get(sq["id"])
-        fce_subq = sq_map_value if sq_map_value else await to_first_class_extension_async(sq)
+    fhir_subqs_bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [{"resource": dict(s)} for s in subqs],
+    }
+    fce_bundle = await to_first_class_extension_async(fhir_subqs_bundle)
+    fce_subqs = [s["resource"] for s in fce_bundle["entry"]]
 
+    subqs_all_items = []
+    for fce_subq in fce_subqs:
         if (
             fce_subq["id"] in sub_questionnaire_ids_map
             and sub_questionnaire_ids_map[fce_subq["id"]] is None
