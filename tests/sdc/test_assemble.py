@@ -655,10 +655,6 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                 {
                     "type": "string",
                     "linkId": "line-1",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "line[0]",
-                    },
                 },
                 {
                     "type": "display",
@@ -739,23 +735,8 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                             }
                         ],
                     },
-                    {
-                        "type": "string",
-                        "linkId": "line-1",
-                        "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                "valueExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "line[0]",
-                                },
-                            }
-                        ],
-                    },
-                    {
-                        "type": "string",
-                        "linkId": "address-line-2",
-                    },
+                    {"type": "string", "linkId": "line-1"},
+                    {"type": "string", "linkId": "address-line-2"},
                 ],
                 "type": "group",
                 "linkId": "demographics",
@@ -764,7 +745,7 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                         "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
                         "valueExpression": {
                             "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.name",
+                            "expression": "%LaunchPatient.address",
                         },
                     }
                 ],
