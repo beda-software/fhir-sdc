@@ -647,10 +647,6 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                 }
             ],
             "targetStructureMap": ["StructureMap/create-patient"],
-            "itemPopulationContext": {
-                "language": "text/fhirpath",
-                "expression": "%LaunchPatient.address",
-            },
             "item": [
                 {
                     "type": "string",
@@ -745,7 +741,7 @@ async def test_fhir_assemble_sub_questionnaire(aidbox_client, fhir_client, safe_
                         "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
                         "valueExpression": {
                             "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.address",
+                            "expression": "%LaunchPatient.name",
                         },
                     }
                 ],
