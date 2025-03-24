@@ -193,3 +193,14 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
             )
 
         full_urls_set.add(full_url)
+
+
+async def apply_converter_for_resources(converter_fn, resources: list) -> list:
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [{"resource": dict(s)} for s in resources],
+    }
+    fce_bundle = await converter_fn(bundle)
+    result = [s["resource"] for s in fce_bundle["entry"]]
+    return result
