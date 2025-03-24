@@ -1,5 +1,3 @@
-import copy
-
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
@@ -43,7 +41,7 @@ async def assemble(client, fce_questionnaire, to_first_class_extension_async):
 
 
 def _collect_sub_questionnaire_ids_map(questionnaire_items, sub_questionnaire_ids_map: dict):
-    result_map = copy.deepcopy(sub_questionnaire_ids_map)
+    result_map = sub_questionnaire_ids_map.copy()
 
     for item in questionnaire_items:
         if "subQuestionnaire" in item and item["subQuestionnaire"] not in result_map:
