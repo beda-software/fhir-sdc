@@ -1,9 +1,12 @@
-import asyncio
-
 from funcy.colls import project
 from funcy.seqs import concat, distinct, flatten
 
-from .utils import prepare_link_ids, prepare_variables, validate_context
+from .utils import (
+    apply_converter_for_resources,
+    prepare_link_ids,
+    prepare_variables,
+    validate_context,
+)
 
 WHITELISTED_ROOT_ELEMENTS = {
     "launchContext": lambda i: i["name"]["code"],
@@ -19,12 +22,17 @@ PROPAGATE_ELEMENTS = ["itemContext", "itemPopulationContext"]
 
 async def assemble(client, fce_questionnaire, to_first_class_extension_async):
     root_elements = project(dict(fce_questionnaire), WHITELISTED_ROOT_ELEMENTS.keys())
-    fce_questionnaire["item"] = await _assemble_questionnaire(
+
+    sub_questionnaire_ids_map = await _load_sub_questionnaires(
+        client, fce_questionnaire["item"], to_first_class_extension_async
+    )
+
+    fce_questionnaire["item"] = _assemble_questionnaire(
         client,
         fce_questionnaire,
         fce_questionnaire["item"],
         root_elements,
-        to_first_class_extension_async,
+        sub_questionnaire_ids_map,
     )
     dict.update(fce_questionnaire, root_elements)
     fce_questionnaire["assembledFrom"] = fce_questionnaire["id"]
@@ -32,14 +40,64 @@ async def assemble(client, fce_questionnaire, to_first_class_extension_async):
     return fce_questionnaire
 
 
-async def _load_sub_questionnaire(
-    client, root_elements, parent_item, item, to_first_class_extension_async
+def _collect_sub_questionnaire_ids_map(questionnaire_items, sub_questionnaire_ids_map: dict):
+    result_map = sub_questionnaire_ids_map.copy()
+
+    for item in questionnaire_items:
+        if "subQuestionnaire" in item and item["subQuestionnaire"] not in result_map:
+            result_map[item["subQuestionnaire"]] = None
+        else:
+            result_map = _collect_sub_questionnaire_ids_map(item.get("item", []), result_map)
+
+    return result_map
+
+
+async def _load_sub_questionnaires(
+    client,
+    questionnaire_items,
+    to_first_class_extension_async,
+    prev_sub_questionnaire_ids_map: dict = {},
 ):
+    sub_questionnaire_ids_map = _collect_sub_questionnaire_ids_map(
+        questionnaire_items, prev_sub_questionnaire_ids_map
+    )
+
+    not_loaded_sub_questionnaire_ids = [
+        k for k, v in sub_questionnaire_ids_map.items() if v is None
+    ]
+    if not not_loaded_sub_questionnaire_ids:
+        return sub_questionnaire_ids_map
+
+    id_query = ",".join(not_loaded_sub_questionnaire_ids)
+
+    subqs = await client.resources("Questionnaire").search(_id=id_query).fetch_all()
+
+    fce_subqs = await apply_converter_for_resources(to_first_class_extension_async, subqs)
+
+    subqs_all_items = []
+    for fce_subq in fce_subqs:
+        if (
+            fce_subq["id"] in sub_questionnaire_ids_map
+            and sub_questionnaire_ids_map[fce_subq["id"]] is None
+        ):
+            sub_questionnaire_ids_map[fce_subq["id"]] = fce_subq
+
+        if fce_subq.get("item"):
+            subqs_all_items.extend(fce_subq["item"])
+
+    sub_questionnaire_ids_map = await _load_sub_questionnaires(
+        client,
+        subqs_all_items,
+        to_first_class_extension_async,
+        sub_questionnaire_ids_map,
+    )
+
+    return sub_questionnaire_ids_map
+
+
+def _load_sub_questionnaire(root_elements, parent_item, item, sub_questionnaire_ids_map):
     if "subQuestionnaire" in item:
-        fhir_subq = (
-            await client.resources("Questionnaire").search(_id=item["subQuestionnaire"]).get()
-        )
-        fce_subq = await to_first_class_extension_async(fhir_subq)
+        fce_subq = sub_questionnaire_ids_map[item["subQuestionnaire"]]
 
         variables = prepare_variables(item)
         if _validate_assemble_context(fce_subq, variables):
@@ -59,24 +117,30 @@ async def _load_sub_questionnaire(
     return item
 
 
-async def _assemble_questionnaire(
-    client, parent, questionnaire_items, root_elements, to_first_class_extension_async
+def _assemble_questionnaire(
+    client,
+    parent,
+    questionnaire_items,
+    root_elements,
+    sub_questionnaire_ids_map,
 ):
     with_sub_items = questionnaire_items
     while len([i for i in with_sub_items if "subQuestionnaire" in i]) > 0:
         with_sub_items_futures = (
-            _load_sub_questionnaire(
-                client, root_elements, parent, i, to_first_class_extension_async
-            )
+            _load_sub_questionnaire(root_elements, parent, i, sub_questionnaire_ids_map)
             for i in with_sub_items
         )
-        with_sub_items = list(flatten(await asyncio.gather(*with_sub_items_futures)))
+        with_sub_items = list(flatten(with_sub_items_futures))
 
     resp = []
     for i in with_sub_items:
         if "item" in i:
-            i["item"] = await _assemble_questionnaire(
-                client, i, i["item"], root_elements, to_first_class_extension_async
+            i["item"] = _assemble_questionnaire(
+                client,
+                i,
+                i["item"],
+                root_elements,
+                sub_questionnaire_ids_map,
             )
         resp.append(i)
     return resp

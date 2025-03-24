@@ -1,3 +1,5 @@
+import copy
+
 from urllib.parse import quote
 
 from fhirpathpy import evaluate as fhirpath
@@ -40,14 +42,17 @@ def get_type(item, data):
 
 
 def walk_dict(d, transform):
-    for k, v in d.items():
+    result_dict = copy.deepcopy(d)
+    for k, v in result_dict.items():
         if is_list(v):
-            d[k] = [walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v]
+            result_dict[k] = [
+                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v
+            ]
         elif is_mapping(v):
-            d[k] = walk_dict(v, transform)
+            result_dict[k] = walk_dict(v, transform)
         else:
-            d[k] = transform(v, k)
-    return d
+            result_dict[k] = transform(v, k)
+    return result_dict
 
 
 def update_link_id_or_question(variables):
@@ -188,3 +193,14 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
             )
 
         full_urls_set.add(full_url)
+
+
+async def apply_converter_for_resources(converter_fn, resources: list) -> list:
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [{"resource": dict(s)} for s in resources],
+    }
+    fce_bundle = await converter_fn(bundle)
+    result = [s["resource"] for s in fce_bundle["entry"]]
+    return result
