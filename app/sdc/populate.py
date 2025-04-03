@@ -8,6 +8,14 @@ from .utils import get_type, load_source_queries, validate_context
 async def populate(client, fce_questionnaire, env):
     if "launchContext" in fce_questionnaire:
         validate_context(fce_questionnaire["launchContext"], env)
+    if "QuestionnaireResponse" not in env:
+        # Populate operation does not accept QR, but source queries might use it
+        # in constraint-check operations
+        # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
+        env["QuestionnaireResponse"] = {
+            "resourceType": "QuestionnaireResponse",
+            "status": "in-progress"
+        }
 
     await load_source_queries(client, fce_questionnaire, env)
 
