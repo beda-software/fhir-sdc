@@ -432,7 +432,7 @@ def process_mapping(questionnaire):
 def process_assebled_from(questionnaire):
     if questionnaire.get("assembledFrom"):
         assembled_from_extension = {
-            "url": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
             "valueCanonical": questionnaire.get("assembledFrom"),
         }
         questionnaire["extension"] = questionnaire.get("extension", [])
