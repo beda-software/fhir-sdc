@@ -439,7 +439,7 @@ async def test_item_context_without_repeats_populate(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_source_queries_populate(aidbox_client, safe_db):
+async def test_source_query_populate(aidbox_client, safe_db):
     p = aidbox_client.resource("Patient")
     await p.save()
 
@@ -967,5 +967,118 @@ async def test_money_populate(fhir_client, safe_db):
     )
 
     assert evaluate(
-        p, "QuestionnaireResponse.item.where(linkId='charge-amount').answer.valueQuantity"
+        p,
+        "QuestionnaireResponse.item.where(linkId='charge-amount').answer.valueQuantity",
     ) == [{"code": "USD", "system": "urn:iso:std:iso:4217", "value": Decimal("33.3")}]
+
+
+@pytest.mark.asyncio
+async def test_source_query_with_qr_vars_populate(aidbox_client, safe_db):
+    """
+    It's unusual case according to FHIR SDC spec, but we use QR vars in source queries for constraint checks
+    The test checks that populate does not fail when we access QR
+    """
+
+    p = aidbox_client.resource("Patient")
+    await p.save()
+
+    q = aidbox_client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "contained": [
+                {
+                    "resourceType": "Bundle",
+                    "id": "PrePopQuery",
+                    "type": "batch",
+                    "entry": [
+                        {
+                            "request": {
+                                "method": "GET",
+                                "url": "Appointment?patient={{(%QuestionnaireResponse.item.where(linkId='patient-id').answer.valueString | 'undefined').first()}}",
+                            },
+                        },
+                    ],
+                }
+            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "last-appointment",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%PrePopQuery.entry.resource.entry.resource.start",
+                    },
+                    # Constraint check that uses PrePopQuery should go here
+                },
+            ],
+        },
+    )
+
+    await q.save()
+
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [{"linkId": "last-appointment"}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_fhir_source_query_with_qr_vars_populate(fhir_client, safe_db):
+    """
+    It's unusual case according to FHIR SDC spec, but we use QR vars in source queries for constraint checks
+    The test checks that populate does not fail when we access QR
+    """
+
+    p = fhir_client.resource("Patient")
+    await p.save()
+
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
+            "status": "active",
+            "contained": [
+                {
+                    "resourceType": "Bundle",
+                    "id": "PrePopQuery",
+                    "type": "batch",
+                    "entry": [
+                        {
+                            "request": {
+                                "method": "GET",
+                                "url": "Appointment?patient={{(%QuestionnaireResponse.item.where(linkId='patient-id').answer.valueString | 'undefined').first()}}",
+                            },
+                        },
+                    ],
+                }
+            ],
+            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "last-appointment",
+                    "initialExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%PrePopQuery.entry.resource.entry.resource.start",
+                    },
+                    # Constraint check that uses PrePopQuery should go here
+                },
+            ],
+        },
+    )
+
+    await q.save()
+
+    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [{"linkId": "last-appointment"}],
+    }
