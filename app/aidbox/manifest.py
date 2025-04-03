@@ -110,7 +110,7 @@ attributes = {
             "type": {"resourceType": "Entity", "id": "canonical"},
             "path": ["assembledFrom"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "https://jira.hl7.org/browse/FHIR-22356#assembledFrom",
+            "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
         },
         "Questionnaire.assembleContext": {
             "path": ["assembleContext"],
