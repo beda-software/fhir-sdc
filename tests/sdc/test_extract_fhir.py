@@ -213,3 +213,57 @@ async def test_q_extraction(aidbox_client, safe_db):
     assert p["name"] == [{"family": last_name, "given": [first_name]}]
     pr = await aidbox_client.resources("PractitionerRole").search().first()
     assert pr["practitioner"]["id"] == p.id
+
+
+@pytest.mark.asyncio
+async def test_decimal_extraction(aidbox_client, safe_db):
+    m = aidbox_client.resource(
+        "Mapping",
+        **{
+            "resourceType": "Mapping",
+            "type": "FHIRPath",
+            "body": {
+                "resourceType": "Bundle",
+                "entry": [
+                    {
+                        "request": {"method": "post", "url": "Location"},
+                        "resource": {
+                            "resourceType": "Location",
+                            "position": {
+                                "longitude": "{{ 10.1 }}",
+                                "latitude": "{{ 10.1 }}",
+                            },
+                        },
+                    }
+                ],
+            },
+        },
+    )
+    await m.save()
+    assert m.id
+
+    q = await aidbox_client.execute(
+        "fhir/Questionnaire",
+        data={
+            "resourceType": "Questionnaire",
+            "extension": [
+                {
+                    "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
+                }
+            ],
+            "status": "active",
+            "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
+            "meta": {
+                "profile": ["https://beda.software/beda-emr-questionnaire"],
+            },
+        },
+    )
+    assert q.id
+
+    result = await aidbox_client.execute(
+        f"fhir/Questionnaire/{q['id']}/$extract",
+        data={"resourceType": "QuestionnaireResponse"},
+    )
+
+    assert result[0]["entry"][0]["resource"]["id"]
