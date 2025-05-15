@@ -1,26 +1,8 @@
-from functools import lru_cache
-
-from fhirpathpy import compile
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
 from .utils import get_type, load_source_queries, validate_context
-
-
-@lru_cache(maxsize=1024)
-def cached_compile(expression):
-    return compile(expression)
-
-
-def fhirpath(context, expression, env):
-    compiled_expression = cached_compile(expression)
-
-    try:
-        result = compiled_expression(context, env)
-    except Exception as e:
-        raise OperationOutcome(f'Error: "{expression}" - {str(e)}')
-
-    return result
+from app.cached_fhirpath import fhirpath
 
 
 async def populate(client, fce_questionnaire, env):
