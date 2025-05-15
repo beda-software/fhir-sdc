@@ -1,5 +1,6 @@
 import asyncio
 
+from concurrent.futures import ThreadPoolExecutor
 from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
@@ -7,12 +8,7 @@ from funcy import is_list
 from .utils import get_type, load_source_queries, validate_context
 
 
-def execute_fhirpath(link_id, item_context, expression, env):
-    expression_result = fhirpath(item_context, expression, env)
-    return {
-        "linkId": link_id,
-        "expression_result": expression_result,
-    }
+_executor = ThreadPoolExecutor()
 
 
 async def populate(client, fce_questionnaire, env):
@@ -34,74 +30,13 @@ async def populate(client, fce_questionnaire, env):
         "questionnaire": fce_questionnaire.get("id"),
         "item": [],
     }
-
-    initial_expressions_map = await get_initial_expressions_map(fce_questionnaire, env, {})
-
     for item in fce_questionnaire["item"]:
-        root["item"].extend(_handle_item(item, env, {}, initial_expressions_map))
+        root["item"].extend(await _handle_item(item, env, {}))
 
     return root
 
 
-async def get_initial_expressions_map(fce_questionnaire, env, context):
-    loop = asyncio.get_running_loop()
-
-    initial_expressions_map = {}
-
-    def get_expressions(fce_questionnaire_item, link_id_coroutines=[]):
-        for item in fce_questionnaire_item["item"]:
-            if "initialExpression" in item:
-                expression = item["initialExpression"]["expression"]
-
-                if context and item.get("repeats", False) is True:
-                    for ctx in context:
-                        link_id_coroutines.append(
-                            {
-                                "linkId": item["linkId"],
-                                "context": ctx,
-                                "expression": expression,
-                            }
-                        )
-                else:
-                    link_id_coroutines.append(
-                        {
-                            "linkId": item["linkId"],
-                            "expression": expression,
-                        }
-                    )
-
-            if "item" in item:
-                get_expressions(item, link_id_coroutines)
-
-        return link_id_coroutines
-
-    link_id_expressions = get_expressions(fce_questionnaire)
-
-    results = await asyncio.gather(
-        *[
-            loop.run_in_executor(
-                None,
-                execute_fhirpath,
-                link_id_expression["linkId"],
-                link_id_expression.get("context", context),
-                link_id_expression["expression"],
-                env,
-            )
-            for link_id_expression in link_id_expressions
-        ]
-    )
-
-    for result in results:
-        if result["linkId"] not in initial_expressions_map:
-            initial_expressions_map[result["linkId"]] = []
-
-        if result["expression_result"] is not None:
-            initial_expressions_map[result["linkId"]].append(result["expression_result"])
-
-    return initial_expressions_map
-
-
-def _handle_item(item, env, context, initial_expressions_map={}):
+async def _handle_item(item, env, context):
     def init_item():
         new_item = {"linkId": item["linkId"]}
         if "text" in item:
@@ -120,7 +55,7 @@ def _handle_item(item, env, context, initial_expressions_map={}):
         for c in context:
             populated_items = []
             for i in item["item"]:
-                populated_items.extend(_handle_item(i, env, c))
+                populated_items.extend(await _handle_item(i, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 
@@ -129,28 +64,8 @@ def _handle_item(item, env, context, initial_expressions_map={}):
 
     root_item = init_item()
 
-    if context and "initialExpression" in item and item.get("repeats", False) is True:
-        results = initial_expressions_map.get(item["linkId"], [])
-        answers = []
-        for data in results:
-            if data and len(data):
-                type = get_type(item, data)
-                answers.extend([{"value": {type: d}} for d in data])
-        if answers:
-            root_item["answer"] = answers
-
-    elif "initialExpression" in item:
-        try:
-            data = initial_expressions_map.get(item["linkId"], [])
-        except Exception as e:
-            raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
-
-        if data and len(data):
-            type = get_type(item, data)
-            if item.get("repeats") is True:
-                root_item["answer"] = [{"value": {type: d}} for d in data]
-            else:
-                root_item["answer"] = [{"value": {type: data[0]}}]
+    if "initialExpression" in item:
+        root_item = await handle_initial_expression(item, context, env, root_item)
 
     elif "initial" in item:
         root_item["answer"] = item["initial"]
@@ -158,7 +73,45 @@ def _handle_item(item, env, context, initial_expressions_map={}):
     if "item" in item:
         populated_items = []
         for i in item["item"]:
-            populated_items.extend(_handle_item(i, env, context))
+            populated_items.extend(await _handle_item(i, env, context))
+
         root_item["item"] = populated_items
 
     return [root_item]
+
+
+async def handle_initial_expression(item, context, env, root_item):
+    loop = asyncio.get_running_loop()
+
+    async def run_fhirpath_in_executor(ctx):
+        return await loop.run_in_executor(
+            _executor, fhirpath, ctx, item["initialExpression"]["expression"], env
+        )
+
+    if context and item.get("repeats", False) is True:
+        tasks = [run_fhirpath_in_executor(item_ctx) for item_ctx in context]
+        results = await asyncio.gather(*tasks)
+
+        answers = []
+        for data in results:
+            if data:
+                type = get_type(item, data)
+                answers.extend([{"value": {type: d}} for d in data])
+        if answers:
+            root_item["answer"] = answers
+
+    else:
+        try:
+            data = await run_fhirpath_in_executor(context)
+        except Exception as e:
+            raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
+
+        if data:
+            type = get_type(item, data)
+            if item.get("repeats") is True:
+                answers = [{"value": {type: d}} for d in data]
+            else:
+                answers = [{"value": {type: data[0]}}]
+            root_item["answer"] = answers
+
+    return root_item
