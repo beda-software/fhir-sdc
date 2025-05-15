@@ -2,12 +2,12 @@ import copy
 
 from urllib.parse import quote
 
-from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.utils import get_by_path
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
+from app.cached_fhirpath import fhirpath
 from .exception import ConstraintCheckOperationOutcome
 
 
