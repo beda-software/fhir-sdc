@@ -11,7 +11,7 @@ def test_prepare_bundle():
         }
     }
 
-    assert prepare_bundle(bundle_entry, {}) == {
+    assert prepare_bundle(bundle_entry, {"CurrentAppointmentId": None}) == {
         "request": {
             "method": "GET",
             "url": "/QuestionnaireResponse?subject=",
