@@ -263,9 +263,7 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
         fhir_questionnaire, request.aidbox_client
     )
     env = parameter_to_env(request.resource)
-    env["Questionnaire"] = (
-        await fhir_questionnaire if request.is_fhir else fce_questionnaire
-    )
+    env["Questionnaire"] = fhir_questionnaire if request.is_fhir else fce_questionnaire
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
 
