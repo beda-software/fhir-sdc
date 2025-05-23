@@ -18,3 +18,5 @@ htmlcov/
 .vscode
 .pytest_cache
 tests_zen_project/zen-packages
+.clj-kondo
+.lsp
