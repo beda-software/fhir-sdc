@@ -21,21 +21,22 @@ from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prep
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
 @prepare_args
 async def assemble_op(request: AidboxSdcRequest):
-    aidbox_client = request.aidbox_client
+    def get_to_first_class_extension(fhir_resource):
+        return to_first_class_extension(fhir_resource, request.aidbox_client)
 
-    questionnaire = (
-        await request.aidbox_client.resources("Questionnaire")
+    fhir_questionnaire = (
+        await request.fhir_client.resources("Questionnaire")
         .search(_id=request.route_params["id"])
         .get()
     )
-
-    def get_to_first_class_extension(fhir_resource):
-        return to_first_class_extension(fhir_resource, aidbox_client)
+    fce_questionnaire = await get_to_first_class_extension(fhir_questionnaire)
 
     assembled_questionnaire_lazy = await assemble(
-        request.fhir_client, questionnaire, get_to_first_class_extension
+        request.fhir_client, fce_questionnaire, get_to_first_class_extension
     )
-    assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
+    assembled_questionnaire = json.loads(
+        json.dumps(assembled_questionnaire_lazy, default=list)
+    )
     if request.is_fhir:
         assembled_questionnaire = await from_first_class_extension(
             assembled_questionnaire, request.aidbox_client
@@ -88,26 +89,26 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
 @prepare_args
 async def extract_questionnaire_operation(request: AidboxSdcRequest):
     resource = request.resource
-
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         env_questionnaire_response = resource
-        fce_questionnaire = (
-            await request.aidbox_client.resources("Questionnaire")
+        fhir_questionnaire = (
+            await request.fhir_client.resources("Questionnaire")
             .search(_id=resource["questionnaire"])
             .get()
         )
-        env_questionnaire = (
-            await from_first_class_extension(fce_questionnaire, request.aidbox_client)
-            if request.is_fhir
-            else fce_questionnaire
+        fce_questionnaire = await to_first_class_extension(
+            fhir_questionnaire, request.aidbox_client
         )
+        env_questionnaire = fhir_questionnaire if request.is_fhir else fce_questionnaire
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(request.resource)
         if "Questionnaire" not in env:
             raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
         if "QuestionnaireResponse" not in env:
-            raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
+            raise MissingParamOperationOutcome(
+                "`QuestionnaireResponse` parameter is required"
+            )
 
         fce_questionnaire = (
             await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
@@ -158,7 +159,9 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     )
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     extract_client = (
-        request.client if as_root else get_user_sdk_client(request.request, request.client)
+        request.client
+        if as_root
+        else get_user_sdk_client(request.request, request.client)
     )
     return web.json_response(
         await extract_questionnaire_instance(
@@ -183,11 +186,15 @@ async def extract_questionnaire_instance(
 ):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
-        env_questionnaire_response = extract_client.resource("QuestionnaireResponse", **resource)
+        env_questionnaire_response = extract_client.resource(
+            "QuestionnaireResponse", **resource
+        )
     elif resource["resourceType"] == "Parameters":
         env = parameter_to_env(resource)
         if "QuestionnaireResponse" not in env:
-            raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
+            raise MissingParamOperationOutcome(
+                "`QuestionnaireResponse` parameter is required"
+            )
 
         env_questionnaire_response = env["QuestionnaireResponse"]
     else:
@@ -230,35 +237,42 @@ async def populate_questionnaire(request: AidboxSdcRequest):
         else env["Questionnaire"]
     )
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = request.client if as_root else get_user_sdk_client(request.request, request.client)
+    client = (
+        request.client
+        if as_root
+        else get_user_sdk_client(request.request, request.client)
+    )
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
     if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
+        fce_populated_qr = await from_first_class_extension(
+            fce_populated_qr, request.aidbox_client
+        )
     return web.json_response(fce_populated_qr, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
 @prepare_args
 async def populate_questionnaire_instance(request: AidboxSdcRequest):
-    fce_questionnaire = (
-        await request.aidbox_client.resources("Questionnaire")
+    fhir_questionnaire = (
+        await request.fhir_client.resources("Questionnaire")
         .search(_id=request.route_params["id"])
         .get()
     )
-    env = parameter_to_env(request.resource)
-    env["Questionnaire"] = (
-        await from_first_class_extension(fce_questionnaire, request.aidbox_client)
-        if request.is_fhir
-        else fce_questionnaire
+    fce_questionnaire = await to_first_class_extension(
+        fhir_questionnaire, request.aidbox_client
     )
+    env = parameter_to_env(request.resource)
+    env["Questionnaire"] = fhir_questionnaire if request.is_fhir else fce_questionnaire
     as_root = fce_questionnaire.get("runOnBehalfOfRoot")
     client = client if as_root else get_user_sdk_client(request.request, request.client)
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
 
     if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
+        fce_populated_qr = await from_first_class_extension(
+            fce_populated_qr, request.aidbox_client
+        )
     return web.json_response(fce_populated_qr, dumps=json.dumps)
 
 
