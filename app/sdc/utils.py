@@ -123,10 +123,20 @@ def parameter_to_env(resource):
 
 
 async def load_source_queries(client, fce_questionnaire, env):
-    contained = {
+    # Previously we used invalid format for localRef Bundle#id
+    # But according to the specification, local ref to contained resource should be #id
+    # And since in Aidbox format we have localRef without leading #, 
+    # contained resources are accessible via id
+    # But for backward compatibility they are also accessible by Bundle#id
+    contained_compat = {
         f"{item['resourceType']}#{item['id']}": item
         for item in fce_questionnaire.get("contained", [])
     }
+    contained_new = {
+        item['id']: item
+        for item in fce_questionnaire.get("contained", [])
+    }
+    contained = {**contained_compat, **contained_new}
 
     source_queries = fce_questionnaire.get("sourceQueries", {})
 
