@@ -40,7 +40,7 @@ fhirpy = "==1.4.2"
 pytest-asyncio = "*"
 aiohttp-cors = "~=0.7.0"
 simplejson = "*"
-fpml = "==0.1.1"
+fpml = ">=0.2.0"
 
 [requires]
 python_version = "3.11"
