@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "206c0c7d1d0ac559b2e92f37729a25b912f7798e30b5f444630167acc7fd3a7c"
+            "sha256": "f27fb4b90453f6294e59d524819c0938686c7325b0a47d2c8a0caa9a356b5788"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -18,12 +18,12 @@
     "default": {
         "aidbox-python-sdk": {
             "hashes": [
-                "sha256:d9dc4adc012b429b9ce1be012944bbd3c63965eec9e29ed22f45981fd3a502b1",
-                "sha256:dcd41a13588e90be09fc0e2b4aa5413b02d4d57bc19af94552dbe4b027b78f25"
+                "sha256:55a8624d7e831dd5359aeebcf7716443e04ffab2d054f5f80c6ed54bf54e80b1",
+                "sha256:b81bf30e4b24fa27bbb4b09bcff17da3086e06b58279e103e1df286b0b6679e4"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.8'",
-            "version": "==0.1.14"
+            "version": "==0.1.16"
         },
         "aiocontextvars": {
             "hashes": [
