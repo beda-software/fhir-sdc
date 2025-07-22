@@ -214,7 +214,7 @@ def answers(inputs, link_id):
         inputs,
         f"repeat(item).where(linkId='{link_id}').answer.value",
         None,
-        r4,
+        "r4",
     )
 
 
