@@ -8,6 +8,6 @@ def cached_compile(expression):
     return compile(expression)
 
 
-def fhirpath(context, expression, env=None):
+def fhirpath(context, expression, env=None, model=None):
     compiled_expression = cached_compile(expression)
-    return compiled_expression(context, env or {})
+    return compiled_expression(context, env or {}, model)

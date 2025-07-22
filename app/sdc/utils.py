@@ -2,7 +2,6 @@ import copy
 
 from urllib.parse import quote
 
-from fhirpathpy import evaluate as fhirpath
 from fhirpathpy.models import models
 from fhirpy.base.utils import get_by_path
 from fpml import resolve_template
