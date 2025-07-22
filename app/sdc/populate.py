@@ -1,8 +1,8 @@
-from fhirpathpy import evaluate as fhirpath
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
 from .utils import get_type, load_source_queries, validate_context
+from app.cached_fhirpath import fhirpath
 
 
 async def populate(client, fce_questionnaire, env):

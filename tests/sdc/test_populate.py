@@ -833,7 +833,161 @@ async def test_fhir_source_query_populate(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
+async def test_fhir_source_query_reference_populate(fhir_client, safe_db):
+    q = {
+        "meta": {
+            "profile": ["https://beda.software/beda-emr-questionnaire"],
+        },
+        "item": [
+            {
+                "type": "dateTime",
+                "linkId": "deceased",
+                "extension": [
+                    {
+                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                        "valueExpression": {
+                            "language": "text/fhirpath",
+                            "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
+                        },
+                    }
+                ],
+            }
+        ],
+        "status": "active",
+        "resourceType": "Questionnaire",
+        "contained": [
+            {
+                "id": "PrePopQuery",
+                "type": "batch",
+                "entry": [
+                    {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
+                ],
+                "resourceType": "Bundle",
+            }
+        ],
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                "extension": [
+                    {
+                        "url": "name",
+                        "valueCoding": {
+                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                            "code": "LaunchPatient",
+                        },
+                    },
+                    {"url": "type", "valueCode": "Patient"},
+                ],
+            },
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                "valueReference": {"reference": "#PrePopQuery"},
+            },
+        ],
+    }
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "deceasedDateTime": "2020",
+    }
+
+    patient = fhir_client.resource("Patient", **launch_patient)
+    await patient.save()
+
+    p = await fhir_client.execute(
+        "Questionnaire/$populate",
+        data=create_parameters(
+            LaunchPatient={"resourceType": "Patient", "id": patient["id"]}, Questionnaire=q
+        ),
+    )
+
+    assert p == {
+        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
+        "questionnaire": None,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
+@pytest.mark.asyncio
 async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
+            "item": [
+                {
+                    "type": "dateTime",
+                    "linkId": "deceased",
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                            "valueExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
+                            },
+                        }
+                    ],
+                }
+            ],
+            "status": "active",
+            "resourceType": "Questionnaire",
+            "contained": [
+                {
+                    "id": "PrePopQuery",
+                    "type": "batch",
+                    "entry": [
+                        {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
+                    ],
+                    "resourceType": "Bundle",
+                }
+            ],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                    "extension": [
+                        {
+                            "url": "name",
+                            "valueCoding": {
+                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                                "code": "LaunchPatient",
+                            },
+                        },
+                        {"url": "type", "valueCode": "Patient"},
+                    ],
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {"reference": "#PrePopQuery"},
+                },
+            ],
+        },
+    )
+
+    await q.save()
+
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "deceasedDateTime": "2020",
+    }
+
+    patient = fhir_client.resource("Patient", **launch_patient)
+    await patient.save()
+
+    p = await q.execute(
+        "$populate",
+        data=create_parameters(LaunchPatient={"resourceType": "Patient", "id": patient["id"]}),
+    )
+
+    assert p == {
+        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
+@pytest.mark.asyncio
+async def test_fhir_source_query_reference_populate_from_api(fhir_client, safe_db):
     q = fhir_client.resource(
         "Questionnaire",
         **{

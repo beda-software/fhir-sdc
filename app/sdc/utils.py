@@ -1,3 +1,5 @@
+import copy
+
 from urllib.parse import quote
 
 from fhirpathpy import evaluate as fhirpath
@@ -8,6 +10,7 @@ from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
+from app.cached_fhirpath import fhirpath
 from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
@@ -44,14 +47,17 @@ def get_type(item, data):
 
 
 def walk_dict(d, transform):
-    for k, v in d.items():
+    result_dict = copy.deepcopy(d)
+    for k, v in result_dict.items():
         if is_list(v):
-            d[k] = [walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v]
+            result_dict[k] = [
+                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v
+            ]
         elif is_mapping(v):
-            d[k] = walk_dict(v, transform)
+            result_dict[k] = walk_dict(v, transform)
         else:
-            d[k] = transform(v, k)
-    return d
+            result_dict[k] = transform(v, k)
+    return result_dict
 
 
 def update_link_id_or_question(variables):
@@ -122,10 +128,20 @@ def parameter_to_env(resource):
 
 
 async def load_source_queries(client, fce_questionnaire, env):
-    contained = {
+    # Previously we used invalid format for localRef Bundle#id
+    # But according to the specification, local ref to contained resource should be #id
+    # And since in Aidbox format we have localRef without leading #, 
+    # contained resources are accessible via id
+    # But for backward compatibility they are also accessible by Bundle#id
+    contained_compat = {
         f"{item['resourceType']}#{item['id']}": item
         for item in fce_questionnaire.get("contained", [])
     }
+    contained_new = {
+        item['id']: item
+        for item in fce_questionnaire.get("contained", [])
+    }
+    contained = {**contained_compat, **contained_new}
 
     source_queries = fce_questionnaire.get("sourceQueries", {})
 
@@ -222,3 +238,14 @@ def resolve_fpml_template(template, context):
         fp_options,
         True,
     )
+
+
+async def apply_converter_for_resources(converter_fn, resources: list) -> list:
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [{"resource": dict(s)} for s in resources],
+    }
+    fce_bundle = await converter_fn(bundle)
+    result = [s["resource"] for s in fce_bundle["entry"]]
+    return result
