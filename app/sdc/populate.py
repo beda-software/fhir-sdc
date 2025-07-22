@@ -14,7 +14,7 @@ async def populate(client, fce_questionnaire, env):
         # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
         env["QuestionnaireResponse"] = {
             "resourceType": "QuestionnaireResponse",
-            "status": "in-progress",
+            "status": "in-progress"
         }
 
     await load_source_queries(client, fce_questionnaire, env)

@@ -1,7 +1,7 @@
 from aiohttp import ClientSession, web
 from funcy.seqs import flatten
 
-from .utils import check_mappers_bundles_full_url_duplicates
+from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
 
 
 async def get_external_service_bundle(session, service, template, context):
@@ -53,6 +53,14 @@ async def extract(client, mappings, context, extract_services):
                         continue
 
                     mappers_bundles.append(mapper_bundle)
+
+                elif mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
+                    mappers_bundles.append(
+                        resolve_fpml_template(
+                            mapper["body"],
+                            context,
+                        )
+                    )
                 else:
                     # Use 3rd party service FHIRPathMapping or JUTE
                     mappers_bundles.append(
