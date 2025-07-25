@@ -1,3 +1,4 @@
+import simplejson as json
 from aiohttp import ClientSession, web
 from funcy.seqs import flatten
 
@@ -55,12 +56,12 @@ async def extract(client, mappings, context, extract_services):
                     mappers_bundles.append(mapper_bundle)
 
                 elif mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
-                    mappers_bundles.append(
-                        resolve_fpml_template(
-                            mapper["body"],
-                            context,
-                        )
+                    result = resolve_fpml_template(
+                        mapper["body"],
+                        context,
                     )
+                    result_no_decimal = json.loads(json.dumps(result))
+                    mappers_bundles.append(result_no_decimal)
                 else:
                     # Use 3rd party service FHIRPathMapping or JUTE
                     mappers_bundles.append(
