@@ -14,7 +14,6 @@ from ..sdc import (
 from ..sdc.exception import MissingParamOperationOutcome
 from ..sdc.utils import parameter_to_env, validate_context
 from ..utils import get_extract_services
-from .settings import settings
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 
 
