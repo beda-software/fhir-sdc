@@ -1,14 +1,27 @@
 import pytest
 
-from app.test.utils import create_address_questionnaire, create_parameters, create_questionnaire
+from app.test.utils import (
+    create_address_questionnaire,
+    create_parameters,
+    create_questionnaire,
+)
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_source_queries_ext,
+    make_initial_expression_ext,
+    make_item_population_context_ext,
+    make_variable_ext,
+    make_sub_questionnaire_ext,
+    make_assembled_from_ext,
+)
 
 
 @pytest.mark.asyncio
-async def test_assemble_then_populate(aidbox_client, safe_db):
-    address = await create_address_questionnaire(aidbox_client)
+async def test_assemble_then_populate(fhir_client, safe_db):
+    address = await create_address_questionnaire(fhir_client)
 
     appointment = await create_questionnaire(
-        aidbox_client,
+        fhir_client,
         {
             "status": "active",
             "contained": [
@@ -26,53 +39,51 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     ],
                 }
             ],
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
-            "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery"),
+            ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                    },
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%PrePopQuery.entry.resource.entry.resource.start"
+                        )
+                    ],
                 },
             ],
         },
     )
 
     q = await create_questionnaire(
-        aidbox_client,
+        fhir_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "extension": [make_launch_context_ext("LaunchPatient", "Patient")],
             "item": [
                 {
-                    "linkId": "patient-appointment-display",
+                    "linkId": "appointment",
                     "type": "display",
-                    "text": "Sub questionanire is not supported",
-                    "subQuestionnaire": appointment.id,
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(appointment.id)],
                 },
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "itemPopulationContext": {
-                        "language": "text/fhirpath",
-                        "expression": "%LaunchPatient.address",
-                    },
+                    "extension": [
+                        make_item_population_context_ext("%LaunchPatient.address")
+                    ],
                     "item": [
                         {
                             "linkId": "patient-address-display",
                             "type": "display",
                             "text": "Sub questionanire is not supported",
-                            "variable": [
-                                {
-                                    "name": "prefix",
-                                    "language": "text/fhirpath",
-                                    "expression": "'patient-address-'",
-                                }
+                            "extension": [
+                                make_variable_ext("prefix", "'patient-address-'"),
+                                make_sub_questionnaire_ext(address.id),
                             ],
-                            "subQuestionnaire": address.id,
                         }
                     ],
                 },
@@ -80,31 +91,25 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                     "type": "group",
                     "linkId": "patient-contact",
                     "repeats": True,
-                    "itemPopulationContext": {
-                        "language": "text/fhirpath",
-                        "expression": "%LaunchPatient.contact",
-                    },
+                    "extension": [
+                        make_item_population_context_ext("%LaunchPatient.contact")
+                    ],
                     "item": [
                         {
                             "type": "group",
                             "linkId": "patient-contanct-address",
-                            "itemPopulationContext": {
-                                "language": "text/fhirpath",
-                                "expression": "address",
-                            },
+                            "extension": [make_item_population_context_ext("address")],
                             "item": [
                                 {
                                     "linkId": "patient-contact-address-display",
                                     "type": "display",
                                     "text": "Sub questionanire is not supported",
-                                    "variable": [
-                                        {
-                                            "name": "prefix",
-                                            "language": "text/fhirpath",
-                                            "expression": "'patient-contact-address-'",
-                                        }
+                                    "extension": [
+                                        make_variable_ext(
+                                            "prefix", "'patient-contact-address-'"
+                                        ),
+                                        make_sub_questionnaire_ext(address.id),
                                     ],
-                                    "subQuestionnaire": address.id,
                                 }
                             ],
                         }
@@ -119,11 +124,13 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
     del assembled["meta"]
 
     assert assembled == {
-        "assembledFrom": q.id,
         "resourceType": "Questionnaire",
         "status": "active",
-        "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
-        "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
+        "extension": [
+            make_launch_context_ext("LaunchPatient", "Patient"),
+            make_source_queries_ext("#PrePopQuery"),
+            make_assembled_from_ext(q.id),
+        ],
         "contained": [
             {
                 "resourceType": "Bundle",
@@ -143,39 +150,33 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
             {
                 "type": "string",
                 "linkId": "last-appointment",
-                "initialExpression": {
-                    "language": "text/fhirpath",
-                    "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                },
+                "extension": [
+                    make_initial_expression_ext(
+                        "%PrePopQuery.entry.resource.entry.resource.start"
+                    )
+                ],
             },
             {
                 "type": "group",
                 "linkId": "patient-address",
-                "itemPopulationContext": {
-                    "language": "text/fhirpath",
-                    "expression": "%LaunchPatient.address",
-                },
+                "extension": [
+                    make_item_population_context_ext("%LaunchPatient.address")
+                ],
                 "item": [
                     {
                         "linkId": "patient-address-line-1",
                         "type": "string",
-                        "initialExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "line[0]",
-                        },
+                        "extension": [make_initial_expression_ext("line[0]")],
                     },
                     {
                         "linkId": "patient-address-line-2",
                         "type": "string",
-                        "initialExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "line[1]",
-                        },
+                        "extension": [make_initial_expression_ext("line[1]")],
                         "enableWhen": [
                             {
                                 "question": "patient-address-line-1",
                                 "operator": "exists",
-                                "answer": {"boolean": True},
+                                "answerBoolean": True,
                             }
                         ],
                     },
@@ -185,39 +186,33 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
                 "type": "group",
                 "linkId": "patient-contact",
                 "repeats": True,
-                "itemPopulationContext": {
-                    "language": "text/fhirpath",
-                    "expression": "%LaunchPatient.contact",
-                },
+                "extension": [
+                    make_item_population_context_ext("%LaunchPatient.contact")
+                ],
                 "item": [
                     {
                         "type": "group",
                         "linkId": "patient-contanct-address",
-                        "itemPopulationContext": {
-                            "language": "text/fhirpath",
-                            "expression": "address",
-                        },
+                        "extension": [make_item_population_context_ext("address")],
                         "item": [
                             {
                                 "linkId": "patient-contact-address-line-1",
                                 "type": "string",
-                                "initialExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "line[0]",
-                                },
+                                "extension": [
+                                    make_initial_expression_ext("line[0]")
+                                ],
                             },
                             {
                                 "linkId": "patient-contact-address-line-2",
                                 "type": "string",
-                                "initialExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "line[1]",
-                                },
+                                "extension": [
+                                    make_initial_expression_ext("line[1]")
+                                ],
                                 "enableWhen": [
                                     {
                                         "question": "patient-contact-address-line-1",
                                         "operator": "exists",
-                                        "answer": {"boolean": True},
+                                        "answerBoolean": True,
                                     }
                                 ],
                             },
@@ -228,10 +223,10 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
         ],
     }
 
-    patient = aidbox_client.resource("Patient")
+    patient = fhir_client.resource("Patient")
     await patient.save()
 
-    appointment = aidbox_client.resource(
+    appointment = fhir_client.resource(
         "Appointment",
         **{
             "status": "booked",
@@ -241,7 +236,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
     )
     await appointment.save()
 
-    p = await aidbox_client.execute(
+    p = await fhir_client.execute(
         "Questionnaire/$populate",
         data=create_parameters(LaunchPatient=patient, questionnaire=assembled),
     )
@@ -249,7 +244,7 @@ async def test_assemble_then_populate(aidbox_client, safe_db):
     assert p == {
         "item": [
             {
-                "answer": [{"value": {"string": "2020-01-01T00:00:00Z"}}],
+                "answer": [{"valueString": "2020-01-01T00:00:00Z"}],
                 "linkId": "last-appointment",
             },
             {

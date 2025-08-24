@@ -20,3 +20,4 @@ htmlcov/
 tests_zen_project/zen-packages
 .clj-kondo
 .lsp
+.history
