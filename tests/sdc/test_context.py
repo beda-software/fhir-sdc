@@ -6,12 +6,12 @@ from app.test.utils import create_parameters
 
 
 @pytest.mark.asyncio
-async def test_get_questionnaire_context(aidbox_client, safe_db):
-    p = aidbox_client.resource("Patient", **{"id": "patient-id"})
+async def test_get_questionnaire_context(fhir_client, safe_db):
+    p = fhir_client.resource("Patient", **{"id": "patient-id"})
     await p.save()
 
     # Create related resources (Appointment, Organization and Location)
-    a = aidbox_client.resource(
+    a = fhir_client.resource(
         "Appointment",
         **{
             "status": "booked",
@@ -22,19 +22,48 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
     await a.save()
 
     organization_name = uuid.uuid4().hex
-    organization = aidbox_client.resource("Organization", **{"name": organization_name})
+    organization = fhir_client.resource("Organization", **{"name": organization_name})
     await organization.save()
 
     location_name = uuid.uuid4().hex
-    location = aidbox_client.resource("Location", **{"name": location_name})
+    location = fhir_client.resource("Location", **{"name": location_name})
     await location.save()
 
     # Create a new questionnaire with source queries that request created resources above
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+                    "extension": [
+                        {
+                            "url": "name",
+                            "valueCoding": {
+                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                                "code": "LaunchPatient"
+                            }
+                        },
+                        {
+                            "url": "type",
+                            "valueCode": "Patient"
+                        }
+                    ]
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {
+                        "reference": "#Data1"
+                    }
+                },
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {
+                        "reference": "#Data2"
+                    }
+                }
+            ],
             "contained": [
                 {
                     "id": "Data1",
@@ -59,7 +88,6 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
                     "resourceType": "Bundle",
                 },
             ],
-            "sourceQueries": [{"localRef": "Bundle#Data1"}, {"localRef": "Bundle#Data2"}],
         },
     )
     await q.save()
@@ -67,8 +95,8 @@ async def test_get_questionnaire_context(aidbox_client, safe_db):
     assert q.id is not None
 
     # Execute get context request and assert that output bundle has the related resources
-    context = await aidbox_client.execute(
-        f"Questionnaire/$context",
+    context = await fhir_client.execute(
+        "Questionnaire/$context",
         method="POST",
         data=create_parameters(Questionnaire=q, LaunchPatient=p),
         params=None,

@@ -25,27 +25,26 @@ async def test_live_health_check(client):
 
 
 @pytest.mark.asyncio
-async def test_database_isolation__1(aidbox_client, safe_db):
-    patients = await aidbox_client.resources("Patient").fetch_all()
+async def test_database_isolation__1(fhir_client, safe_db):
+    patients = await fhir_client.resources("Patient").fetch_all()
     assert len(patients) == 0
 
-    patient = aidbox_client.resource("Patient")
+    patient = fhir_client.resource("Patient")
     await patient.save()
 
-    patients = await aidbox_client.resources("Patient").fetch_all()
+    patients = await fhir_client.resources("Patient").fetch_all()
     assert len(patients) == 1
 
 
 @pytest.mark.asyncio
-async def test_database_isolation__2(aidbox_client, safe_db):
-    patients = await aidbox_client.resources("Patient").fetch_all()
+async def test_database_isolation__2(fhir_client, safe_db):
+    patients = await fhir_client.resources("Patient").fetch_all()
     assert len(patients) == 0
 
-    patient = aidbox_client.resource("Patient")
+    patient = fhir_client.resource("Patient")
+    await patient.save()
+    patient = fhir_client.resource("Patient")
     await patient.save()
 
-    patient = aidbox_client.resource("Patient")
-    await patient.save()
-
-    patients = await aidbox_client.resources("Patient").fetch_all()
+    patients = await fhir_client.resources("Patient").fetch_all()
     assert len(patients) == 2

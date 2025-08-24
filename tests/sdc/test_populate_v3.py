@@ -1,15 +1,28 @@
 import pytest
 
-from app.sdc.populate import populate
+from app.test.utils import create_parameters
 
 questionnaire = {
     "resourceType": "Questionnaire",
     "id": "example-questionnaire",
     "status": "active",
-    "launchContext": [
+    "extension": [
         {
-            "name": {"code": "patient"},
-            "type": ["Patient"],
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+            "extension": [
+                {
+                    "url": "name",
+                    "valueCoding": {
+                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
+                        "code": "patient",
+                    },
+                },
+                {"url": "type", "valueCode": "Patient"},
+            ],
+        },
+        {
+            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+            "valueReference": {"reference": "#PrePopQuery"},
         },
     ],
     "contained": [
@@ -27,24 +40,33 @@ questionnaire = {
             ],
         }
     ],
-    "sourceQueries": [{"localRef": "Bundle#PrePopQuery"}],
     "item": [
         {
             "type": "group",
             "linkId": "names",
-            "itemPopulationContext": {
-                "language": "text/fhirpath",
-                "expression": "%PrePopQuery.entry.resource.entry.resource.name",
-            },
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+                    "valueExpression": {
+                        "language": "text/fhirpath",
+                        "expression": "%PrePopQuery.entry.resource.entry.resource.name",
+                    },
+                }
+            ],
             "item": [
                 {
                     "repeats": True,
                     "type": "string",
                     "linkId": "firstName",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "given",
-                    },
+                    "extension": [
+                        {
+                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+                            "valueExpression": {
+                                "language": "text/fhirpath",
+                                "expression": "given",
+                            },
+                        }
+                    ],
                 },
             ],
         },
@@ -65,14 +87,17 @@ env = {
 
 
 @pytest.mark.asyncio
-async def test_populate_v3(aidbox_client, safe_db):
-    patient_example = aidbox_client.resource("Patient", **env["patient"])
+async def test_populate_v3(fhir_client, safe_db):
+    patient_example = fhir_client.resource("Patient", **env["patient"])
 
     await patient_example.save()
 
     assert patient_example.id is not None
-
-    questionnaire_response = await populate(aidbox_client, questionnaire, env)
+    q = fhir_client.resource(
+        "Questionnaire", **questionnaire
+    )
+    await q.save()
+    questionnaire_response = await q.execute("$populate", data=create_parameters(patient=patient_example))
 
     assert questionnaire_response == {
         "item": [
@@ -81,10 +106,10 @@ async def test_populate_v3(aidbox_client, safe_db):
                     {
                         "linkId": "firstName",
                         "answer": [
-                            {"value": {"string": "Peter"}},
-                            {"value": {"string": "Middlename"}},
-                            {"value": {"string": "Pit"}},
-                            {"value": {"string": "Little Pitty"}},
+                            {"valueString": "Peter"},
+                            {"valueString": "Middlename"},
+                            {"valueString": "Pit"},
+                            {"valueString": "Little Pitty"},
                         ],
                     }
                 ],

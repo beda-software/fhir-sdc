@@ -40,7 +40,7 @@ def test_prepare_bundle_encode_params():
     bundle_entry = {
         "request": {
             "method": "GET",
-            "url": "/Patient?email={{%QuestionnaireResponse.repeat(item).where(linkId='email').answer.value.string}}",
+            "url": "/Patient?email={{%QuestionnaireResponse.repeat(item).where(linkId='email').answer.valueString}}",
         }
     }
 
@@ -52,14 +52,16 @@ def test_prepare_bundle_encode_params():
                 "linkId": "email",
                 "answer": [
                     {
-                        "value": {"string": "test+1@example.com"},
+                        "valueString": "test+1@example.com",
                     }
                 ],
             }
         ],
     }
 
-    assert prepare_bundle(bundle_entry, {"QuestionnaireResponse": questionnaire_response}) == {
+    assert prepare_bundle(
+        bundle_entry, {"QuestionnaireResponse": questionnaire_response}
+    ) == {
         "request": {
             "method": "GET",
             "url": "/Patient?email=test%2B1%40example.com",
@@ -92,7 +94,21 @@ def test_prepare_link_ids_does_not_encode_params():
     questionnaire = {
         "resourceType": "Questionnaire",
         "status": "active",
-        "assembleContext": [{"name": "prefix", "type": "string"}],
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
+                "extension": [
+                    {
+                        "url": "name",
+                        "valueString": "prefix"
+                    },
+                    {
+                        "url": "type",
+                        "valueString": "string"
+                    }
+                ]
+            }
+        ],
         "item": [
             {
                 "linkId": "{{%prefix}}line-1",
@@ -105,7 +121,7 @@ def test_prepare_link_ids_does_not_encode_params():
                     {
                         "question": "{{%prefix}}line-1",
                         "operator": "exists",
-                        "answer": {"boolean": True},
+                        "answerBoolean": True,
                     }
                 ],
             },
@@ -113,12 +129,30 @@ def test_prepare_link_ids_does_not_encode_params():
     }
 
     assert prepare_link_ids(questionnaire, {"prefix": "test+"}) == {
-        "assembleContext": [{"name": "prefix", "type": "string"}],
+        "extension": [
+            {
+                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
+                "extension": [
+                    {
+                        "url": "name",
+                        "valueString": "prefix"
+                    },
+                    {
+                        "url": "type",
+                        "valueString": "string"
+                    }
+                ]
+            }
+        ],
         "item": [
             {"linkId": "test+line-1", "type": "string"},
             {
                 "enableWhen": [
-                    {"answer": {"boolean": True}, "operator": "exists", "question": "test+line-1"}
+                    {
+                        "answerBoolean": True,
+                        "operator": "exists",
+                        "question": "test+line-1",
+                    }
                 ],
                 "linkId": "test+line-2",
                 "type": "string",
@@ -183,5 +217,7 @@ def test_fpml():
         "resourceType": "Patient",
         "id": "{{ %QuestionnaireResponse.answers('patientId') }}",
     }
-    result = resolve_fpml_template(template, {"QuestionnaireResponse": questionnaire_response})
+    result = resolve_fpml_template(
+        template, {"QuestionnaireResponse": questionnaire_response}
+    )
     assert result == {"resourceType": "Patient", "id": "1"}

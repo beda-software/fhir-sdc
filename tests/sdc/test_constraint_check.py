@@ -5,12 +5,19 @@ from app.test.utils import create_parameters
 
 
 @pytest.mark.asyncio
-async def test_fce_email_uniq(aidbox_client, safe_db):
-    q = aidbox_client.resource(
+async def test_fce_email_uniq(fhir_client, safe_db):
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "sourceQueries": [{"localRef": "Bundle#AllEmails"}],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {
+                        "reference": "#AllEmails"
+                    }
+                }
+            ],
             "contained": [
                 {
                     "resourceType": "Bundle",
@@ -19,10 +26,10 @@ async def test_fce_email_uniq(aidbox_client, safe_db):
                     "entry": [
                         {
                             "request": {
+                                "url": "/Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString}}",
                                 "method": "GET",
-                                "url": "/Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string}}",
-                            },
-                        },
+                            }
+                        }
                     ],
                 }
             ],
@@ -30,58 +37,91 @@ async def test_fce_email_uniq(aidbox_client, safe_db):
                 {
                     "type": "string",
                     "linkId": "email",
-                    "itemConstraint": [
+                    "extension": [
                         {
-                            "key": "email-uniq",
-                            "requirements": "Any email should present only once in the system",
-                            "severity": "error",
-                            "human": "Email already exists",
-                            # TODO: remove not() when legacy behaviour is disabled
-                            "expression": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.value.string).not().not()",
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                            "extension": [
+                                {
+                                    "url": "key",
+                                    "valueString": "email-uniq"
+                                },
+                                {
+                                    "url": "requirements",
+                                    "valueString": "Any email should present only once in the system"
+                                },
+                                {
+                                    "url": "severity",
+                                    "valueCode": "error"
+                                },
+                                {
+                                    "url": "human",
+                                    "valueString": "Email already exists"
+                                },
+                                {
+                                    "url": "expression",
+                                    "valueString": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                                }
+                            ]
                         }
-                    ],
-                },
+                    ]
+                }
             ],
         },
     )
     await q.save()
 
-    p = aidbox_client.resource(
-        "Patient", telecom=[{"system": "email", "value": "p1@beda.software"}]
+    p = fhir_client.resource(
+        "Patient",
+        **{
+            "telecom": [
+                {
+                    "system": "email",
+                    "value": "p1@beda.software",
+                }
+            ]
+        },
     )
     await p.save()
 
-    valid = aidbox_client.resource(
+    valid = fhir_client.resource(
         "QuestionnaireResponse",
-        status="completed",
-        item=[
-            {
-                "linkId": "email-uniq",
-                "answer": [{"value": {"string": "p2@beda.software"}}],
-            }
-        ],
+        **{
+            "status": "completed",
+            "questionnaire": q.id,
+            "subject": p,
+            "item": [
+                {
+                    "linkId": "email-uniq",
+                    "answer": [{"valueString": "p2@beda.software"}],
+                }
+            ],
+        },
     )
     await valid.save()
 
-    invalid = aidbox_client.resource(
+    invalid = fhir_client.resource(
         "QuestionnaireResponse",
-        status="completed",
-        item=[
-            {
-                "linkId": "email-uniq",
-                "answer": [{"value": {"string": "p1@beda.software"}}],
-            }
-        ],
+        **{
+            "status": "completed",
+            "questionnaire": q.id,
+            "subject": p,
+            "item": [
+                {
+                    "linkId": "email-uniq",
+                    "answer": [{"valueString": "p1@beda.software"}],
+                }
+            ],
+        },
     )
     await invalid.save()
 
     with pytest.raises(OperationOutcome):
-        assert await aidbox_client.execute(
+        assert await fhir_client.execute(
             "QuestionnaireResponse/$constraint-check",
             data=create_parameters(Questionnaire=q, QuestionnaireResponse=invalid),
         )
 
-    result = await aidbox_client.execute(
+    result = await fhir_client.execute(
         "QuestionnaireResponse/$constraint-check",
         data=create_parameters(Questionnaire=q, QuestionnaireResponse=valid),
     )
@@ -95,7 +135,14 @@ async def test_fhir_email_uniq(fhir_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "sourceQueries": [{"localRef": "Bundle#AllEmails"}],
+            "extension": [
+                {
+                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+                    "valueReference": {
+                        "reference": "#AllEmails"
+                    }
+                }
+            ],
             "contained": [
                 {
                     "resourceType": "Bundle",
@@ -115,16 +162,33 @@ async def test_fhir_email_uniq(fhir_client, safe_db):
                 {
                     "type": "string",
                     "linkId": "email",
-                    "itemConstraint": [
+                    "extension": [
                         {
-                            "key": "email-uniq",
-                            "requirements": "Any email should present only once in the system",
-                            "severity": "error",
-                            "human": "Email already exists",
-                            # TODO: remove not() when legacy behaviour is disabled
-                            "expression": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()",
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                            "extension": [
+                                {
+                                    "url": "key",
+                                    "valueString": "email-uniq"
+                                },
+                                {
+                                    "url": "requirements",
+                                    "valueString": "Any email should present only once in the system"
+                                },
+                                {
+                                    "url": "severity",
+                                    "valueCode": "error"
+                                },
+                                {
+                                    "url": "human",
+                                    "valueString": "Email already exists"
+                                },
+                                {
+                                    "url": "expression",
+                                    "valueString": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                                }
+                            ]
                         }
-                    ],
+                    ]
                 },
             ],
         },

@@ -2,13 +2,12 @@ import pytest
 from fhirpy.base.lib import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
-from app.converter.aidbox import from_first_class_extension
 from app.test.utils import create_parameters
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_without_context(aidbox_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fce_extract_without_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -19,43 +18,44 @@ async def test_fce_extract_without_context(aidbox_client, safe_db):
                         "request": {"url": "/Patient", "method": "POST"},
                         "resource": {
                             "resourceType": "Patient",
-                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.valueString").0""",
                         },
                     }
                 ],
             }
         },
     )
-
     await m.save()
-    q = aidbox_client.resource(
+
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
+            "extension": [
                 {
-                    "resourceType": "Mapping",
-                    "id": m.id,
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
                 }
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "patientId",
-                },
+                }
             ],
         },
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
+            "status": "completed",
             "questionnaire": q.id,
             "item": [
                 {
                     "linkId": "patientId",
-                    "answer": [{"value": {"string": "newPatient"}}],
+                    "answer": [{"valueString": "newPatient"}],
                 }
             ],
         },
@@ -65,16 +65,15 @@ async def test_fce_extract_without_context(aidbox_client, safe_db):
 
     assert len(extraction) == 1
 
-    p = await aidbox_client.resources("Patient").search().fetch_all()
-
+    p = await fhir_client.resources("Patient").search().fetch_all()
     assert len(p) == 1
 
     assert p[0].id == "newPatient"
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_with_context(aidbox_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fce_extract_with_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -85,7 +84,7 @@ async def test_fce_extract_with_context(aidbox_client, safe_db):
                         "request": {"url": "/Patient", "method": "POST"},
                         "resource": {
                             "resourceType": "Patient",
-                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.valueString").0""",
                             "name": [
                                 {
                                     "text": """$ fhirpath("ContextResource.name")""",
@@ -99,14 +98,14 @@ async def test_fce_extract_with_context(aidbox_client, safe_db):
     )
 
     await m.save()
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
+            "extension": [
                 {
-                    "resourceType": "Mapping",
-                    "id": m.id,
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
                 }
             ],
             "item": [
@@ -119,14 +118,14 @@ async def test_fce_extract_with_context(aidbox_client, safe_db):
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
                 {
                     "linkId": "patientId",
-                    "answer": [{"value": {"string": "newPatient"}}],
+                    "answer": [{"valueString": "newPatient"}],
                 }
             ],
         },
@@ -140,7 +139,7 @@ async def test_fce_extract_with_context(aidbox_client, safe_db):
 
     assert len(extraction) == 1
 
-    p = await aidbox_client.resources("Patient").search().fetch_all()
+    p = await fhir_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
@@ -149,8 +148,8 @@ async def test_fce_extract_with_context(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_using_list_endpoint_with_context(aidbox_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fce_extract_using_list_endpoint_with_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -161,7 +160,7 @@ async def test_fce_extract_using_list_endpoint_with_context(aidbox_client, safe_
                         "request": {"url": "/Patient", "method": "POST"},
                         "resource": {
                             "resourceType": "Patient",
-                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+                            "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.valueString").0""",
                             "name": [
                                 {
                                     "text": """$ fhirpath("ContextResource.name")""",
@@ -175,45 +174,50 @@ async def test_fce_extract_using_list_endpoint_with_context(aidbox_client, safe_
     )
 
     await m.save()
-    q = {
-        "resourceType": "Questionnaire",
-        "status": "active",
-        "mapping": [
-            {
-                "resourceType": "Mapping",
-                "id": m.id,
-            }
-        ],
-        "item": [
-            {
-                "type": "string",
-                "linkId": "patientId",
-            },
-        ],
-    }
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
+            "resourceType": "Questionnaire",
+            "status": "active",
+            "extension": [
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
+                }
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "patientId",
+                },
+            ],
+        },
+    )
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": "virtual_id",
             "item": [
                 {
                     "linkId": "patientId",
-                    "answer": [{"value": {"string": "newPatient"}}],
+                    "answer": [{"valueString": "newPatient"}],
                 }
             ],
         },
     )
     context = {"resourceType": "ContextResource", "name": "Name"}
 
-    extraction = await aidbox_client.execute(
+    extraction = await fhir_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
+        data=create_parameters(
+            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
+        ),
     )
 
     assert len(extraction) == 1
 
-    p = await aidbox_client.resources("Patient").search().fetch_all()
+    p = await fhir_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
@@ -222,8 +226,8 @@ async def test_fce_extract_using_list_endpoint_with_context(aidbox_client, safe_
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe_db):
-    q = aidbox_client.resource(
+async def test_fce_extract_fails_because_of_constraint_check(fhir_client, safe_db):
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -235,15 +239,26 @@ async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe
                 {
                     "type": "string",
                     "linkId": "v2",
-                    "itemConstraint": [
+                    "extension": [
                         {
-                            "key": "v1eqv2",
-                            "requirements": "v2 should be the same as v1",
-                            "severity": "error",
-                            "human": "v2 is not equal to v1",
-                            # TODO: remove not() when legacy behaviour is disabled
-                            "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                        },
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                            "extension": [
+                                {"url": "key", "valueString": "v1eqv2"},
+                                {
+                                    "url": "requirements",
+                                    "valueString": "v2 should be the same as v1",
+                                },
+                                {"url": "severity", "valueCode": "error"},
+                                {
+                                    "url": "human",
+                                    "valueString": "v2 is not equal to v1",
+                                },
+                                {
+                                    "url": "expression",
+                                    "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                },
+                            ],
+                        }
                     ],
                 },
             ],
@@ -251,18 +266,18 @@ async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
                 {
                     "linkId": "v1",
-                    "answer": [{"value": {"string": "1"}}],
+                    "answer": [{"valueString": "1"}],
                 },
                 {
                     "linkId": "v2",
-                    "answer": [{"value": {"string": "2"}}],
+                    "answer": [{"valueString": "2"}],
                 },
             ],
         },
@@ -273,10 +288,10 @@ async def test_fce_extract_fails_because_of_constraint_check(aidbox_client, safe
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check(
-    aidbox_client, safe_db
+async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check_list(
+    fhir_client, safe_db
 ):
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
@@ -288,15 +303,26 @@ async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check
                 {
                     "type": "string",
                     "linkId": "v2",
-                    "itemConstraint": [
+                    "extension": [
                         {
-                            "key": "v1eqv2",
-                            "requirements": "v2 should be the same as v1",
-                            "severity": "error",
-                            "human": "v2 is not equal to v1",
-                            # TODO: remove not() when legacy behaviour is disabled
-                            "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                        },
+                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                            "extension": [
+                                {"url": "key", "valueString": "v1eqv2"},
+                                {
+                                    "url": "requirements",
+                                    "valueString": "v2 should be the same as v1",
+                                },
+                                {"url": "severity", "valueCode": "error"},
+                                {
+                                    "url": "human",
+                                    "valueString": "v2 is not equal to v1",
+                                },
+                                {
+                                    "url": "expression",
+                                    "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                },
+                            ],
+                        }
                     ],
                 },
             ],
@@ -304,40 +330,42 @@ async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
                 {
                     "linkId": "v1",
-                    "answer": [{"value": {"string": "1"}}],
+                    "answer": [{"valueString": "1"}],
                 },
                 {
                     "linkId": "v2",
-                    "answer": [{"value": {"string": "2"}}],
+                    "answer": [{"valueString": "2"}],
                 },
             ],
         },
     )
 
     with pytest.raises(OperationOutcome):
-        await aidbox_client.execute(
+        await fhir_client.execute(
             "Questionnaire/$extract",
-            data=create_parameters(Questionnaire=q.serialize(), QuestionnaireResponse=qr),
+            data=create_parameters(
+                Questionnaire=q.serialize(), QuestionnaireResponse=qr
+            ),
         )
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
-    a = aidbox_client.resource(
+async def test_fce_extract_with_fhirpathmapping(fhir_client, safe_db):
+    a = fhir_client.resource(
         "Attribute",
         type={"resourceType": "Entity", "id": "code"},
         path=["type"],
         resource={"resourceType": "Entity", "id": "Mapping"},
     )
     await a.save()
-    m = aidbox_client.resource(
+    m = fhir_client.resource(
         "Mapping",
         **{
             "type": "FHIRPath",
@@ -360,14 +388,14 @@ async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
 
     await m.save()
 
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
+            "extension": [
                 {
-                    "resourceType": "Mapping",
-                    "id": m.id,
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
                 }
             ],
             "item": [
@@ -380,7 +408,7 @@ async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
@@ -393,11 +421,13 @@ async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
         },
     )
 
-    extraction = await aidbox_client.execute(f"fhir/Questionnaire/{q.id}/$extract", data=qr)
+    extraction = await fhir_client.execute(
+        f"fhir/Questionnaire/{q.id}/$extract", data=qr
+    )
 
     assert len(extraction) == 1
 
-    p = await aidbox_client.resources("Patient").search().fetch_all()
+    p = await fhir_client.resources("Patient").search().fetch_all()
 
     assert len(p) == 1
 
@@ -405,8 +435,8 @@ async def test_fce_extract_with_fhirpathmapping(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_without_context(aidbox_client, fhir_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fhir_extract_without_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -429,24 +459,21 @@ async def test_fhir_extract_without_context(aidbox_client, fhir_client, safe_db)
     q = fhir_client.resource(
         "Questionnaire",
         **(
-            await from_first_class_extension(
-                {
-                    "status": "active",
-                    "mapping": [
-                        {
-                            "resourceType": "Mapping",
-                            "id": m.id,
-                        }
-                    ],
-                    "item": [
-                        {
-                            "type": "string",
-                            "linkId": "patientId",
-                        },
-                    ],
-                },
-                aidbox_client,
-            )
+            {
+                "status": "active",
+                "extension": [
+                    {
+                        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                        "valueReference": {"reference": f"Mapping/{m.id}"},
+                    }
+                ],
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "patientId",
+                    },
+                ],
+            }
         ),
     )
     await q.save()
@@ -476,8 +503,8 @@ async def test_fhir_extract_without_context(aidbox_client, fhir_client, safe_db)
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_with_context(aidbox_client, fhir_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fhir_extract_with_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -505,24 +532,21 @@ async def test_fhir_extract_with_context(aidbox_client, fhir_client, safe_db):
     q = fhir_client.resource(
         "Questionnaire",
         **(
-            await from_first_class_extension(
-                {
-                    "status": "active",
-                    "mapping": [
-                        {
-                            "resourceType": "Mapping",
-                            "id": m.id,
-                        }
-                    ],
-                    "item": [
-                        {
-                            "type": "string",
-                            "linkId": "patientId",
-                        },
-                    ],
-                },
-                aidbox_client,
-            )
+            {
+                "status": "active",
+                "extension": [
+                    {
+                        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                        "valueReference": {"reference": f"Mapping/{m.id}"},
+                    }
+                ],
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "patientId",
+                    },
+                ],
+            }
         ),
     )
     await q.save()
@@ -557,8 +581,8 @@ async def test_fhir_extract_with_context(aidbox_client, fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir_client, safe_db):
-    m = aidbox_client.resource(
+async def test_fhir_extract_using_list_endpoint_with_context(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "body": {
@@ -583,14 +607,15 @@ async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir
     )
 
     await m.save()
-    q = await from_first_class_extension(
-        {
+    q = fhir_client.resource(
+        "Questionnaire",
+        **{
             "resourceType": "Questionnaire",
             "status": "active",
-            "mapping": [
+            "extension": [
                 {
-                    "resourceType": "Mapping",
-                    "id": m.id,
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m.id}"},
                 }
             ],
             "item": [
@@ -600,7 +625,6 @@ async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir
                 },
             ],
         },
-        aidbox_client,
     )
 
     qr = fhir_client.resource(
@@ -619,7 +643,9 @@ async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir
 
     extraction = await fhir_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
+        data=create_parameters(
+            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
+        ),
     )
 
     assert len(extraction) == 1
@@ -633,36 +659,44 @@ async def test_fhir_extract_using_list_endpoint_with_context(aidbox_client, fhir
 
 
 @pytest.mark.asyncio
-async def test_fhir_extract_fails_because_of_constraint_check(aidbox_client, fhir_client, safe_db):
+async def test_fhir_extract_fails_because_of_constraint_check(fhir_client, safe_db):
     q = fhir_client.resource(
         "Questionnaire",
         **(
-            await from_first_class_extension(
-                {
-                    "status": "active",
-                    "item": [
-                        {
-                            "type": "string",
-                            "linkId": "v1",
-                        },
-                        {
-                            "type": "string",
-                            "linkId": "v2",
-                            "itemConstraint": [
-                                {
-                                    "key": "v1eqv2",
-                                    "requirements": "v2 should be the same as v1",
-                                    "severity": "error",
-                                    "human": "v2 is not equal to v1",
-                                    # TODO: remove not() when legacy behaviour is disabled
-                                    "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                },
-                            ],
-                        },
-                    ],
-                },
-                aidbox_client,
-            )
+            {
+                "status": "active",
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "v1",
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "v2",
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                                "extension": [
+                                    {"url": "key", "valueString": "v1eqv2"},
+                                    {
+                                        "url": "requirements",
+                                        "valueString": "v2 should be the same as v1",
+                                    },
+                                    {"url": "severity", "valueCode": "error"},
+                                    {
+                                        "url": "human",
+                                        "valueString": "v2 is not equal to v1",
+                                    },
+                                    {
+                                        "url": "expression",
+                                        "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                    },
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
         ),
     )
     await q.save()
@@ -674,11 +708,11 @@ async def test_fhir_extract_fails_because_of_constraint_check(aidbox_client, fhi
             "item": [
                 {
                     "linkId": "v1",
-                    "answer": [{"value": {"string": "1"}}],
+                    "answer": [{"valueString": "1"}],
                 },
                 {
                     "linkId": "v2",
-                    "answer": [{"value": {"string": "2"}}],
+                    "answer": [{"valueString": "2"}],
                 },
             ],
         },
@@ -690,37 +724,45 @@ async def test_fhir_extract_fails_because_of_constraint_check(aidbox_client, fhi
 
 @pytest.mark.asyncio
 async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_check_list(
-    aidbox_client, fhir_client, safe_db
+    fhir_client, safe_db
 ):
     q = fhir_client.resource(
         "Questionnaire",
         **(
-            await from_first_class_extension(
-                {
-                    "status": "active",
-                    "item": [
-                        {
-                            "type": "string",
-                            "linkId": "v1",
-                        },
-                        {
-                            "type": "string",
-                            "linkId": "v2",
-                            "itemConstraint": [
-                                {
-                                    "key": "v1eqv2",
-                                    "requirements": "v2 should be the same as v1",
-                                    "severity": "error",
-                                    "human": "v2 is not equal to v1",
-                                    # TODO: remove not() when legacy behaviour is disabled
-                                    "expression": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                },
-                            ],
-                        },
-                    ],
-                },
-                aidbox_client,
-            )
+            {
+                "status": "active",
+                "item": [
+                    {
+                        "type": "string",
+                        "linkId": "v1",
+                    },
+                    {
+                        "type": "string",
+                        "linkId": "v2",
+                        "extension": [
+                            {
+                                "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
+                                "extension": [
+                                    {"url": "key", "valueString": "v1eqv2"},
+                                    {
+                                        "url": "requirements",
+                                        "valueString": "v2 should be the same as v1",
+                                    },
+                                    {"url": "severity", "valueCode": "error"},
+                                    {
+                                        "url": "human",
+                                        "valueString": "v2 is not equal to v1",
+                                    },
+                                    {
+                                        "url": "expression",
+                                        "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                    },
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            }
         ),
     )
     await q.save()
@@ -732,11 +774,11 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
             "item": [
                 {
                     "linkId": "v1",
-                    "answer": [{"value": {"string": "1"}}],
+                    "answer": [{"valueString": "1"}],
                 },
                 {
                     "linkId": "v2",
-                    "answer": [{"value": {"string": "2"}}],
+                    "answer": [{"valueString": "2"}],
                 },
             ],
         },
@@ -745,7 +787,9 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
     with pytest.raises(OperationOutcome):
         await fhir_client.execute(
             "Questionnaire/$extract",
-            data=create_parameters(Questionnaire=q.serialize(), QuestionnaireResponse=qr),
+            data=create_parameters(
+                Questionnaire=q.serialize(), QuestionnaireResponse=qr
+            ),
         )
 
 
@@ -764,7 +808,7 @@ PATIENT_BUNDLE_DATA = {
                 "fullUrl": PATIENT_1_FULL_URL,
                 "resource": {
                     "resourceType": "Patient",
-                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.children().string").0""",
+                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId').answer.valueString").0""",
                 },
             }
         ],
@@ -781,7 +825,7 @@ PATIENT_WITH_DUPLICATED_FULL_URL_DATA = {
                 "fullUrl": PATIENT_1_FULL_URL,
                 "resource": {
                     "resourceType": "Patient",
-                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId2').answer.children().string").0""",
+                    "id": """$ fhirpath("QuestionnaireResponse.item.where(linkId='patientId2').answer.valueString").0""",
                 },
             }
         ],
@@ -800,7 +844,7 @@ OBSERVATION_BUNDLE_DATA = {
                     "code": {
                         "coding": [
                             {
-                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0"""
+                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.valueString").0"""
                             }
                         ]
                     },
@@ -821,7 +865,7 @@ OBSERVATION_WITH_ERROR_DATA = {
                 "resource": {
                     "resourceType": "Observation",
                     # Wrong data to test that multiple mappers extract is atomic
-                    "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0""",
+                    "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.valueString").0""",
                     "status": "final",
                 },
             }
@@ -841,7 +885,7 @@ OBSERVATION_WITH_SUBJECT_DATA = {
                     "code": {
                         "coding": [
                             {
-                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.children().string").0"""
+                                "code": """$ fhirpath("QuestionnaireResponse.item.where(linkId='observationCode').answer.valueString").0"""
                             }
                         ]
                     },
@@ -855,13 +899,13 @@ OBSERVATION_WITH_SUBJECT_DATA = {
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
-    m1 = aidbox_client.resource(
+async def test_fce_extract_multiple_mappers(fhir_client, safe_db):
+    m1 = fhir_client.resource(
         "Mapping",
         **PATIENT_BUNDLE_DATA,
     )
 
-    m2 = aidbox_client.resource(
+    m2 = fhir_client.resource(
         "Mapping",
         **OBSERVATION_BUNDLE_DATA,
     )
@@ -869,13 +913,19 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     await m1.save()
     await m2.save()
 
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
-                {"resourceType": "Mapping", "id": m1.id},
-                {"resourceType": "Mapping", "id": m2.id},
+            "extension": [
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m1.id}"},
+                },
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m2.id}"},
+                },
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},
@@ -885,13 +935,16 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
-                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
+                {"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]},
+                {
+                    "linkId": "observationCode",
+                    "answer": [{"valueString": OBSERVATION_CODE}],
+                },
             ],
         },
     )
@@ -901,8 +954,12 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
     assert extraction[0]["resourceType"] == "Bundle"
     assert len(extraction[0]["entry"]) == 2
 
-    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
-    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
+    p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    o = (
+        await fhir_client.resources("Observation")
+        .search(code=OBSERVATION_CODE)
+        .fetch_all()
+    )
 
     assert len(p) == 1
     assert len(o) == 1
@@ -913,13 +970,13 @@ async def test_fce_extract_multiple_mappers(aidbox_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
-    m1 = aidbox_client.resource(
+async def test_fce_extract_multiple_mappers_is_atomic(fhir_client, safe_db):
+    m1 = fhir_client.resource(
         "Mapping",
         **PATIENT_BUNDLE_DATA,
     )
 
-    m2 = aidbox_client.resource(
+    m2 = fhir_client.resource(
         "Mapping",
         **OBSERVATION_WITH_ERROR_DATA,
     )
@@ -927,13 +984,19 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
     await m1.save()
     await m2.save()
 
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
-                {"resourceType": "Mapping", "id": m1.id},
-                {"resourceType": "Mapping", "id": m2.id},
+            "extension": [
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m1.id}"},
+                },
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m2.id}"},
+                },
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},
@@ -943,13 +1006,16 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
-                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
+                {"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]},
+                {
+                    "linkId": "observationCode",
+                    "answer": [{"valueString": OBSERVATION_CODE}],
+                },
             ],
         },
     )
@@ -959,26 +1025,32 @@ async def test_fce_extract_multiple_mappers_is_atomic(aidbox_client, safe_db):
 
     assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "invalid"
 
-    p = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
-    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
+    p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    o = (
+        await fhir_client.resources("Observation")
+        .search(code=OBSERVATION_CODE)
+        .fetch_all()
+    )
 
     assert p == []
     assert o == []
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_multiple_mappers_checks_unique_full_urls(aidbox_client, safe_db):
-    m1 = aidbox_client.resource(
+async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
+    fhir_client, safe_db
+):
+    m1 = fhir_client.resource(
         "Mapping",
         **PATIENT_BUNDLE_DATA,
     )
 
-    m2 = aidbox_client.resource(
+    m2 = fhir_client.resource(
         "Mapping",
         **PATIENT_WITH_DUPLICATED_FULL_URL_DATA,
     )
 
-    m3 = aidbox_client.resource(
+    m3 = fhir_client.resource(
         "Mapping",
         **OBSERVATION_WITH_SUBJECT_DATA,
     )
@@ -987,32 +1059,49 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(aidbox_clien
     await m2.save()
     await m3.save()
 
-    q = aidbox_client.resource(
+    q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
-            "mapping": [
-                {"resourceType": "Mapping", "id": m1.id},
-                {"resourceType": "Mapping", "id": m2.id},
-                {"resourceType": "Mapping", "id": m3.id},
+            "extension": [
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m1.id}"},
+                },
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m2.id}"},
+                },
+                {
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+                    "valueReference": {"reference": f"Mapping/{m3.id}"},
+                },
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},
                 {"type": "string", "linkId": "patientId2"},
                 {"type": "string", "linkId": "observationCode"},
             ],
+            "meta": {
+                "profile": [
+                    "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
+                ],
+            },
         },
     )
     await q.save()
 
-    qr = aidbox_client.resource(
+    qr = fhir_client.resource(
         "QuestionnaireResponse",
         **{
             "questionnaire": q.id,
             "item": [
-                {"linkId": "patientId", "answer": [{"value": {"string": PATIENT_1_ID}}]},
-                {"linkId": "patientId2", "answer": [{"value": {"string": PATIENT_2_ID}}]},
-                {"linkId": "observationCode", "answer": [{"value": {"string": OBSERVATION_CODE}}]},
+                {"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]},
+                {"linkId": "patientId2", "answer": [{"valueString": PATIENT_2_ID}]},
+                {
+                    "linkId": "observationCode",
+                    "answer": [{"valueString": OBSERVATION_CODE}],
+                },
             ],
         },
     )
@@ -1020,11 +1109,18 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(aidbox_clien
     with pytest.raises(OperationOutcome) as excinfo:
         await q.execute("$extract", data=qr)
 
-    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "duplicate-full-url"
+    assert (
+        get_by_path(excinfo.value.resource, ["issue", 0, "code"])
+        == "duplicate-full-url"
+    )
 
-    p1 = await aidbox_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
-    p2 = await aidbox_client.resources("Patient").search(id=PATIENT_2_ID).fetch_all()
-    o = await aidbox_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
+    p1 = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    p2 = await fhir_client.resources("Patient").search(id=PATIENT_2_ID).fetch_all()
+    o = (
+        await fhir_client.resources("Observation")
+        .search(code=OBSERVATION_CODE)
+        .fetch_all()
+    )
 
     assert p1 == []
     assert p2 == []
