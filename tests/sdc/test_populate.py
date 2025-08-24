@@ -8,7 +8,7 @@ from tests.test_utils import (
     make_launch_context_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
-    make_source_queries_ext
+    make_source_queries_ext,
 )
 
 
@@ -25,9 +25,7 @@ async def test_initial_expression_populate(fhir_client, safe_db):
                 {
                     "type": "string",
                     "linkId": "patientId",
-                    "extension": [
-                        make_initial_expression_ext("%LaunchPatient.id")
-                    ]
+                    "extension": [make_initial_expression_ext("%LaunchPatient.id")],
                 },
             ],
         },
@@ -38,7 +36,9 @@ async def test_initial_expression_populate(fhir_client, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -58,16 +58,12 @@ async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe
         "id": "virtual-id",
         "resourceType": "Questionnaire",
         "status": "active",
-        "extension": [
-            make_launch_context_ext("LaunchPatient", "Patient")
-        ],
+        "extension": [make_launch_context_ext("LaunchPatient", "Patient")],
         "item": [
             {
                 "type": "string",
                 "linkId": "patientId",
-                "extension": [
-                    make_initial_expression_ext("%LaunchPatient.id")
-                ]
+                "extension": [make_initial_expression_ext("%LaunchPatient.id")],
             },
         ],
     }
@@ -99,7 +95,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.name")
+                make_item_population_context_ext("%LaunchPatient.name"),
             ],
             "item": [
                 {
@@ -113,9 +109,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
                             "repeats": True,
                             "type": "string",
                             "linkId": "firstName",
-                            "extension": [
-                                make_initial_expression_ext("given")
-                            ],
+                            "extension": [make_initial_expression_ext("given")],
                         },
                     ],
                 },
@@ -136,7 +130,9 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
         ],
     }
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "item": [
@@ -168,7 +164,7 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.address")
+                make_item_population_context_ext("%LaunchPatient.address"),
             ],
             "item": [
                 {
@@ -182,9 +178,7 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
                         {
                             "type": "string",
                             "linkId": "city",
-                            "extension": [
-                                make_initial_expression_ext("city.first()")
-                            ],
+                            "extension": [make_initial_expression_ext("city.first()")],
                         },
                     ],
                 },
@@ -201,7 +195,9 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
         "address": [{"city": "San Francisco"}, {"city": "San Diego"}],
     }
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "item": [
@@ -234,14 +230,16 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_item_context_with_repeating_group_populate_from_nonlocal_context(fhir_client, safe_db):
+async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
+    fhir_client, safe_db
+):
     q = fhir_client.resource(
         "Questionnaire",
         **{
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_launch_context_ext("LaunchEncounter", "Encounter")
+                make_launch_context_ext("LaunchEncounter", "Encounter"),
             ],
             "item": [
                 {
@@ -255,9 +253,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         {
                             "type": "string",
                             "linkId": "city",
-                            "extension": [
-                                make_initial_expression_ext("city.first()")
-                            ],
+                            "extension": [make_initial_expression_ext("city.first()")],
                         },
                         {
                             "type": "string",
@@ -282,13 +278,14 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
         "address": [{"city": "San Francisco"}, {"city": "San Diego"}],
     }
 
-    launch_encounter = {
-        "resourceType": "Encounter",
-        "id": "encounter-example"
-    }
+    launch_encounter = {"resourceType": "Encounter", "id": "encounter-example"}
 
-    p = await q.execute("$populate",
-                        data=create_parameters(LaunchPatient=launch_patient, LaunchEncounter=launch_encounter))
+    p = await q.execute(
+        "$populate",
+        data=create_parameters(
+            LaunchPatient=launch_patient, LaunchEncounter=launch_encounter
+        ),
+    )
 
     assert p == {
         "item": [
@@ -305,7 +302,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         "answer": [
                             {"valueString": "encounter-example"},
                         ],
-                    }
+                    },
                 ],
                 "linkId": "addresses",
             },
@@ -322,7 +319,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         "answer": [
                             {"valueString": "encounter-example"},
                         ],
-                    }
+                    },
                 ],
                 "linkId": "addresses",
             },
@@ -340,7 +337,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.address")
+                make_item_population_context_ext("%LaunchPatient.address"),
             ],
             "item": [
                 {
@@ -355,33 +352,25 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                             "text": "City",
                             "linkId": "city",
                             "type": "string",
-                            "extension": [
-                                make_initial_expression_ext("city")
-                            ],
+                            "extension": [make_initial_expression_ext("city")],
                         },
                         {
                             "text": "Line 1",
                             "linkId": "line-1",
                             "type": "string",
-                            "extension": [
-                                make_initial_expression_ext("line[0]")
-                            ],
+                            "extension": [make_initial_expression_ext("line[0]")],
                         },
                         {
                             "text": "Line 2",
                             "linkId": "line-2",
                             "type": "string",
-                            "extension": [
-                                make_initial_expression_ext("line[1]")
-                            ],
+                            "extension": [make_initial_expression_ext("line[1]")],
                         },
                         {
                             "text": "Country",
                             "linkId": "Country",
                             "type": "string",
-                            "extension": [
-                                make_initial_expression_ext("country")
-                            ],
+                            "extension": [make_initial_expression_ext("country")],
                         },
                     ],
                 }
@@ -402,7 +391,9 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
         ],
     }
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+    p = await q.execute(
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+    )
 
     assert p == {
         "item": [
@@ -419,7 +410,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                         "text": "Line 1",
                     },
                     {
-                        "answer": [{"valueString": "near metro station " "museum"}],
+                        "answer": [{"valueString": "near metro station museum"}],
                         "linkId": "line-2",
                         "text": "Line 2",
                     },
@@ -474,15 +465,17 @@ async def test_source_query_populate(fhir_client, safe_db):
             ],
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#PrePopQuery")
+                make_source_queries_ext("#PrePopQuery"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
-                    ]
+                        make_initial_expression_ext(
+                            "%PrePopQuery.entry.resource.entry.resource.start"
+                        )
+                    ],
                 },
             ],
         },
@@ -519,7 +512,9 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
                     "linkId": "diet",
                     "repeats": True,
                     "extension": [
-                        make_initial_expression_ext("%Diet.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')")
+                        make_initial_expression_ext(
+                            "%Diet.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')"
+                        )
                     ],
                 },
             ],
@@ -620,7 +615,9 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
                     "type": "string",
                     "linkId": "patientName",
                     "extension": [
-                        make_initial_expression_ext("%LaunchPatient.name.given.toQuantity()")
+                        make_initial_expression_ext(
+                            "%LaunchPatient.name.given.toQuantity()"
+                        )
                     ],
                 }
             ],
@@ -638,7 +635,9 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
     }
 
     try:
-        await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
+        await q.execute(
+            "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        )
     except Exception as e:
         assert json.loads(str(e)) == {
             "resourceType": "OperationOutcome",
@@ -671,7 +670,9 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
                     "type": "string",
                     "linkId": "patientName",
                     "extension": [
-                        make_initial_expression_ext("%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family")
+                        make_initial_expression_ext(
+                            "%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family"
+                        )
                     ],
                 }
             ],
@@ -688,276 +689,16 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
         "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
     }
 
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=launch_patient))
-
-    assert p == {
-        "resourceType": "QuestionnaireResponse",
-        "questionnaire": q.id,
-        "item": [{"linkId": "patientName", "answer": [{"valueString": "Peter Chalmers"}]}],
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_fhirpath_success_populate(fhir_client, safe_db):
-    q = {
-        "item": [
-            {
-                "type": "string",
-                "linkId": "patientName",
-                "extension": [
-                    make_initial_expression_ext("%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family")
-                ],
-            }
-        ],
-        "status": "active",
-        "resourceType": "Questionnaire",
-        "extension": [
-            make_launch_context_ext("LaunchPatient", "Patient")
-        ],
-        "meta": {
-            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
-        },
-    }
-
-    launch_patient = {
-        "resourceType": "Patient",
-        "id": "patient-id",
-        "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
-    }
-
-    p = await fhir_client.execute(
-        "Questionnaire/$populate",
-        data=create_parameters(LaunchPatient=launch_patient, Questionnaire=q),
-    )
-
-    assert p == {
-        "item": [{"answer": [{"valueString": "Peter Chalmers"}], "linkId": "patientName"}],
-        "questionnaire": None,
-        "resourceType": "QuestionnaireResponse",
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_source_query_populate(fhir_client, safe_db):
-    q = {
-        "meta": {
-            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
-        },
-        "item": [
-            {
-                "type": "dateTime",
-                "linkId": "deceased",
-                "extension": [
-                    make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
-                ],
-            }
-        ],
-        "status": "active",
-        "resourceType": "Questionnaire",
-        "contained": [
-            {
-                "id": "PrePopQuery",
-                "type": "batch",
-                "entry": [
-                    {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
-                ],
-                "resourceType": "Bundle",
-            }
-        ],
-        "extension": [
-            make_launch_context_ext("LaunchPatient", "Patient"),
-            make_source_queries_ext("#Bundle#PrePopQuery"),
-        ],
-    }
-
-    launch_patient = {
-        "resourceType": "Patient",
-        "id": "patient-id",
-        "deceasedDateTime": "2020",
-    }
-
-    patient = fhir_client.resource("Patient", **launch_patient)
-    await patient.save()
-
-    p = await fhir_client.execute(
-        "Questionnaire/$populate",
-        data=create_parameters(
-            LaunchPatient={"resourceType": "Patient", "id": patient["id"]}, Questionnaire=q
-        ),
-    )
-
-    assert p == {
-        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
-        "questionnaire": None,
-        "resourceType": "QuestionnaireResponse",
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_source_query_reference_populate(fhir_client, safe_db):
-    q = {
-        "meta": {
-            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
-        },
-        "item": [
-            {
-                "type": "dateTime",
-                "linkId": "deceased",
-                "extension": [
-                    make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
-                ],
-            }
-        ],
-        "status": "active",
-        "resourceType": "Questionnaire",
-        "contained": [
-            {
-                "id": "PrePopQuery",
-                "type": "batch",
-                "entry": [
-                    {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
-                ],
-                "resourceType": "Bundle",
-            }
-        ],
-        "extension": [
-            make_launch_context_ext("LaunchPatient", "Patient"),
-            make_source_queries_ext("#PrePopQuery"),
-        ],
-    }
-
-    launch_patient = {
-        "resourceType": "Patient",
-        "id": "patient-id",
-        "deceasedDateTime": "2020",
-    }
-
-    patient = fhir_client.resource("Patient", **launch_patient)
-    await patient.save()
-
-    p = await fhir_client.execute(
-        "Questionnaire/$populate",
-        data=create_parameters(
-            LaunchPatient={"resourceType": "Patient", "id": patient["id"]}, Questionnaire=q
-        ),
-    )
-
-    assert p == {
-        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
-        "questionnaire": None,
-        "resourceType": "QuestionnaireResponse",
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
-            "item": [
-                {
-                    "type": "dateTime",
-                    "linkId": "deceased",
-                    "extension": [
-                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
-                    ],
-                }
-            ],
-            "status": "active",
-            "resourceType": "Questionnaire",
-            "contained": [
-                {
-                    "id": "PrePopQuery",
-                    "type": "batch",
-                    "entry": [
-                        {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
-                    ],
-                    "resourceType": "Bundle",
-                }
-            ],
-            "extension": [
-                make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#PrePopQuery"),
-            ],
-        },
-    )
-
-    await q.save()
-
-    launch_patient = {
-        "resourceType": "Patient",
-        "id": "patient-id",
-        "deceasedDateTime": "2020",
-    }
-
-    patient = fhir_client.resource("Patient", **launch_patient)
-    await patient.save()
-
     p = await q.execute(
-        "$populate",
-        data=create_parameters(LaunchPatient={"resourceType": "Patient", "id": patient["id"]}),
+        "$populate", data=create_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
-        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
-        "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_source_query_reference_populate_from_api(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
-            "item": [
-                {
-                    "type": "dateTime",
-                    "linkId": "deceased",
-                    "extension": [
-                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
-                    ],
-                }
-            ],
-            "status": "active",
-            "resourceType": "Questionnaire",
-            "contained": [
-                {
-                    "id": "PrePopQuery",
-                    "type": "batch",
-                    "entry": [
-                        {"request": {"url": "Patient?_id={{%LaunchPatient.id}}", "method": "GET"}}
-                    ],
-                    "resourceType": "Bundle",
-                }
-            ],
-            "extension": [
-                make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#Bundle#PrePopQuery"),
-            ],
-        },
-    )
-
-    await q.save()
-
-    launch_patient = {
-        "resourceType": "Patient",
-        "id": "patient-id",
-        "deceasedDateTime": "2020",
-    }
-
-    patient = fhir_client.resource("Patient", **launch_patient)
-    await patient.save()
-
-    p = await q.execute(
-        "$populate",
-        data=create_parameters(LaunchPatient={"resourceType": "Patient", "id": patient["id"]}),
-    )
-
-    assert p == {
-        "item": [{"answer": [{"valueDateTime": "2020"}], "linkId": "deceased"}],
         "questionnaire": q.id,
-        "resourceType": "QuestionnaireResponse",
+        "item": [
+            {"linkId": "patientName", "answer": [{"valueString": "Peter Chalmers"}]}
+        ],
     }
 
 
@@ -971,7 +712,9 @@ async def test_money_populate(fhir_client, safe_db):
                     "type": "quantity",
                     "linkId": "charge-amount",
                     "extension": [
-                        make_initial_expression_ext("%ChargeItemDefinition.extension('charge-item-definition-price').valueQuantity")
+                        make_initial_expression_ext(
+                            "%ChargeItemDefinition.extension('charge-item-definition-price').valueQuantity"
+                        )
                     ],
                 }
             ],
@@ -990,7 +733,11 @@ async def test_money_populate(fhir_client, safe_db):
         "extension": [
             {
                 "url": "charge-item-definition-price",
-                "valueQuantity": {"code": "USD", "value": 33.3, "system": "urn:iso:std:iso:4217"},
+                "valueQuantity": {
+                    "code": "USD",
+                    "value": 33.3,
+                    "system": "urn:iso:std:iso:4217",
+                },
             }
         ],
     }
@@ -1037,71 +784,16 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
             ],
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#PrePopQuery")
+                make_source_queries_ext("#PrePopQuery"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
-                    ],
-                    # Constraint check that uses PrePopQuery should go here
-                },
-            ],
-        },
-    )
-
-    await q.save()
-
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
-
-    assert p == {
-        "resourceType": "QuestionnaireResponse",
-        "questionnaire": q.id,
-        "item": [{"linkId": "last-appointment"}],
-    }
-
-
-@pytest.mark.asyncio
-async def test_fhir_source_query_with_qr_vars_populate(fhir_client, safe_db):
-    """
-    It's unusual case according to FHIR SDC spec, but we use QR vars in source queries for constraint checks
-    The test checks that populate does not fail when we access QR
-    """
-
-    p = fhir_client.resource("Patient")
-    await p.save()
-
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
-            "status": "active",
-            "contained": [
-                {
-                    "resourceType": "Bundle",
-                    "id": "PrePopQuery",
-                    "type": "batch",
-                    "entry": [
-                        {
-                            "request": {
-                                "method": "GET",
-                                "url": "Appointment?patient={{(%QuestionnaireResponse.item.where(linkId='patient-id').answer.valueString | 'undefined').first()}}",
-                            },
-                        },
-                    ],
-                }
-            ],
-            "extension": [
-                make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#PrePopQuery")
-            ],
-            "item": [
-                {
-                    "type": "string",
-                    "linkId": "last-appointment",
-                    "extension": [
-                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
+                        make_initial_expression_ext(
+                            "%PrePopQuery.entry.resource.entry.resource.start"
+                        )
                     ],
                     # Constraint check that uses PrePopQuery should go here
                 },
