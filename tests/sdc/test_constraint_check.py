@@ -2,6 +2,10 @@ import pytest
 from fhirpy.base.lib import OperationOutcome
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_source_queries_ext,
+    make_item_constraint_ext
+)
 
 
 @pytest.mark.asyncio
@@ -11,12 +15,7 @@ async def test_fce_email_uniq(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#AllEmails"
-                    }
-                }
+                make_source_queries_ext("#AllEmails")
             ],
             "contained": [
                 {
@@ -26,8 +25,8 @@ async def test_fce_email_uniq(fhir_client, safe_db):
                     "entry": [
                         {
                             "request": {
-                                "url": "/Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString}}",
                                 "method": "GET",
+                                "url": "/Patient?_elements=telecom&email={{%QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString}}",
                             }
                         }
                     ],
@@ -38,31 +37,13 @@ async def test_fce_email_uniq(fhir_client, safe_db):
                     "type": "string",
                     "linkId": "email",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                            "extension": [
-                                {
-                                    "url": "key",
-                                    "valueString": "email-uniq"
-                                },
-                                {
-                                    "url": "requirements",
-                                    "valueString": "Any email should present only once in the system"
-                                },
-                                {
-                                    "url": "severity",
-                                    "valueCode": "error"
-                                },
-                                {
-                                    "url": "human",
-                                    "valueString": "Email already exists"
-                                },
-                                {
-                                    "url": "expression",
-                                    "valueString": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
-                                }
-                            ]
-                        }
+                        make_item_constraint_ext(
+                            key="email-uniq",
+                            requirements="Any email should present only once in the system",
+                            severity="error",
+                            human="Email already exists",
+                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                        )
                     ]
                 }
             ],
@@ -136,12 +117,7 @@ async def test_fhir_email_uniq(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#AllEmails"
-                    }
-                }
+                make_source_queries_ext("#AllEmails")
             ],
             "contained": [
                 {
@@ -163,31 +139,13 @@ async def test_fhir_email_uniq(fhir_client, safe_db):
                     "type": "string",
                     "linkId": "email",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                            "extension": [
-                                {
-                                    "url": "key",
-                                    "valueString": "email-uniq"
-                                },
-                                {
-                                    "url": "requirements",
-                                    "valueString": "Any email should present only once in the system"
-                                },
-                                {
-                                    "url": "severity",
-                                    "valueCode": "error"
-                                },
-                                {
-                                    "url": "human",
-                                    "valueString": "Email already exists"
-                                },
-                                {
-                                    "url": "expression",
-                                    "valueString": "(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
-                                }
-                            ]
-                        }
+                        make_item_constraint_ext(
+                            key="email-uniq",
+                            requirements="Any email should present only once in the system",
+                            severity="error",
+                            human="Email already exists",
+                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                        )
                     ]
                 },
             ],

@@ -2,6 +2,11 @@ import pytest
 from fhirpathpy import evaluate as fhirpath
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_source_queries_ext,
+    make_initial_expression_ext
+)
 
 
 @pytest.mark.asyncio
@@ -16,23 +21,8 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient",
-                            },
-                        },
-                        {"url": "type", "valueCode": "Patient"},
-                    ],
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {"reference": "#DietAndNutrition"},
-                },
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#DietAndNutrition")
             ],
             "contained": [
                 {
@@ -57,13 +47,7 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
                     "repeats": True,
                     "answerValueSet": "diet",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%DietAndNutrition.entry[0].resource.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')",
-                            },
-                        }
+                        make_initial_expression_ext("%DietAndNutrition.entry[0].resource.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')")
                     ],
                 }
             ],

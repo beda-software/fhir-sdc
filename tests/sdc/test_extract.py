@@ -1,8 +1,12 @@
 import pytest
-from fhirpy.base.lib import OperationOutcome
+from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_questionnaire_mapper_ext,
+    make_item_constraint_ext,
+)
 
 
 @pytest.mark.asyncio
@@ -31,12 +35,7 @@ async def test_fce_extract_without_context(fhir_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
                 {
                     "type": "string",
@@ -102,12 +101,7 @@ async def test_fce_extract_with_context(fhir_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
                 {
                     "type": "string",
@@ -179,12 +173,7 @@ async def test_fce_extract_using_list_endpoint_with_context(fhir_client, safe_db
         **{
             "resourceType": "Questionnaire",
             "status": "active",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
                 {
                     "type": "string",
@@ -240,25 +229,13 @@ async def test_fce_extract_fails_because_of_constraint_check(fhir_client, safe_d
                     "type": "string",
                     "linkId": "v2",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                            "extension": [
-                                {"url": "key", "valueString": "v1eqv2"},
-                                {
-                                    "url": "requirements",
-                                    "valueString": "v2 should be the same as v1",
-                                },
-                                {"url": "severity", "valueCode": "error"},
-                                {
-                                    "url": "human",
-                                    "valueString": "v2 is not equal to v1",
-                                },
-                                {
-                                    "url": "expression",
-                                    "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                },
-                            ],
-                        }
+                        make_item_constraint_ext(
+                            key="v1eqv2",
+                            requirements="v2 should be the same as v1",
+                            severity="error",
+                            human="v2 is not equal to v1",
+                            expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                        )
                     ],
                 },
             ],
@@ -304,25 +281,13 @@ async def test_fce_extract_using_list_endpoint_fails_because_of_constraint_check
                     "type": "string",
                     "linkId": "v2",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                            "extension": [
-                                {"url": "key", "valueString": "v1eqv2"},
-                                {
-                                    "url": "requirements",
-                                    "valueString": "v2 should be the same as v1",
-                                },
-                                {"url": "severity", "valueCode": "error"},
-                                {
-                                    "url": "human",
-                                    "valueString": "v2 is not equal to v1",
-                                },
-                                {
-                                    "url": "expression",
-                                    "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                },
-                            ],
-                        }
+                        make_item_constraint_ext(
+                            key="v1eqv2",
+                            requirements="v2 should be the same as v1",
+                            severity="error",
+                            human="v2 is not equal to v1",
+                            expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                        )
                     ],
                 },
             ],
@@ -392,12 +357,7 @@ async def test_fce_extract_with_fhirpathmapping(fhir_client, safe_db):
         "Questionnaire",
         **{
             "status": "active",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
                 {
                     "type": "string",
@@ -461,12 +421,7 @@ async def test_fhir_extract_without_context(fhir_client, safe_db):
         **(
             {
                 "status": "active",
-                "extension": [
-                    {
-                        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                        "valueReference": {"reference": f"Mapping/{m.id}"},
-                    }
-                ],
+                "extension": [make_questionnaire_mapper_ext(m.id)],
                 "item": [
                     {
                         "type": "string",
@@ -534,12 +489,7 @@ async def test_fhir_extract_with_context(fhir_client, safe_db):
         **(
             {
                 "status": "active",
-                "extension": [
-                    {
-                        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                        "valueReference": {"reference": f"Mapping/{m.id}"},
-                    }
-                ],
+                "extension": [make_questionnaire_mapper_ext(m.id)],
                 "item": [
                     {
                         "type": "string",
@@ -612,12 +562,7 @@ async def test_fhir_extract_using_list_endpoint_with_context(fhir_client, safe_d
         **{
             "resourceType": "Questionnaire",
             "status": "active",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
                 {
                     "type": "string",
@@ -674,25 +619,13 @@ async def test_fhir_extract_fails_because_of_constraint_check(fhir_client, safe_
                         "type": "string",
                         "linkId": "v2",
                         "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                                "extension": [
-                                    {"url": "key", "valueString": "v1eqv2"},
-                                    {
-                                        "url": "requirements",
-                                        "valueString": "v2 should be the same as v1",
-                                    },
-                                    {"url": "severity", "valueCode": "error"},
-                                    {
-                                        "url": "human",
-                                        "valueString": "v2 is not equal to v1",
-                                    },
-                                    {
-                                        "url": "expression",
-                                        "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                    },
-                                ],
-                            }
+                            make_item_constraint_ext(
+                                key="v1eqv2",
+                                requirements="v2 should be the same as v1",
+                                severity="error",
+                                human="v2 is not equal to v1",
+                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()"
+                            )
                         ],
                     },
                 ],
@@ -740,25 +673,13 @@ async def test_fhir_extract_using_list_endpoint_fails_because_of_constraint_chec
                         "type": "string",
                         "linkId": "v2",
                         "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
-                                "extension": [
-                                    {"url": "key", "valueString": "v1eqv2"},
-                                    {
-                                        "url": "requirements",
-                                        "valueString": "v2 should be the same as v1",
-                                    },
-                                    {"url": "severity", "valueCode": "error"},
-                                    {
-                                        "url": "human",
-                                        "valueString": "v2 is not equal to v1",
-                                    },
-                                    {
-                                        "url": "expression",
-                                        "valueString": "(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
-                                    },
-                                ],
-                            }
+                            make_item_constraint_ext(
+                                key="v1eqv2",
+                                requirements="v2 should be the same as v1",
+                                severity="error",
+                                human="v2 is not equal to v1",
+                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()"
+                            )
                         ],
                     },
                 ],
@@ -918,14 +839,8 @@ async def test_fce_extract_multiple_mappers(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m1.id}"},
-                },
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m2.id}"},
-                },
+                make_questionnaire_mapper_ext(m1.id),
+                make_questionnaire_mapper_ext(m2.id),
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},
@@ -989,14 +904,8 @@ async def test_fce_extract_multiple_mappers_is_atomic(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m1.id}"},
-                },
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m2.id}"},
-                },
+                make_questionnaire_mapper_ext(m1.id),
+                make_questionnaire_mapper_ext(m2.id),
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},
@@ -1064,18 +973,9 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m1.id}"},
-                },
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m2.id}"},
-                },
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m3.id}"},
-                },
+                make_questionnaire_mapper_ext(m1.id),
+                make_questionnaire_mapper_ext(m2.id),
+                make_questionnaire_mapper_ext(m3.id),
             ],
             "item": [
                 {"type": "string", "linkId": "patientId"},

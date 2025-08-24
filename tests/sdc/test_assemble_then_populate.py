@@ -5,6 +5,15 @@ from app.test.utils import (
     create_parameters,
     create_questionnaire,
 )
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_source_queries_ext,
+    make_initial_expression_ext,
+    make_item_population_context_ext,
+    make_variable_ext,
+    make_sub_questionnaire_ext,
+    make_assembled_from_ext,
+)
 
 
 @pytest.mark.asyncio
@@ -31,36 +40,17 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient",
-                            },
-                        },
-                        {"url": "type", "valueCode": "Patient"},
-                    ],
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {"reference": "#PrePopQuery"},
-                },
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                            },
-                        }
+                        make_initial_expression_ext(
+                            "%PrePopQuery.entry.resource.entry.resource.start"
+                        )
                     ],
                 },
             ],
@@ -71,44 +61,19 @@ async def test_assemble_then_populate(fhir_client, safe_db):
         fhir_client,
         {
             "status": "active",
-            "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient",
-                            },
-                        },
-                        {"url": "type", "valueCode": "Patient"},
-                    ],
-                }
-            ],
+            "extension": [make_launch_context_ext("LaunchPatient", "Patient")],
             "item": [
                 {
                     "linkId": "appointment",
                     "type": "display",
                     "text": "Sub questionnaire is not supported",
-                    "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
-                            "valueCanonical": appointment.id,
-                        }
-                    ],
+                    "extension": [make_sub_questionnaire_ext(appointment.id)],
                 },
                 {
                     "type": "group",
                     "linkId": "patient-address",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.address",
-                            },
-                        }
+                        make_item_population_context_ext("%LaunchPatient.address")
                     ],
                     "item": [
                         {
@@ -116,18 +81,8 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                             "type": "display",
                             "text": "Sub questionanire is not supported",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/StructureDefinition/variable",
-                                    "valueExpression": {
-                                        "name": "prefix",
-                                        "language": "text/fhirpath",
-                                        "expression": "'patient-address-'",
-                                    },
-                                },
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
-                                    "valueCanonical": address.id,
-                                },
+                                make_variable_ext("prefix", "'patient-address-'"),
+                                make_sub_questionnaire_ext(address.id),
                             ],
                         }
                     ],
@@ -137,45 +92,23 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                     "linkId": "patient-contact",
                     "repeats": True,
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.contact",
-                            },
-                        }
+                        make_item_population_context_ext("%LaunchPatient.contact")
                     ],
                     "item": [
                         {
                             "type": "group",
                             "linkId": "patient-contanct-address",
-                            "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "address",
-                                    },
-                                }
-                            ],
+                            "extension": [make_item_population_context_ext("address")],
                             "item": [
                                 {
                                     "linkId": "patient-contact-address-display",
                                     "type": "display",
                                     "text": "Sub questionanire is not supported",
                                     "extension": [
-                                        {
-                                            "url": "http://hl7.org/fhir/StructureDefinition/variable",
-                                            "valueExpression": {
-                                                "name": "prefix",
-                                                "language": "text/fhirpath",
-                                                "expression": "'patient-contact-address-'",
-                                            },
-                                        },
-                                        {
-                                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-subQuestionnaire",
-                                            "valueCanonical": address.id,
-                                        },
+                                        make_variable_ext(
+                                            "prefix", "'patient-contact-address-'"
+                                        ),
+                                        make_sub_questionnaire_ext(address.id),
                                     ],
                                 }
                             ],
@@ -194,27 +127,9 @@ async def test_assemble_then_populate(fhir_client, safe_db):
         "resourceType": "Questionnaire",
         "status": "active",
         "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "code": "LaunchPatient",
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                        },
-                    },
-                    {"url": "type", "valueCode": "Patient"},
-                ],
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                "valueReference": {"reference": "#PrePopQuery"},
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom",
-                "valueCanonical": q.id,
-            },
+            make_launch_context_ext("LaunchPatient", "Patient"),
+            make_source_queries_ext("#PrePopQuery"),
+            make_assembled_from_ext(q.id),
         ],
         "contained": [
             {
@@ -236,53 +151,27 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 "type": "string",
                 "linkId": "last-appointment",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                        },
-                    }
+                    make_initial_expression_ext(
+                        "%PrePopQuery.entry.resource.entry.resource.start"
+                    )
                 ],
             },
             {
                 "type": "group",
                 "linkId": "patient-address",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.address",
-                        },
-                    }
+                    make_item_population_context_ext("%LaunchPatient.address")
                 ],
                 "item": [
                     {
                         "linkId": "patient-address-line-1",
                         "type": "string",
-                        "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                "valueExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "line[0]",
-                                },
-                            }
-                        ],
+                        "extension": [make_initial_expression_ext("line[0]")],
                     },
                     {
                         "linkId": "patient-address-line-2",
                         "type": "string",
-                        "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                "valueExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "line[1]",
-                                },
-                            }
-                        ],
+                        "extension": [make_initial_expression_ext("line[1]")],
                         "enableWhen": [
                             {
                                 "question": "patient-address-line-1",
@@ -298,52 +187,26 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 "linkId": "patient-contact",
                 "repeats": True,
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.contact",
-                        },
-                    }
+                    make_item_population_context_ext("%LaunchPatient.contact")
                 ],
                 "item": [
                     {
                         "type": "group",
                         "linkId": "patient-contanct-address",
-                        "extension": [
-                            {
-                                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                                "valueExpression": {
-                                    "language": "text/fhirpath",
-                                    "expression": "address",
-                                },
-                            }
-                        ],
+                        "extension": [make_item_population_context_ext("address")],
                         "item": [
                             {
                                 "linkId": "patient-contact-address-line-1",
                                 "type": "string",
                                 "extension": [
-                                    {
-                                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                        "valueExpression": {
-                                            "language": "text/fhirpath",
-                                            "expression": "line[0]",
-                                        },
-                                    }
+                                    make_initial_expression_ext("line[0]")
                                 ],
                             },
                             {
                                 "linkId": "patient-contact-address-line-2",
                                 "type": "string",
                                 "extension": [
-                                    {
-                                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                        "valueExpression": {
-                                            "language": "text/fhirpath",
-                                            "expression": "line[1]",
-                                        },
-                                    }
+                                    make_initial_expression_ext("line[1]")
                                 ],
                                 "enableWhen": [
                                     {

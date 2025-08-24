@@ -4,6 +4,12 @@ from decimal import Decimal
 from fhirpathpy import evaluate
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_initial_expression_ext,
+    make_item_population_context_ext,
+    make_source_queries_ext
+)
 
 
 @pytest.mark.asyncio
@@ -13,35 +19,14 @@ async def test_initial_expression_populate(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "code": "LaunchPatient",
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "patientId",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.id",
-                            }
-                        }
+                        make_initial_expression_ext("%LaunchPatient.id")
                     ]
                 },
             ],
@@ -74,35 +59,14 @@ async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe
         "resourceType": "Questionnaire",
         "status": "active",
         "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": "LaunchPatient"
-                        }
-                    },
-                    {
-                        "url": "type",
-                        "valueCode": "Patient"
-                    }
-                ]
-            }
+            make_launch_context_ext("LaunchPatient", "Patient")
         ],
         "item": [
             {
                 "type": "string",
                 "linkId": "patientId",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.id",
-                        }
-                    }
+                    make_initial_expression_ext("%LaunchPatient.id")
                 ]
             },
         ],
@@ -134,35 +98,15 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_item_population_context_ext("%LaunchPatient.name")
             ],
             "item": [
                 {
                     "type": "group",
                     "linkId": "names",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.name",
-                            }
-                        }
+                        make_item_population_context_ext("%LaunchPatient.name")
                     ],
                     "item": [
                         {
@@ -170,13 +114,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
                             "type": "string",
                             "linkId": "firstName",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "given",
-                                    }
-                                }
+                                make_initial_expression_ext("given")
                             ],
                         },
                     ],
@@ -229,22 +167,8 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_item_population_context_ext("%LaunchPatient.address")
             ],
             "item": [
                 {
@@ -252,26 +176,14 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
                     "linkId": "addresses",
                     "repeats": True,
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.address",
-                            }
-                        }
+                        make_item_population_context_ext("%LaunchPatient.address")
                     ],
                     "item": [
                         {
                             "type": "string",
                             "linkId": "city",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "city.first()",
-                                    }
-                                }
+                                make_initial_expression_ext("city.first()")
                             ],
                         },
                     ],
@@ -328,38 +240,8 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchEncounter"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Encounter"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_launch_context_ext("LaunchEncounter", "Encounter")
             ],
             "item": [
                 {
@@ -367,26 +249,14 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                     "linkId": "addresses",
                     "repeats": True,
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.address",
-                            }
-                        }
+                        make_item_population_context_ext("%LaunchPatient.address")
                     ],
                     "item": [
                         {
                             "type": "string",
                             "linkId": "city",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "city.first()",
-                                    }
-                                }
+                                make_initial_expression_ext("city.first()")
                             ],
                         },
                         {
@@ -394,13 +264,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                             "repeats": True,
                             "linkId": "encounter-id",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "%LaunchEncounter.id",
-                                    }
-                                }
+                                make_initial_expression_ext("%LaunchEncounter.id")
                             ],
                         },
                     ],
@@ -475,22 +339,8 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_item_population_context_ext("%LaunchPatient.address")
             ],
             "item": [
                 {
@@ -498,13 +348,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                     "type": "group",
                     "linkId": "address",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.address",
-                            }
-                        }
+                        make_item_population_context_ext("%LaunchPatient.address")
                     ],
                     "item": [
                         {
@@ -512,13 +356,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                             "linkId": "city",
                             "type": "string",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "city",
-                                    }
-                                }
+                                make_initial_expression_ext("city")
                             ],
                         },
                         {
@@ -526,13 +364,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                             "linkId": "line-1",
                             "type": "string",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "line[0]",
-                                    }
-                                }
+                                make_initial_expression_ext("line[0]")
                             ],
                         },
                         {
@@ -540,13 +372,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                             "linkId": "line-2",
                             "type": "string",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "line[1]",
-                                    }
-                                }
+                                make_initial_expression_ext("line[1]")
                             ],
                         },
                         {
@@ -554,13 +380,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
                             "linkId": "Country",
                             "type": "string",
                             "extension": [
-                                {
-                                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                                    "valueExpression": {
-                                        "language": "text/fhirpath",
-                                        "expression": "country",
-                                    }
-                                }
+                                make_initial_expression_ext("country")
                             ],
                         },
                     ],
@@ -653,41 +473,15 @@ async def test_source_query_populate(fhir_client, safe_db):
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#PrePopQuery"
-                    }
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery")
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                            }
-                        }
+                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
                     ]
                 },
             ],
@@ -717,22 +511,7 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "Diet"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Bundle"
-                        }
-                    ]
-                }
+                make_launch_context_ext("Diet", "Bundle"),
             ],
             "item": [
                 {
@@ -740,13 +519,7 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
                     "linkId": "diet",
                     "repeats": True,
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%Diet.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')",
-                            }
-                        }
+                        make_initial_expression_ext("%Diet.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')")
                     ],
                 },
             ],
@@ -840,35 +613,14 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
         "Questionnaire",
         **{
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "patientName",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.name.given.toQuantity()",
-                            }
-                        }
+                        make_initial_expression_ext("%LaunchPatient.name.given.toQuantity()")
                     ],
                 }
             ],
@@ -912,35 +664,14 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
         "Questionnaire",
         **{
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "patientName",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family",
-                            }
-                        }
+                        make_initial_expression_ext("%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family")
                     ],
                 }
             ],
@@ -974,32 +705,14 @@ async def test_fhir_fhirpath_success_populate(fhir_client, safe_db):
                 "type": "string",
                 "linkId": "patientName",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family",
-                        },
-                    }
+                    make_initial_expression_ext("%LaunchPatient.name.given[0] + ' ' + %LaunchPatient.name.family")
                 ],
             }
         ],
         "status": "active",
         "resourceType": "Questionnaire",
         "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": "LaunchPatient",
-                        },
-                    },
-                    {"url": "type", "valueCode": "Patient"},
-                ],
-            }
+            make_launch_context_ext("LaunchPatient", "Patient")
         ],
         "meta": {
             "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
@@ -1035,13 +748,7 @@ async def test_fhir_source_query_populate(fhir_client, safe_db):
                 "type": "dateTime",
                 "linkId": "deceased",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
-                        },
-                    }
+                    make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
                 ],
             }
         ],
@@ -1058,23 +765,8 @@ async def test_fhir_source_query_populate(fhir_client, safe_db):
             }
         ],
         "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": "LaunchPatient",
-                        },
-                    },
-                    {"url": "type", "valueCode": "Patient"},
-                ],
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                "valueReference": {"reference": "#Bundle#PrePopQuery"},
-            },
+            make_launch_context_ext("LaunchPatient", "Patient"),
+            make_source_queries_ext("#Bundle#PrePopQuery"),
         ],
     }
 
@@ -1112,13 +804,7 @@ async def test_fhir_source_query_reference_populate(fhir_client, safe_db):
                 "type": "dateTime",
                 "linkId": "deceased",
                 "extension": [
-                    {
-                        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                        "valueExpression": {
-                            "language": "text/fhirpath",
-                            "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
-                        },
-                    }
+                    make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
                 ],
             }
         ],
@@ -1135,23 +821,8 @@ async def test_fhir_source_query_reference_populate(fhir_client, safe_db):
             }
         ],
         "extension": [
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                "extension": [
-                    {
-                        "url": "name",
-                        "valueCoding": {
-                            "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                            "code": "LaunchPatient",
-                        },
-                    },
-                    {"url": "type", "valueCode": "Patient"},
-                ],
-            },
-            {
-                "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                "valueReference": {"reference": "#PrePopQuery"},
-            },
+            make_launch_context_ext("LaunchPatient", "Patient"),
+            make_source_queries_ext("#PrePopQuery"),
         ],
     }
 
@@ -1188,13 +859,7 @@ async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
                     "type": "dateTime",
                     "linkId": "deceased",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
-                            },
-                        }
+                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
                     ],
                 }
             ],
@@ -1211,23 +876,8 @@ async def test_fhir_source_query_populate_from_api(fhir_client, safe_db):
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient",
-                            },
-                        },
-                        {"url": "type", "valueCode": "Patient"},
-                    ],
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {"reference": "#PrePopQuery"},
-                },
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery"),
             ],
         },
     )
@@ -1265,13 +915,7 @@ async def test_fhir_source_query_reference_populate_from_api(fhir_client, safe_d
                     "type": "dateTime",
                     "linkId": "deceased",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.deceasedDateTime",
-                            },
-                        }
+                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.deceasedDateTime")
                     ],
                 }
             ],
@@ -1288,23 +932,8 @@ async def test_fhir_source_query_reference_populate_from_api(fhir_client, safe_d
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient",
-                            },
-                        },
-                        {"url": "type", "valueCode": "Patient"},
-                    ],
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {"reference": "#Bundle#PrePopQuery"},
-                },
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#Bundle#PrePopQuery"),
             ],
         },
     )
@@ -1342,32 +971,14 @@ async def test_money_populate(fhir_client, safe_db):
                     "type": "quantity",
                     "linkId": "charge-amount",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%ChargeItemDefinition.extension('charge-item-definition-price').valueQuantity",
-                            },
-                        }
+                        make_initial_expression_ext("%ChargeItemDefinition.extension('charge-item-definition-price').valueQuantity")
                     ],
                 }
             ],
             "status": "active",
             "resourceType": "Questionnaire",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "ChargeItemDefinition",
-                            },
-                        },
-                        {"url": "type", "valueCode": "ChargeItemDefinition"},
-                    ],
-                }
+                make_launch_context_ext("ChargeItemDefinition", "ChargeItemDefinition")
             ],
         },
     )
@@ -1425,41 +1036,15 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#PrePopQuery"
-                    }
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery")
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                            }
-                        }
+                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
                     ],
                     # Constraint check that uses PrePopQuery should go here
                 },
@@ -1508,41 +1093,15 @@ async def test_fhir_source_query_with_qr_vars_populate(fhir_client, safe_db):
                 }
             ],
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#PrePopQuery"
-                    }
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#PrePopQuery")
             ],
             "item": [
                 {
                     "type": "string",
                     "linkId": "last-appointment",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "%PrePopQuery.entry.resource.entry.resource.start",
-                            }
-                        }
+                        make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
                     ],
                     # Constraint check that uses PrePopQuery should go here
                 },

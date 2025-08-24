@@ -1,29 +1,20 @@
 import pytest
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_source_queries_ext,
+    make_initial_expression_ext,
+    make_item_population_context_ext
+)
 
 questionnaire = {
     "resourceType": "Questionnaire",
     "id": "example-questionnaire",
     "status": "active",
     "extension": [
-        {
-            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-            "extension": [
-                {
-                    "url": "name",
-                    "valueCoding": {
-                        "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                        "code": "patient",
-                    },
-                },
-                {"url": "type", "valueCode": "Patient"},
-            ],
-        },
-        {
-            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-            "valueReference": {"reference": "#PrePopQuery"},
-        },
+        make_launch_context_ext("patient", "Patient"),
+        make_source_queries_ext("#PrePopQuery"),
     ],
     "contained": [
         {
@@ -45,13 +36,7 @@ questionnaire = {
             "type": "group",
             "linkId": "names",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
-                    "valueExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "%PrePopQuery.entry.resource.entry.resource.name",
-                    },
-                }
+                make_item_population_context_ext("%PrePopQuery.entry.resource.entry.resource.name")
             ],
             "item": [
                 {
@@ -59,13 +44,7 @@ questionnaire = {
                     "type": "string",
                     "linkId": "firstName",
                     "extension": [
-                        {
-                            "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
-                            "valueExpression": {
-                                "language": "text/fhirpath",
-                                "expression": "given",
-                            },
-                        }
+                        make_initial_expression_ext("given")
                     ],
                 },
             ],

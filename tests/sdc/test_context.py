@@ -3,6 +3,10 @@ import uuid
 import pytest
 
 from app.test.utils import create_parameters
+from tests.test_utils import (
+    make_launch_context_ext,
+    make_source_queries_ext
+)
 
 
 @pytest.mark.asyncio
@@ -35,34 +39,9 @@ async def test_get_questionnaire_context(fhir_client, safe_db):
         **{
             "status": "active",
             "extension": [
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
-                    "extension": [
-                        {
-                            "url": "name",
-                            "valueCoding": {
-                                "system": "http://hl7.org/fhir/uv/sdc/CodeSystem/launchContext",
-                                "code": "LaunchPatient"
-                            }
-                        },
-                        {
-                            "url": "type",
-                            "valueCode": "Patient"
-                        }
-                    ]
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#Data1"
-                    }
-                },
-                {
-                    "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
-                    "valueReference": {
-                        "reference": "#Data2"
-                    }
-                }
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_source_queries_ext("#Data1"),
+                make_source_queries_ext("#Data2")
             ],
             "contained": [
                 {
