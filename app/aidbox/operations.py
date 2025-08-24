@@ -61,7 +61,6 @@ async def constraint_check_operation(request: AidboxSdcRequest):
             client,
             fce_questionnaire,
             env,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
         ),
         dumps=json.dumps,
     )
@@ -132,7 +131,6 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
         client,
         fce_questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
     )
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request.request["app"])
@@ -209,7 +207,6 @@ async def extract_questionnaire_instance(
         extract_client,
         fce_questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
     )
 
     return await extract(extract_client, mappings, context, extract_services)
