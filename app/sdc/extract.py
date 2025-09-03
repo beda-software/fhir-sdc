@@ -25,9 +25,6 @@ async def execute_mappers_bundles(client, mappers_bundles):
     except:
         flattened_mappers_bundles = []
 
-    if len(flattened_mappers_bundles) == 0:
-        return {"status": 204, "status_description": "Empty bundle,  nothing to do"}
-
     check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles)
 
     not_transaction = any(bundle.get("type") != "transaction" for bundle in mappers_bundles)
