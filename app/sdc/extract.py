@@ -20,7 +20,13 @@ async def get_external_service_bundle(session, service, template, context):
 
 
 async def execute_mappers_bundles(client, mappers_bundles):
-    flattened_mappers_bundles = list(flatten(bundle["entry"] for bundle in mappers_bundles))
+    try:
+        flattened_mappers_bundles = list(flatten(bundle["entry"] for bundle in mappers_bundles))
+    except:
+        flattened_mappers_bundles = []
+
+    if len(flattened_mappers_bundles) == 0:
+        return {"status": 204, "status_description": "Empty bundle,  nothing to do"}
 
     check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles)
 
