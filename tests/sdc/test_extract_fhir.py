@@ -2,13 +2,19 @@ import pytest
 from faker import Faker
 
 from app.test.utils import create_parameters
+from tests.test_utils import make_questionnaire_mapper_ext
 
 fake = Faker()
 
 questionnaire = {
     "name": "practitioner-create",
     "item": [
-        {"text": "Last name", "type": "string", "linkId": "last-name", "required": True},
+        {
+            "text": "Last name",
+            "type": "string",
+            "linkId": "last-name",
+            "required": True,
+        },
         {"text": "First name", "type": "string", "linkId": "first-name"},
         {"text": "Middle name", "type": "string", "linkId": "middle-name"},
         {
@@ -57,15 +63,14 @@ questionnaire = {
     "resourceType": "Questionnaire",
     "title": "Practitioner create",
     "extension": [
-        {
-            "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-            "valueReference": {"reference": "Mapping/practitioner-create"},
-        }
+        make_questionnaire_mapper_ext("practitioner-create")
     ],
     "status": "active",
     "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
     "meta": {
-        "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
+        "profile": [
+            "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
+        ],
     },
 }
 
@@ -153,71 +158,77 @@ def questionnaire_response(first_name, last_name):
 
 
 @pytest.mark.asyncio
-async def test_context_extraction(aidbox_client, safe_db):
-    m = aidbox_client.resource("Mapping", **mapping)
+async def test_context_extraction(fhir_client, safe_db):
+    m = fhir_client.resource("Mapping", **mapping)
     await m.save()
     assert m.id
     first_name = fake.first_name()
     last_name = fake.last_name()
-    await aidbox_client.execute(
-        "fhir/Questionnaire/$extract",
+    await fhir_client.execute(
+        "Questionnaire/$extract",
         data=create_parameters(
             Questionnaire=questionnaire,
             QuestionnaireResponse=questionnaire_response(first_name, last_name),
         ),
     )
 
-    p = await aidbox_client.resources("Practitioner").search().first()
+    p = await fhir_client.resources("Practitioner").search().first()
     assert p["name"] == [{"family": last_name, "given": [first_name]}]
-    pr = await aidbox_client.resources("PractitionerRole").search().first()
-    assert pr["practitioner"]["id"] == p.id
+    pr = await fhir_client.resources("PractitionerRole").search().first()
+    assert pr["practitioner"]["reference"].split("/")[-1] == p.id
 
 
 @pytest.mark.asyncio
-async def test_qr_extraction(aidbox_client, safe_db):
-    m = aidbox_client.resource("Mapping", **mapping)
+async def test_qr_extraction(fhir_client, safe_db):
+    m = fhir_client.resource("Mapping", **mapping)
     await m.save()
     assert m.id
 
-    q = await aidbox_client.execute("fhir/Questionnaire", data=questionnaire)
+    q = await fhir_client.execute("Questionnaire", data=questionnaire)
 
     first_name = fake.first_name()
     last_name = fake.last_name()
-    await aidbox_client.execute(
-        "fhir/Questionnaire/$extract",
-        data={**questionnaire_response(first_name, last_name), "questionnaire": q["id"]},
+    await fhir_client.execute(
+        "Questionnaire/$extract",
+        data={
+            **questionnaire_response(first_name, last_name),
+            "questionnaire": q["id"],
+        },
     )
 
-    p = await aidbox_client.resources("Practitioner").search().first()
+    p = await fhir_client.resources("Practitioner").search().first()
     assert p["name"] == [{"family": last_name, "given": [first_name]}]
-    pr = await aidbox_client.resources("PractitionerRole").search().first()
-    assert pr["practitioner"]["id"] == p.id
+    pr = await fhir_client.resources("PractitionerRole").search().first()
+    assert pr["practitioner"]["reference"].split("/")[-1] == p.id
 
 
 @pytest.mark.asyncio
-async def test_q_extraction(aidbox_client, safe_db):
-    m = aidbox_client.resource("Mapping", **mapping)
+async def test_q_extraction(fhir_client, safe_db):
+    m = fhir_client.resource("Mapping", **mapping)
     await m.save()
     assert m.id
 
-    q = await aidbox_client.execute("fhir/Questionnaire", data=questionnaire)
+    q = await fhir_client.execute("Questionnaire", data=questionnaire)
 
     first_name = fake.first_name()
     last_name = fake.last_name()
-    await aidbox_client.execute(
-        f"fhir/Questionnaire/{q['id']}/$extract",
-        data={**questionnaire_response(first_name, last_name), "questionnaire": q["id"]},
+    await fhir_client.execute(
+        f"Questionnaire/{q['id']}/$extract",
+        data={
+            **questionnaire_response(first_name, last_name),
+            "questionnaire": q["id"],
+        },
     )
 
-    p = await aidbox_client.resources("Practitioner").search().first()
+    p = await fhir_client.resources("Practitioner").search().first()
     assert p["name"] == [{"family": last_name, "given": [first_name]}]
-    pr = await aidbox_client.resources("PractitionerRole").search().first()
-    assert pr["practitioner"]["id"] == p.id
+    pr = await fhir_client.resources("PractitionerRole").search().first()
+    assert pr["practitioner"]["reference"].split("/")[-1] == p.id
 
 
 @pytest.mark.asyncio
-async def test_decimal_extraction(aidbox_client, safe_db):
-    m = aidbox_client.resource(
+async def test_decimal_extraction(fhir_client, safe_db):
+    m = fhir_client.resource(
         "Mapping",
         **{
             "resourceType": "Mapping",
@@ -242,27 +253,24 @@ async def test_decimal_extraction(aidbox_client, safe_db):
     await m.save()
     assert m.id
 
-    q = await aidbox_client.execute(
-        "fhir/Questionnaire",
+    q = await fhir_client.execute(
+        "Questionnaire",
         data={
             "resourceType": "Questionnaire",
-            "extension": [
-                {
-                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
-                    "valueReference": {"reference": f"Mapping/{m.id}"},
-                }
-            ],
+            "extension": [make_questionnaire_mapper_ext(m.id)],
             "status": "active",
             "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
             "meta": {
-                "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
+                "profile": [
+                    "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
+                ],
             },
         },
     )
     assert q.id
 
-    result = await aidbox_client.execute(
-        f"fhir/Questionnaire/{q['id']}/$extract",
+    result = await fhir_client.execute(
+        f"Questionnaire/{q['id']}/$extract",
         data={"resourceType": "QuestionnaireResponse"},
     )
 
