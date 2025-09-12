@@ -570,8 +570,12 @@ def process_source_queries(fhirQuestionnaire):
     )
 
 
+def find_extensions(item, url):
+    return [ext for ext in item.get("extension", []) if ext.get("url") == url]
+
+
 def find_extension(item, url):
-    return next((ext for ext in item.get("extension", []) if ext.get("url") == url), None)
+    return next(find_extensions(item, url), None)
 
 
 def find_initial_value(item, property):

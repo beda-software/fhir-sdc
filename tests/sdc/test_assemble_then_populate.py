@@ -1,10 +1,12 @@
 import pytest
 
 from tests.factories import (
+    QUESTIONNAIRE_PROFILE_URL,
     create_address_questionnaire,
     make_parameters,
     create_questionnaire,
     make_launch_context_ext,
+    make_questionnaire,
     make_source_queries_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
@@ -119,10 +121,13 @@ async def test_assemble_then_populate(fhir_client, safe_db):
 
     assembled = await q.execute("$assemble", method="get")
 
-    del assembled["meta"]
+    del assembled["meta"]["lastUpdated"]
+    del assembled["meta"]["versionId"]
+    del assembled["meta"]["extension"]
 
     assert assembled == {
         "resourceType": "Questionnaire",
+        "meta": {"profile": [QUESTIONNAIRE_PROFILE_URL]},
         "status": "active",
         "extension": [
             make_launch_context_ext("LaunchPatient", "Patient"),
@@ -225,6 +230,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
         **{
             "status": "booked",
             "start": "2020-01-01T00:00:00Z",
+            "end": "2020-01-01T00:00:00Z",
             "participant": [{"status": "accepted", "actor": patient}],
         },
     )
