@@ -1,9 +1,9 @@
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
-
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_questionnaire_mapper_ext,
     make_item_constraint_ext,
 )
@@ -41,9 +41,9 @@ async def test_extract_with_fhirpathmapping(fhir_client, safe_db):
 
     await m.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [make_questionnaire_mapper_ext(m.id)],
             "item": [
@@ -54,7 +54,6 @@ async def test_extract_with_fhirpathmapping(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -82,7 +81,6 @@ async def test_extract_with_fhirpathmapping(fhir_client, safe_db):
     assert p[0].id == "newPatient"
 
 
-
 @pytest.mark.asyncio
 async def test_extract_without_context(fhir_client, safe_db):
     m = fhir_client.resource(
@@ -105,9 +103,9 @@ async def test_extract_without_context(fhir_client, safe_db):
     )
 
     await m.save()
-    q = fhir_client.resource(
-        "Questionnaire",
-        **(
+    q = await create_questionnaire(
+        fhir_client,
+        (
             {
                 "status": "active",
                 "extension": [make_questionnaire_mapper_ext(m.id)],
@@ -120,7 +118,6 @@ async def test_extract_without_context(fhir_client, safe_db):
             }
         ),
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -173,9 +170,9 @@ async def test_extract_with_context(fhir_client, safe_db):
     )
 
     await m.save()
-    q = fhir_client.resource(
-        "Questionnaire",
-        **(
+    q = await create_questionnaire(
+        fhir_client,
+        (
             {
                 "status": "active",
                 "extension": [make_questionnaire_mapper_ext(m.id)],
@@ -188,7 +185,6 @@ async def test_extract_with_context(fhir_client, safe_db):
             }
         ),
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -206,7 +202,7 @@ async def test_extract_with_context(fhir_client, safe_db):
     context = {"resourceType": "ContextResource", "name": "Name"}
     extraction = await q.execute(
         "$extract",
-        data=create_parameters(QuestionnaireResponse=qr, ContextResource=context),
+        data=make_parameters(QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
@@ -246,9 +242,9 @@ async def test_extract_using_list_endpoint_with_context(fhir_client, safe_db):
     )
 
     await m.save()
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "resourceType": "Questionnaire",
             "status": "active",
             "extension": [make_questionnaire_mapper_ext(m.id)],
@@ -277,7 +273,7 @@ async def test_extract_using_list_endpoint_with_context(fhir_client, safe_db):
 
     extraction = await fhir_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(
+        data=make_parameters(
             Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
         ),
     )
@@ -294,9 +290,9 @@ async def test_extract_using_list_endpoint_with_context(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_extract_fails_because_of_constraint_check(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **(
+    q = await create_questionnaire(
+        fhir_client,
+        (
             {
                 "status": "active",
                 "item": [
@@ -321,7 +317,6 @@ async def test_extract_fails_because_of_constraint_check(fhir_client, safe_db):
             }
         ),
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -348,9 +343,9 @@ async def test_extract_fails_because_of_constraint_check(fhir_client, safe_db):
 async def test_extract_using_list_endpoint_fails_because_of_constraint_check_list(
     fhir_client, safe_db
 ):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **(
+    q = await create_questionnaire(
+        fhir_client,
+        (
             {
                 "status": "active",
                 "item": [
@@ -375,7 +370,6 @@ async def test_extract_using_list_endpoint_fails_because_of_constraint_check_lis
             }
         ),
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -397,9 +391,7 @@ async def test_extract_using_list_endpoint_fails_because_of_constraint_check_lis
     with pytest.raises(OperationOutcome):
         await fhir_client.execute(
             "Questionnaire/$extract",
-            data=create_parameters(
-                Questionnaire=q.serialize(), QuestionnaireResponse=qr
-            ),
+            data=make_parameters(Questionnaire=q.serialize(), QuestionnaireResponse=qr),
         )
 
 
@@ -523,9 +515,9 @@ async def test_extract_multiple_mappers(fhir_client, safe_db):
     await m1.save()
     await m2.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_questionnaire_mapper_ext(m1.id),
@@ -537,7 +529,6 @@ async def test_extract_multiple_mappers(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -588,9 +579,9 @@ async def test_extract_multiple_mappers_is_atomic(fhir_client, safe_db):
     await m1.save()
     await m2.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_questionnaire_mapper_ext(m1.id),
@@ -602,7 +593,6 @@ async def test_extract_multiple_mappers_is_atomic(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",
@@ -657,9 +647,9 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
     await m2.save()
     await m3.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_questionnaire_mapper_ext(m1.id),
@@ -671,14 +661,8 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
                 {"type": "string", "linkId": "patientId2"},
                 {"type": "string", "linkId": "observationCode"},
             ],
-            "meta": {
-                "profile": [
-                    "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
-                ],
-            },
         },
     )
-    await q.save()
 
     qr = fhir_client.resource(
         "QuestionnaireResponse",

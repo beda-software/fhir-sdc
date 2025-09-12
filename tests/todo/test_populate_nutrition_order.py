@@ -1,8 +1,9 @@
 import pytest
 from fhirpathpy import evaluate as fhirpath
 
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_launch_context_ext,
     make_source_queries_ext,
     make_initial_expression_ext
@@ -16,9 +17,9 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
     Shown typo (missing bracket) causes an empty bundle response
     The system should check such cases an fire warnings
     """
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -53,9 +54,6 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = fhir_client.resource("Patient")
     await launch_patient.save()
@@ -88,7 +86,7 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
     await n.save()
     assert n.id is not None
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     populated_answer = fhirpath(

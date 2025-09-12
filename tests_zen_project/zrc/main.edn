@@ -1,7 +1,0 @@
-{ns main
- import #{aidbox
-          hl7-fhir-r4-core
-          aidbox.multitenancy.v1.fhir-r4
-          questionnaire-profile}
- box
- {:zen/tags #{aidbox/system}}}

@@ -141,17 +141,16 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
 @prepare_args
 async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     resource = request.resource
-    fce_questionnaire = (
-        await request.aidbox_client.resources("Questionnaire")
+    fhir_questionnaire = (
+        await request.fhir_client.resources("Questionnaire")
         .search(_id=request.route_params["id"])
         .get()
     )
-    env_questionnaire = (
-        await from_first_class_extension(fce_questionnaire, request.aidbox_client)
-        if request.is_fhir
-        else fce_questionnaire
+    fce_questionnaire = await to_first_class_extension(
+        fhir_questionnaire, request.aidbox_client
     )
     extract_client = get_user_sdk_client(request.request, request.client)
+    env_questionnaire = fhir_questionnaire if request.is_fhir else fce_questionnaire
     return web.json_response(
         await extract_questionnaire_instance(
             request.aidbox_client,

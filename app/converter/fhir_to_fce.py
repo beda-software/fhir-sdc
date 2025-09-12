@@ -152,7 +152,7 @@ def process_extension(fhirQuestionnaire):
         fhirQuestionnaire,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
     )
-    assemble_context = find_extension(
+    assemble_contexts = find_extensions(
         fhirQuestionnaire,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
     )
@@ -163,9 +163,13 @@ def process_extension(fhirQuestionnaire):
         "sourceQueries": source_queries if source_queries else None,
         "targetStructureMap": target_structure_map if target_structure_map else None,
         "itemPopulationContext": (
-            item_population_context["valueExpression"] if item_population_context else None
+            item_population_context["valueExpression"]
+            if item_population_context
+            else None
         ),
-        "assembleContext": assemble_context["valueString"] if assemble_context else None,
+        "assembleContext": [
+            assemble_context["valueString"] for assemble_context in assemble_contexts
+        ] if assemble_contexts else None,
     }
 
 
@@ -566,8 +570,15 @@ def process_source_queries(fhirQuestionnaire):
     )
 
 
+def find_extensions(item, url):
+    return [ext for ext in item.get("extension", []) if ext.get("url") == url]
+
+
 def find_extension(item, url):
-    return next((ext for ext in item.get("extension", []) if ext.get("url") == url), None)
+    try:
+        return find_extensions(item, url)[0]
+    except IndexError:
+        return None
 
 
 def find_initial_value(item, property):

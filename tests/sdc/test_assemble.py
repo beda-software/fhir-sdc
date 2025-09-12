@@ -1,9 +1,9 @@
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-from app.test.utils import create_address_questionnaire, create_questionnaire
-from tests.sdc.test_extract_fhir import questionnaire
-from tests.test_utils import (
+from tests.factories import (
+    create_address_questionnaire,
+    create_questionnaire,
     make_assembled_from_ext,
     make_launch_context_ext,
     make_item_population_context_ext,
@@ -271,9 +271,9 @@ async def test_fhir_assemble_sub_questionnaire(fhir_client, safe_db):
         "status": "active",
         "resourceType": "Questionnaire",
         "extension": [
+            make_launch_context_ext("LaunchPatient", "Patient"),
             make_target_structure_map_ext("StructureMap/create-another-patient"),
             make_target_structure_map_ext("StructureMap/create-patient"),
-            make_launch_context_ext("LaunchPatient", "Patient"),
             make_assembled_from_ext(q["id"]),
         ],
     }

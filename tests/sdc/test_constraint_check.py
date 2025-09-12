@@ -1,8 +1,9 @@
 import pytest
 from fhirpy.base.lib import OperationOutcome
 
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_source_queries_ext,
     make_item_constraint_ext
 )
@@ -10,9 +11,9 @@ from tests.test_utils import (
 
 @pytest.mark.asyncio
 async def test_email_uniq(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_source_queries_ext("#AllEmails")
@@ -49,7 +50,6 @@ async def test_email_uniq(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
     p = fhir_client.resource(
         "Patient", telecom=[{"system": "email", "value": "p1@beda.software"}]
@@ -83,12 +83,12 @@ async def test_email_uniq(fhir_client, safe_db):
     with pytest.raises(OperationOutcome):
         assert await fhir_client.execute(
             "QuestionnaireResponse/$constraint-check",
-            data=create_parameters(Questionnaire=q, QuestionnaireResponse=invalid),
+            data=make_parameters(Questionnaire=q, QuestionnaireResponse=invalid),
         )
 
     result = await fhir_client.execute(
         "QuestionnaireResponse/$constraint-check",
-        data=create_parameters(Questionnaire=q, QuestionnaireResponse=valid),
+        data=make_parameters(Questionnaire=q, QuestionnaireResponse=valid),
     )
 
     assert result["resourceType"] == "QuestionnaireResponse"
