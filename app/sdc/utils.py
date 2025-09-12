@@ -41,6 +41,8 @@ def get_type(item, data):
         type = "string"
     elif type == "reference":
         type = "Reference"
+    elif type == "quantity":
+        type = "Quantity"
 
     return type
 

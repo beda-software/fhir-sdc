@@ -75,7 +75,7 @@ def check_fhir_questionnaire_profile(fhir_questionnaire):
     if not (
         len(fhir_questionnaire.get("meta", {}).get("profile", [])) == 1
         and fhir_questionnaire.get("meta", {}).get("profile", [])[0]
-        == "https://beda.software/beda-emr-questionnaire"
+        == "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
     ):
         raise ValueError("Only beda emr questionnaire supported")
 
@@ -249,7 +249,7 @@ def process_mapping(fhirQuestionnaire):
     mapperExtensions = list(
         filter(
             lambda ext: ext.get("url")
-            == "http://beda.software/fhir-extensions/questionnaire-mapper",
+            == "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             fhirQuestionnaire.get("extension", []),
         )
     )

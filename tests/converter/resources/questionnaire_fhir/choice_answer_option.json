@@ -36,7 +36,7 @@
   "id": "example",
   "resourceType": "Questionnaire",
   "meta": {
-    "profile": ["https://beda.software/beda-emr-questionnaire"],
+    "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
     "lastUpdated": "2023-04-24T00:09:09.518780Z",
     "versionId": "205",
     "extension": [

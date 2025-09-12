@@ -1,7 +1,7 @@
 {
     "subjectType": ["Encounter", "Patient"],
     "meta": {
-        "profile": ["https://beda.software/beda-emr-questionnaire"],
+        "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
         "lastUpdated": "2023-05-04T06:32:48.956795Z",
         "versionId": "1087",
         "extension": [
@@ -107,7 +107,7 @@
     "title": "Sign-off Consent",
     "extension": [
         {
-            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             "valueReference": {
                 "reference": "Mapping/consent-extract"
             }
