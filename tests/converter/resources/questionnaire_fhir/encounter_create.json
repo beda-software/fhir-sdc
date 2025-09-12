@@ -1,7 +1,7 @@
 {
     "meta": {
         "profile": [
-            "https://beda.software/beda-emr-questionnaire"
+            "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
         ],
         "lastUpdated": "2023-04-10T03:43:34.792167Z",
         "versionId": "694",
@@ -155,13 +155,13 @@
             ]
         },
         {
-            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             "valueReference": {
                 "reference": "Mapping/encounter-create-extract"
             }
         },
         {
-            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             "valueReference": {
                 "reference": "Mapping/test-mapper"
             }

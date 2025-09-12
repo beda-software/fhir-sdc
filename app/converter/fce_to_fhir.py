@@ -421,7 +421,7 @@ def process_mapping(questionnaire):
         mapping = questionnaire["mapping"]
         for item in mapping:
             mapping_extension = {
-                "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+                "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
                 "valueReference": {"reference": f"Mapping/{item['id']}"},
             }
             questionnaire["extension"] = questionnaire.get("extension", [])
