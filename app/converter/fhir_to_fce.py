@@ -575,7 +575,10 @@ def find_extensions(item, url):
 
 
 def find_extension(item, url):
-    return next(find_extensions(item, url), None)
+    try:
+        return find_extensions(item, url)[0]
+    except IndexError:
+        return None
 
 
 def find_initial_value(item, property):
