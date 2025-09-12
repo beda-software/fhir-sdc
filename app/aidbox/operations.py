@@ -14,7 +14,6 @@ from ..sdc import (
 from ..sdc.exception import MissingParamOperationOutcome
 from ..sdc.utils import parameter_to_env, validate_context
 from ..utils import get_extract_services
-from .settings import settings
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 
 
@@ -54,15 +53,13 @@ async def constraint_check_operation(request: AidboxSdcRequest):
         if request.is_fhir
         else env["Questionnaire"]
     )
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = client if as_root else get_user_sdk_client(request.request, request.client)
+    client = get_user_sdk_client(request.request, request.client)
 
     return web.json_response(
         await constraint_check(
             client,
             fce_questionnaire,
             env,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
         ),
         dumps=json.dumps,
     )
@@ -78,8 +75,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
         if request.is_fhir
         else env["Questionnaire"]
     )
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = client if as_root else get_user_sdk_client(request.request, request.client)
+    client = get_user_sdk_client(request.request, request.client)
     result = await get_questionnaire_context(client, fce_questionnaire, env)
 
     return web.json_response(result, dumps=json.dumps)
@@ -129,13 +125,11 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
         **env,
     }
 
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = client if as_root else get_user_sdk_client(request.request, request.client)
+    client = get_user_sdk_client(request.request, request.client)
     await constraint_check(
         client,
         fce_questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
     )
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request.request["app"])
@@ -155,13 +149,8 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     fce_questionnaire = await to_first_class_extension(
         fhir_questionnaire, request.aidbox_client
     )
+    extract_client = get_user_sdk_client(request.request, request.client)
     env_questionnaire = fhir_questionnaire if request.is_fhir else fce_questionnaire
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    extract_client = (
-        request.client
-        if as_root
-        else get_user_sdk_client(request.request, request.client)
-    )
     return web.json_response(
         await extract_questionnaire_instance(
             request.aidbox_client,
@@ -216,7 +205,6 @@ async def extract_questionnaire_instance(
         extract_client,
         fce_questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
     )
 
     return await extract(extract_client, mappings, context, extract_services)
@@ -235,12 +223,7 @@ async def populate_questionnaire(request: AidboxSdcRequest):
         if request.is_fhir
         else env["Questionnaire"]
     )
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = (
-        request.client
-        if as_root
-        else get_user_sdk_client(request.request, request.client)
-    )
+    client = get_user_sdk_client(request.request, request.client)
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
     if request.is_fhir:
@@ -263,8 +246,7 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
     )
     env = parameter_to_env(request.resource)
     env["Questionnaire"] = fhir_questionnaire if request.is_fhir else fce_questionnaire
-    as_root = fce_questionnaire.get("runOnBehalfOfRoot")
-    client = client if as_root else get_user_sdk_client(request.request, request.client)
+    client = get_user_sdk_client(request.request, request.client)
 
     fce_populated_qr = await populate(client, fce_questionnaire, env)
 

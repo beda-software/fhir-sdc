@@ -43,7 +43,7 @@ async def test_email_uniq(fhir_client, safe_db):
                             requirements="Any email should present only once in the system",
                             severity="error",
                             human="Email already exists",
-                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not()"
                         )
                     ]
                 },
