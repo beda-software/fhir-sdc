@@ -58,14 +58,14 @@ questionnaire = {
     "title": "Practitioner create",
     "extension": [
         {
-            "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             "valueReference": {"reference": "Mapping/practitioner-create"},
         }
     ],
     "status": "active",
     "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
     "meta": {
-        "profile": ["https://beda.software/beda-emr-questionnaire"],
+        "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
     },
 }
 
@@ -248,14 +248,14 @@ async def test_decimal_extraction(aidbox_client, safe_db):
             "resourceType": "Questionnaire",
             "extension": [
                 {
-                    "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+                    "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
                     "valueReference": {"reference": f"Mapping/{m.id}"},
                 }
             ],
             "status": "active",
             "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
             "meta": {
-                "profile": ["https://beda.software/beda-emr-questionnaire"],
+                "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
             },
         },
     )

@@ -733,7 +733,7 @@ async def test_fhir_fhirpath_success_populate(fhir_client, safe_db):
             }
         ],
         "meta": {
-            "profile": ["https://beda.software/beda-emr-questionnaire"],
+            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
         },
     }
 
@@ -759,7 +759,7 @@ async def test_fhir_fhirpath_success_populate(fhir_client, safe_db):
 async def test_fhir_source_query_populate(fhir_client, safe_db):
     q = {
         "meta": {
-            "profile": ["https://beda.software/beda-emr-questionnaire"],
+            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
         },
         "item": [
             {
@@ -836,7 +836,7 @@ async def test_fhir_source_query_populate(fhir_client, safe_db):
 async def test_fhir_source_query_reference_populate(fhir_client, safe_db):
     q = {
         "meta": {
-            "profile": ["https://beda.software/beda-emr-questionnaire"],
+            "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
         },
         "item": [
             {

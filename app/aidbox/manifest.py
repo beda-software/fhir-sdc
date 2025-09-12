@@ -96,7 +96,7 @@ attributes = {
             "path": ["mapping"],
             "refers": ["Mapping"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "http://beda.software/fhir-extensions/questionnaire-mapper",
+            "extensionUrl": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
             "isCollection": True,
             "description": "List of mapping resources that must be executed on extract",
         },

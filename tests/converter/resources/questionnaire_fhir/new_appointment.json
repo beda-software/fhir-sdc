@@ -1,6 +1,6 @@
 {
   "meta": {
-    "profile": ["https://beda.software/beda-emr-questionnaire"],
+    "profile": ["https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"],
     "lastUpdated": "2023-05-08T05:15:49.469994Z",
     "versionId": "8337",
     "extension": [
@@ -268,7 +268,7 @@
       ]
     },
     {
-      "url": "http://beda.software/fhir-extensions/questionnaire-mapper",
+      "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
       "valueReference": {
         "reference": "Mapping/new-appointment-extract"
       }
