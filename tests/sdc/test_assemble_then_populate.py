@@ -1,11 +1,9 @@
 import pytest
 
-from app.test.utils import (
+from tests.factories import (
     create_address_questionnaire,
-    create_parameters,
+    make_parameters,
     create_questionnaire,
-)
-from tests.test_utils import (
     make_launch_context_ext,
     make_source_queries_ext,
     make_initial_expression_ext,
@@ -198,16 +196,12 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                             {
                                 "linkId": "patient-contact-address-line-1",
                                 "type": "string",
-                                "extension": [
-                                    make_initial_expression_ext("line[0]")
-                                ],
+                                "extension": [make_initial_expression_ext("line[0]")],
                             },
                             {
                                 "linkId": "patient-contact-address-line-2",
                                 "type": "string",
-                                "extension": [
-                                    make_initial_expression_ext("line[1]")
-                                ],
+                                "extension": [make_initial_expression_ext("line[1]")],
                                 "enableWhen": [
                                     {
                                         "question": "patient-contact-address-line-1",
@@ -238,7 +232,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
 
     p = await fhir_client.execute(
         "Questionnaire/$populate",
-        data=create_parameters(LaunchPatient=patient, questionnaire=assembled),
+        data=make_parameters(LaunchPatient=patient, questionnaire=assembled),
     )
 
     assert p == {

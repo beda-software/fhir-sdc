@@ -1,15 +1,16 @@
 import pytest
 
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_launch_context_ext,
+    make_questionnaire,
     make_source_queries_ext,
     make_initial_expression_ext,
     make_item_population_context_ext
 )
 
-questionnaire = {
-    "resourceType": "Questionnaire",
+questionnaire = make_questionnaire({
     "id": "example-questionnaire",
     "status": "active",
     "extension": [
@@ -50,7 +51,7 @@ questionnaire = {
             ],
         },
     ],
-}
+})
 
 env = {
     "patient": {
@@ -72,11 +73,11 @@ async def test_populate_v3(fhir_client, safe_db):
     await patient_example.save()
 
     assert patient_example.id is not None
-    q = fhir_client.resource(
-        "Questionnaire", **questionnaire
+    q = await create_questionnaire(
+        fhir_client,
+        questionnaire
     )
-    await q.save()
-    questionnaire_response = await q.execute("$populate", data=create_parameters(patient=patient_example))
+    questionnaire_response = await q.execute("$populate", data=make_parameters(patient=patient_example))
 
     assert questionnaire_response == {
         "item": [

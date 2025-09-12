@@ -3,20 +3,22 @@ import pytest
 from decimal import Decimal
 from fhirpathpy import evaluate
 
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_launch_context_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
+    make_questionnaire,
     make_source_queries_ext,
 )
 
 
 @pytest.mark.asyncio
 async def test_initial_expression_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -30,14 +32,11 @@ async def test_initial_expression_populate(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = {"resourceType": "Patient", "id": "patienit-id"}
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -54,7 +53,7 @@ async def test_initial_expression_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe_db):
-    q = {
+    q = make_questionnaire({
         "id": "virtual-id",
         "resourceType": "Questionnaire",
         "status": "active",
@@ -66,13 +65,13 @@ async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe
                 "extension": [make_initial_expression_ext("%LaunchPatient.id")],
             },
         ],
-    }
+    })
 
     launch_patient = {"resourceType": "Patient", "id": "patient-id"}
 
     p = await fhir_client.execute(
         "Questionnaire/$populate",
-        data=create_parameters(Questionnaire=q, LaunchPatient=launch_patient),
+        data=make_parameters(Questionnaire=q, LaunchPatient=launch_patient),
     )
 
     assert p == {
@@ -89,9 +88,9 @@ async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe
 
 @pytest.mark.asyncio
 async def test_item_context_with_repeats_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -116,9 +115,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
-    assert q.id is not None
 
     launch_patient = {
         "resourceType": "Patient",
@@ -131,7 +128,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -158,9 +155,9 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -185,9 +182,6 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = {
         "resourceType": "Patient",
@@ -196,7 +190,7 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -233,9 +227,9 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
 async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
     fhir_client, safe_db
 ):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -268,9 +262,6 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = {
         "resourceType": "Patient",
@@ -282,7 +273,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
 
     p = await q.execute(
         "$populate",
-        data=create_parameters(
+        data=make_parameters(
             LaunchPatient=launch_patient, LaunchEncounter=launch_encounter
         ),
     )
@@ -331,9 +322,9 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
 
 @pytest.mark.asyncio
 async def test_item_context_without_repeats_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -377,7 +368,6 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
 
     launch_patient = {
         "resourceType": "Patient",
@@ -392,7 +382,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -444,9 +434,9 @@ async def test_source_query_populate(fhir_client, safe_db):
     )
     await a.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "contained": [
                 {
@@ -481,9 +471,7 @@ async def test_source_query_populate(fhir_client, safe_db):
         },
     )
 
-    await q.save()
-
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
+    p = await q.execute("$populate", data=make_parameters(LaunchPatient=p))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -499,9 +487,9 @@ async def test_source_query_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_multiple_answers_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("Diet", "Bundle"),
@@ -520,9 +508,6 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     diet = {
         "resourceType": "Bundle",
@@ -575,7 +560,7 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
         ],
     }
 
-    p = await q.execute("$populate", data=create_parameters(Diet=diet))
+    p = await q.execute("$populate", data=make_parameters(Diet=diet))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
@@ -604,9 +589,9 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_fhirpath_failure_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
             ],
@@ -624,9 +609,6 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
             "status": "active",
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = {
         "resourceType": "Patient",
@@ -636,7 +618,7 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
 
     try:
         await q.execute(
-            "$populate", data=create_parameters(LaunchPatient=launch_patient)
+            "$populate", data=make_parameters(LaunchPatient=launch_patient)
         )
     except Exception as e:
         assert json.loads(str(e)) == {
@@ -659,9 +641,9 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_fhirpath_success_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
             ],
@@ -679,9 +661,6 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
             "status": "active",
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     launch_patient = {
         "resourceType": "Patient",
@@ -690,7 +669,7 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
     }
 
     p = await q.execute(
-        "$populate", data=create_parameters(LaunchPatient=launch_patient)
+        "$populate", data=make_parameters(LaunchPatient=launch_patient)
     )
 
     assert p == {
@@ -704,9 +683,9 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_money_populate(fhir_client, safe_db):
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "item": [
                 {
                     "type": "quantity",
@@ -726,8 +705,6 @@ async def test_money_populate(fhir_client, safe_db):
         },
     )
 
-    await q.save()
-
     charge_item_definition = {
         "resourceType": "ChargeItemDefinition",
         "extension": [
@@ -744,7 +721,7 @@ async def test_money_populate(fhir_client, safe_db):
 
     p = await q.execute(
         "$populate",
-        data=create_parameters(ChargeItemDefinition=charge_item_definition),
+        data=make_parameters(ChargeItemDefinition=charge_item_definition),
     )
 
     assert evaluate(
@@ -763,9 +740,9 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
     p = fhir_client.resource("Patient")
     await p.save()
 
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "contained": [
                 {
@@ -801,9 +778,7 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
         },
     )
 
-    await q.save()
-
-    p = await q.execute("$populate", data=create_parameters(LaunchPatient=p))
+    p = await q.execute("$populate", data=make_parameters(LaunchPatient=p))
 
     assert p == {
         "resourceType": "QuestionnaireResponse",

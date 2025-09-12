@@ -3,12 +3,12 @@ from faker import Faker
 from fhirpathpy import evaluate as fhirpath
 
 from app.aidbox.utils import get_organization_client
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    make_parameters,
     make_launch_context_ext,
     make_source_queries_ext,
     make_item_population_context_ext,
-    make_initial_expression_ext
+    make_initial_expression_ext,
 )
 
 fake = Faker()
@@ -41,24 +41,22 @@ async def get_questionnaire():
             {
                 "type": "string",
                 "linkId": "patientId",
-                "extension": [
-                    make_initial_expression_ext("%patient.id")
-                ],
+                "extension": [make_initial_expression_ext("%patient.id")],
             },
             {
                 "type": "group",
                 "linkId": "names",
                 "extension": [
-                    make_item_population_context_ext("%PrePopQuery.entry.resource.entry.resource.name")
+                    make_item_population_context_ext(
+                        "%PrePopQuery.entry.resource.entry.resource.name"
+                    )
                 ],
                 "item": [
                     {
                         "repeats": True,
                         "type": "string",
                         "linkId": "firstName",
-                        "extension": [
-                            make_initial_expression_ext("given")
-                        ],
+                        "extension": [make_initial_expression_ext("given")],
                     },
                 ],
             },
@@ -102,7 +100,7 @@ async def test_populate(aidbox_client, safe_db):
 
     launch_patient = {"resourceType": "Patient", "id": patient1.id}
 
-    p = await q.execute("$populate", data=create_parameters(patient=launch_patient))
+    p = await q.execute("$populate", data=make_parameters(patient=launch_patient))
 
     assert fhirpath(
         p,

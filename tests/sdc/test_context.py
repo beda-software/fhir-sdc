@@ -2,8 +2,9 @@ import uuid
 
 import pytest
 
-from app.test.utils import create_parameters
-from tests.test_utils import (
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
     make_launch_context_ext,
     make_source_queries_ext
 )
@@ -34,9 +35,9 @@ async def test_get_questionnaire_context(fhir_client, safe_db):
     await location.save()
 
     # Create a new questionnaire with source queries that request created resources above
-    q = fhir_client.resource(
-        "Questionnaire",
-        **{
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
@@ -69,15 +70,12 @@ async def test_get_questionnaire_context(fhir_client, safe_db):
             ],
         },
     )
-    await q.save()
-
-    assert q.id is not None
 
     # Execute get context request and assert that output bundle has the related resources
     context = await fhir_client.execute(
         "Questionnaire/$context",
         method="POST",
-        data=create_parameters(Questionnaire=q, LaunchPatient=p),
+        data=make_parameters(Questionnaire=q, LaunchPatient=p),
         params=None,
     )
 

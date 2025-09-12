@@ -1,12 +1,11 @@
 import pytest
 from faker import Faker
 
-from app.test.utils import create_parameters
-from tests.test_utils import make_questionnaire_mapper_ext
+from tests.factories import create_questionnaire, make_parameters, make_questionnaire, make_questionnaire_mapper_ext
 
 fake = Faker()
 
-questionnaire = {
+questionnaire = make_questionnaire({
     "name": "practitioner-create",
     "item": [
         {
@@ -62,17 +61,10 @@ questionnaire = {
     ],
     "resourceType": "Questionnaire",
     "title": "Practitioner create",
-    "extension": [
-        make_questionnaire_mapper_ext("practitioner-create")
-    ],
+    "extension": [make_questionnaire_mapper_ext("practitioner-create")],
     "status": "active",
     "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
-    "meta": {
-        "profile": [
-            "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
-        ],
-    },
-}
+})
 
 
 mapping = {
@@ -166,7 +158,7 @@ async def test_context_extraction(fhir_client, safe_db):
     last_name = fake.last_name()
     await fhir_client.execute(
         "Questionnaire/$extract",
-        data=create_parameters(
+        data=make_parameters(
             Questionnaire=questionnaire,
             QuestionnaireResponse=questionnaire_response(first_name, last_name),
         ),
@@ -253,18 +245,13 @@ async def test_decimal_extraction(fhir_client, safe_db):
     await m.save()
     assert m.id
 
-    q = await fhir_client.execute(
-        "Questionnaire",
-        data={
+    q = await create_questionnaire(
+        fhir_client,
+        {
             "resourceType": "Questionnaire",
             "extension": [make_questionnaire_mapper_ext(m.id)],
             "status": "active",
             "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
-            "meta": {
-                "profile": [
-                    "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
-                ],
-            },
         },
     )
     assert q.id
