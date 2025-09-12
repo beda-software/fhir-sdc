@@ -152,7 +152,7 @@ def process_extension(fhirQuestionnaire):
         fhirQuestionnaire,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
     )
-    assemble_context = find_extension(
+    assemble_contexts = find_extensions(
         fhirQuestionnaire,
         "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
     )
@@ -163,9 +163,13 @@ def process_extension(fhirQuestionnaire):
         "sourceQueries": source_queries if source_queries else None,
         "targetStructureMap": target_structure_map if target_structure_map else None,
         "itemPopulationContext": (
-            item_population_context["valueExpression"] if item_population_context else None
+            item_population_context["valueExpression"]
+            if item_population_context
+            else None
         ),
-        "assembleContext": assemble_context["valueString"] if assemble_context else None,
+        "assembleContext": [
+            assemble_context["valueString"] for assemble_context in assemble_contexts
+        ] if assemble_contexts else None,
     }
 
 

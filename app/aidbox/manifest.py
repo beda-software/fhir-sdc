@@ -115,26 +115,9 @@ attributes = {
         "Questionnaire.assembleContext": {
             "path": ["assembleContext"],
             "resource": {"resourceType": "Entity", "id": "Questionnaire"},
+            "type": {"resourceType": "Entity", "id": "string"},
             "extensionUrl": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
             "isCollection": True,
-        },
-        "Questionnaire.assembleContext.name": {
-            "type": {"resourceType": "Entity", "id": "id"},
-            "path": ["assembleContext", "name"],
-            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "name",
-        },
-        "Questionnaire.assembleContext.type": {
-            "type": {"resourceType": "Entity", "id": "code"},
-            "path": ["assembleContext", "type"],
-            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "type",
-        },
-        "Questionnaire.assembleContext.description": {
-            "type": {"resourceType": "Entity", "id": "string"},
-            "path": ["assembleContext", "description"],
-            "resource": {"resourceType": "Entity", "id": "Questionnaire"},
-            "extensionUrl": "description",
         },
         "Questionnaire.variable": {
             "type": {"resourceType": "Entity", "id": "Expression"},

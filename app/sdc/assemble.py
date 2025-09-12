@@ -5,7 +5,7 @@ from .utils import (
     apply_converter_for_resources,
     prepare_link_ids,
     prepare_variables,
-    validate_context,
+    validate_assemble_context,
 )
 
 WHITELISTED_ROOT_ELEMENTS = {
@@ -147,9 +147,9 @@ def _assemble_questionnaire(
 
 
 def _validate_assemble_context(questionnaire, variables: dict):
-    if "assembleContext" not in questionnaire:
+    if not questionnaire.get("assembleContext", []):
         return False
 
-    validate_context(questionnaire["assembleContext"], variables)
+    validate_assemble_context(questionnaire["assembleContext"], variables)
 
     return True

@@ -157,35 +157,37 @@ async def load_source_queries(client, fce_questionnaire, env):
                 env[bundle["id"]] = await client.execute("/", data=bundle)
 
 
-def validate_context(context_definition, env):
-    if isinstance(context_definition, str):
-        if context_definition not in env.keys():
-            raise ConstraintCheckOperationOutcome(
-                [
-                    {
-                        "severity": "error",
-                        "key": "undefined-var",
-                        "human": "Context variable {} not defined".format(context_definition),
-                    }
-                ]
+def validate_assemble_context(assemble_context: list[str], env):
+    errors = []
+    for var_name in assemble_context:
+        if var_name not in env.keys():
+            errors.append(
+                {
+                    "severity": "error",
+                    "key": "undefined-var",
+                    "human": "Context variable {} not defined".format(var_name),
+                }
             )
-    else:
-        all_vars = env.keys()
-        errors = []
-        for item in context_definition:
-            name = item["name"]
-            if not isinstance(name, str):
-                name = item["name"]["code"]
-            if name not in all_vars:
-                errors.append(
-                    {
-                        "severity": "error",
-                        "key": "undefined-var",
-                        "human": "Context variable {} not defined".format(name),
-                    }
-                )
-        if len(errors) > 0:
-            raise ConstraintCheckOperationOutcome(errors)
+    if len(errors) > 0:
+        raise ConstraintCheckOperationOutcome(errors)   
+
+def validate_context(context_definition, env):
+    all_vars = env.keys()
+    errors = []
+    for item in context_definition:
+        name = item["name"]
+        if not isinstance(name, str):
+            name = item["name"]["code"]
+        if name not in all_vars:
+            errors.append(
+                {
+                    "severity": "error",
+                    "key": "undefined-var",
+                    "human": "Context variable {} not defined".format(name),
+                }
+            )
+    if len(errors) > 0:
+        raise ConstraintCheckOperationOutcome(errors)
 
 
 def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
