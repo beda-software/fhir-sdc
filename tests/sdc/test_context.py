@@ -21,6 +21,7 @@ async def test_get_questionnaire_context(fhir_client, safe_db):
         **{
             "status": "booked",
             "start": "2020-01-01T00:00:00Z",
+            "end": "2020-01-01T00:30:00Z",
             "participant": [{"status": "accepted", "actor": p}],
         },
     )

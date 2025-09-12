@@ -6,6 +6,7 @@ from app.aidbox.utils import get_organization_client
 from tests.factories import (
     make_parameters,
     make_launch_context_ext,
+    make_questionnaire,
     make_source_queries_ext,
     make_item_population_context_ext,
     make_initial_expression_ext,
@@ -15,7 +16,7 @@ fake = Faker()
 
 
 async def get_questionnaire():
-    return {
+    return make_questionnaire({
         "resourceType": "Questionnaire",
         "status": "active",
         "extension": [
@@ -61,14 +62,14 @@ async def get_questionnaire():
                 ],
             },
         ],
-    }
+    })
 
 
 @pytest.mark.asyncio
 async def test_organization_client(aidbox_client, safe_db):
-    org_1 = aidbox_client.resource("Organization")
+    org_1 = aidbox_client.resource("Organization", **{"name": "org_1"})
     await org_1.save()
-    org_2 = aidbox_client.resource("Organization")
+    org_2 = aidbox_client.resource("Organization", **{"name": "org_2"})
     await org_2.save()
 
     org_1_client = get_organization_client(aidbox_client, org_1)
@@ -87,7 +88,7 @@ async def test_organization_client(aidbox_client, safe_db):
 async def test_populate(aidbox_client, safe_db):
     given = fake.first_name()
 
-    org_1 = aidbox_client.resource("Organization")
+    org_1 = aidbox_client.resource("Organization", **{"name": "org_1"})
     await org_1.save()
     org_1_client = get_organization_client(aidbox_client, org_1)
 

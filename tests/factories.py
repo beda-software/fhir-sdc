@@ -34,24 +34,20 @@ async def create_address_questionnaire(fhir_client):
         fhir_client,
         {
             "status": "active",
-            "launchContext": [{"name": {"code": "LaunchPatient"}, "type": ["Patient"]}],
-            "assembleContext": "prefix",
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_assemble_context_ext("prefix"),
+            ],
             "item": [
                 {
                     "linkId": "{{%prefix}}line-1",
                     "type": "string",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "line[0]",
-                    },
+                    "extension": [make_initial_expression_ext("line[0]")],
                 },
                 {
                     "linkId": "{{%prefix}}line-2",
                     "type": "string",
-                    "initialExpression": {
-                        "language": "text/fhirpath",
-                        "expression": "line[1]",
-                    },
+                    "extension": [make_initial_expression_ext("line[1]")],
                     "enableWhen": [
                         {
                             "question": "{{%prefix}}line-1",
@@ -145,7 +141,7 @@ def make_item_constraint_ext(*, key, requirements, severity, human, expression):
     return {
         "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
         "extension": [
-            {"url": "key", "valueString": key},
+            {"url": "key", "valueId": key},
             {"url": "requirements", "valueString": requirements},
             {"url": "severity", "valueCode": severity},
             {"url": "human", "valueString": human},
