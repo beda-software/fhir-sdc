@@ -1,0 +1,14 @@
+{
+  "type": "transaction",
+  "entry": [
+    {
+      "resource": {
+        "myurl1": "https://github.com/beda-software/beda-emr-core/releases/download/v3.0.0/package.tgz"
+      },
+      "request": {
+        "method": "POST",
+        "url": "/$upload-fhir-npm-packages"
+      }
+    }
+  ]
+}

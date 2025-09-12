@@ -1,4 +1,3 @@
-version: '3.1'
 services:
   backend:
     image: ${BUILD_IMAGE:-sdc-backend-test}
@@ -7,46 +6,40 @@ services:
     env_file:
     - env.sdc.tests
     environment:
-      APP_FAST_START_MODE: ${APP_FAST_START_MODE}
       FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
     links:
       - aidbox
     volumes:
       - .:/app
     depends_on:
-      aidbox-healthcheck:
-        condition:
-          service_healthy
+      aidbox:
+        condition: service_healthy
+      fhir-converter:
+        condition: service_started
       jute:
-        condition:
-          service_started
+        condition: service_started
       fhirpath_mapping:
-        condition:
-          service_started
-  aidbox-healthcheck:
-    image: curlimages/curl
-    entrypoint: /bin/sleep 10000
-    links:
-      - aidbox
-    depends_on:
-      - aidbox
-    healthcheck:
-      test: curl --fail http://aidbox:8080/__healthcheck || exit 1
-      interval: 1s
-      timeout: 20s
-      retries: 100
+        condition: service_started
   aidbox:
-    image: healthsamurai/aidboxone:stable
+    image: healthsamurai/aidboxone:latest
     depends_on:
       - aidbox-db
     links:
       - "aidbox-db:database"
     env_file:
       - env.aidbox.tests
+    ports:
+      - "8181:8080"
     environment:
       AIDBOX_LICENSE: ${TESTS_AIDBOX_LICENSE}
+      BOX_INIT_BUNDLE: file:///aidbox-project/initBundle.json
     volumes:
-      - "./tests_zen_project:/aidbox-project"
+      - ./initBundle.json:/aidbox-project/initBundle.json
+    healthcheck:
+      test: curl --fail http://localhost:8080/health || exit 1
+      interval: 5s
+      timeout: 30s
+      retries: 50
   aidbox-db:
     image: healthsamurai/aidboxdb:13.2
     environment:
@@ -57,5 +50,12 @@ services:
     image: bedasoftware/jute-microservice:latest
   fhirpath_mapping:
     image: bedasoftware/fhirpath-extract:main
-
-
+  fhir-converter:
+    image: bedasoftware/aidbox-fhir-converter:main
+    links:
+      - aidbox
+    depends_on:
+      aidbox:
+        condition: service_healthy
+    env_file:
+      - env.fhir-converter.tests

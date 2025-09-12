@@ -271,9 +271,9 @@ async def test_fhir_assemble_sub_questionnaire(fhir_client, safe_db):
         "status": "active",
         "resourceType": "Questionnaire",
         "extension": [
+            make_launch_context_ext("LaunchPatient", "Patient"),
             make_target_structure_map_ext("StructureMap/create-another-patient"),
             make_target_structure_map_ext("StructureMap/create-patient"),
-            make_launch_context_ext("LaunchPatient", "Patient"),
             make_assembled_from_ext(q["id"]),
         ],
     }
