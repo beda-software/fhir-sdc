@@ -19,4 +19,6 @@ settings = Settings(
     # CONSTRAINT_LEGACY_BEHAVIOR - pre-save legacy behavior of constraint when then condition was reversed
     CONSTRAINT_LEGACY_BEHAVIOR=os.getenv("CONSTRAINT_LEGACY_BEHAVIOR", "True").lower()
     == "true",
+
+    EXTRACT_TIMEOUT=int(os.getenv("EXTRACT_TIMEOUT", "60000")),
 )
