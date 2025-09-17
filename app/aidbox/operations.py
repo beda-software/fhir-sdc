@@ -85,7 +85,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     return web.json_response(result, dumps=json.dumps)
 
 
-@aidbox_operation(["POST"], ["Questionnaire", "$extract"], timeout=settings.EXTRACT_TIMEOUT)
+@aidbox_operation(["POST"], ["Questionnaire", "$extract"])
 @prepare_args
 async def extract_questionnaire_operation(request: AidboxSdcRequest):
     resource = request.resource
@@ -143,9 +143,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     return web.json_response(extraction_result, dumps=json.dumps)
 
 
-@aidbox_operation(
-    ["POST"], ["Questionnaire", {"name": "id"}, "$extract"], timeout=settings.EXTRACT_TIMEOUT
-)
+@aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
 @prepare_args
 async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     resource = request.resource
