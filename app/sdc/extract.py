@@ -21,7 +21,9 @@ async def get_external_service_bundle(session, service, template, context):
 
 async def execute_mappers_bundles(client, mappers_bundles):
     try:
-        flattened_mappers_bundles = list(flatten(bundle["entry"] for bundle in mappers_bundles))
+        flattened_mappers_bundles = list(
+            flatten(bundle.get("entry", []) for bundle in mappers_bundles)
+        )
     except:
         flattened_mappers_bundles = []
 
