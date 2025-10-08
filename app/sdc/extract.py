@@ -55,7 +55,11 @@ async def extract(client, mappings, context, extract_services):
                 mapper_type = mapper.get("type", "JUTE")
                 if mapper_type == "JUTE" and extract_services["JUTE"] == "aidbox":
                     mapper_bundle = await mapper.execute("$debug", data=context)
-                    if "entry" not in mapper_bundle:
+                    if (
+                        mapper_bundle is None
+                        or "entry" not in mapper_bundle
+                        or mapper_bundle.get("entry") is None
+                    ):
                         continue
 
                     mappers_bundles.append(mapper_bundle)
