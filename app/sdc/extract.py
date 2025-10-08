@@ -21,8 +21,13 @@ async def get_external_service_bundle(session, service, template, context):
 
 async def execute_mappers_bundles(client, mappers_bundles):
     try:
+        # NOTE: `bundle.get("entry", None) or []` is used to catch cases, when
+        # bundle is like `{'type': 'transaction', 'entry': None, 'resourceType': 'Bundle'}`
+        # This can happen for example when adding the following flag top Mapping
+        # params:
+        #   omit-drop-blanks: true
         flattened_mappers_bundles = list(
-            flatten(bundle.get("entry", []) for bundle in mappers_bundles)
+            flatten(bundle.get("entry", None) or [] for bundle in mappers_bundles)
         )
     except:
         flattened_mappers_bundles = []
