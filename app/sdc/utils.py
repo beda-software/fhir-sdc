@@ -1,6 +1,5 @@
 import copy
 
-import json
 from urllib.parse import quote
 
 from fhirpathpy.models import models
@@ -118,11 +117,10 @@ def parameter_to_env(resource):
             _name_key, value_key = param.keys()
             param_value = param[value_key]
             try:
-                param_value = json.loads(param_value)
                 polimorphic_key = first(param_value.keys())
                 if polimorphic_key:
                     env[param["name"]] = param_value[polimorphic_key]
-            except (json.JSONDecodeError, AttributeError):
+            except AttributeError:
                 env[param["name"]] = param_value
     # Mapping parameters to fhir resource names
     questionnaire = env.get("questionnaire")
