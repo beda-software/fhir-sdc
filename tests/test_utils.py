@@ -261,3 +261,30 @@ def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
     assert env["launch-patientId"] == "patient-123"
     assert env["Questionnaire"] == questionnaire
     assert env["QuestionnaireResponse"] == questionnaire_response
+
+
+def test_parameter_to_env_skips_empty_launch_param():
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-1",
+        "status": "active",
+    }
+    questionnaire_response = {
+        "resourceType": "QuestionnaireResponse",
+        "id": "qr-1",
+        "status": "completed",
+    }
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": questionnaire},
+            {"name": "questionnaire_response", "resource": questionnaire_response},
+            {"name": "launch-patientId", "value": {}},
+        ],
+    }
+
+    env = parameter_to_env(parameters, is_fhir=False)
+
+    assert "launch-patientId" not in env
+    assert env["Questionnaire"] == questionnaire
+    assert env["QuestionnaireResponse"] == questionnaire_response
