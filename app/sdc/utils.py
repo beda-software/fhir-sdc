@@ -127,6 +127,16 @@ def parameter_to_env(resource, is_fhir: bool = True):
     return env
 
 
+def parse_parameter_value(parameter, is_fhir: bool):
+    if is_fhir:
+        _name_key, value_key = parameter.keys()
+        return parameter[value_key]
+    else:
+        value = parameter["value"]
+        polimorphic_key = first(value.keys())
+        return value[polimorphic_key] if polimorphic_key else None
+
+
 async def load_source_queries(client, fce_questionnaire, env):
     # Previously we used invalid format for localRef Bundle#id
     # But according to the specification, local ref to contained resource should be #id
