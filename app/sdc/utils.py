@@ -108,20 +108,15 @@ def prepare_variables(item):
     return variables
 
 
-def parameter_to_env(resource):
+def parameter_to_env(resource, is_fhir: bool = True):
     env = {}
     for param in resource["parameter"]:
         if "resource" in param:
             env[param["name"]] = param["resource"]
         else:
-            _name_key, value_key = param.keys()
-            param_value = param[value_key]
-            try:
-                polimorphic_key = first(param_value.keys())
-                if polimorphic_key:
-                    env[param["name"]] = param_value[polimorphic_key]
-            except AttributeError:
-                env[param["name"]] = param_value
+            value = parse_parameter_value(param, is_fhir)
+            if value:
+                env[param["name"]] = value
     # Mapping parameters to fhir resource names
     questionnaire = env.get("questionnaire")
     if questionnaire:

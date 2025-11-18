@@ -1,6 +1,7 @@
 import pytest
 
 from app.sdc.utils import (
+    parameter_to_env,
     prepare_bundle,
     prepare_link_ids,
     resolve_fpml_template,
@@ -221,3 +222,42 @@ def test_fpml():
         template, {"QuestionnaireResponse": questionnaire_response}
     )
     assert result == {"resourceType": "Patient", "id": "1"}
+
+
+@pytest.mark.parametrize(
+    "is_fhir,launch_param",
+    [
+        (True, {"name": "launch-patientId", "valueString": "patient-123"}),
+        (
+            False,
+            {"name": "launch-patientId", "value": {"string": "patient-123"}},
+        ),
+    ],
+)
+def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-1",
+        "status": "active",
+    }
+    questionnaire_response = {
+        "resourceType": "QuestionnaireResponse",
+        "id": "qr-1",
+        "status": "completed",
+    }
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": questionnaire},
+            {"name": "questionnaire_response", "resource": questionnaire_response},
+            launch_param,
+        ],
+    }
+
+    env = parameter_to_env(parameters, is_fhir)
+
+    assert env["questionnaire"] == questionnaire
+    assert env["questionnaire_response"] == questionnaire_response
+    assert env["launch-patientId"] == "patient-123"
+    assert env["Questionnaire"] == questionnaire
+    assert env["QuestionnaireResponse"] == questionnaire_response
