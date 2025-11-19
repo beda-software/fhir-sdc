@@ -7,7 +7,7 @@ from fhirpy.base import AsyncClient
 from .sdk import sdk
 
 
-def get_user_sdk_client(request, client=None):
+def get_user_sdk_client(request, client=None, external_fhir_base_url=None):
     headers = request["headers"].copy()
     client = client or request["app"]["client"]
 
@@ -16,7 +16,9 @@ def get_user_sdk_client(request, client=None):
     if "content-length" in headers:
         headers.pop("content-length")
 
-    return type(client)(client.url, extra_headers=headers)
+    url = external_fhir_base_url or client.url
+
+    return type(client)(url, extra_headers=headers)
 
 
 def get_aidbox_fhir_client(aidbox_client):

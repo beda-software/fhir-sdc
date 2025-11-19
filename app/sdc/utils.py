@@ -108,16 +108,15 @@ def prepare_variables(item):
     return variables
 
 
-def parameter_to_env(resource):
+def parameter_to_env(resource, is_fhir: bool = True):
     env = {}
     for param in resource["parameter"]:
         if "resource" in param:
             env[param["name"]] = param["resource"]
         else:
-            value = param["value"]
-            polimorphic_key = first(value.keys())
-            if polimorphic_key:
-                env[param["name"]] = value[polimorphic_key]
+            value = parse_parameter_value(param, is_fhir)
+            if value:
+                env[param["name"]] = value
     # Mapping parameters to fhir resource names
     questionnaire = env.get("questionnaire")
     if questionnaire:
@@ -126,6 +125,16 @@ def parameter_to_env(resource):
     if questionnaire_response:
         env["QuestionnaireResponse"] = questionnaire_response
     return env
+
+
+def parse_parameter_value(parameter, is_fhir: bool):
+    if is_fhir:
+        _name_key, value_key = parameter.keys()
+        return parameter[value_key]
+    else:
+        value = parameter["value"]
+        polimorphic_key = first(value.keys())
+        return value[polimorphic_key] if polimorphic_key else None
 
 
 async def load_source_queries(client, fce_questionnaire, env):

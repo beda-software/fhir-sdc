@@ -28,7 +28,7 @@ mode = "pipenv"
 pre-commit = ["autohooks.plugins.black", "autohooks.plugins.isort"]
 
 [tool.pylint.FORMAT]
-max-line-length=160
+max-line-length=100
 
 [tool.pylint.'MESSAGES CONTROL']
 disable = ["C0114", "C0116"]
