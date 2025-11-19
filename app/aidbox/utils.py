@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
+from aiohttp import web
 from fhirpy import AsyncFHIRClient
 from fhirpy.base import AsyncClient
 
@@ -43,11 +44,18 @@ def get_clients(operation, request):
     aidbox_client = request["app"]["client"]
     if operation["request"][1] == "Organization":
         is_fhir = True
-        fhir_client = get_organization_client(aidbox_client, request["route-params"]["org_id"])
+        fhir_client = get_organization_client(
+            aidbox_client, request["route-params"]["org_id"]
+        )
     else:
         is_fhir = operation["request"][1] == "fhir"
         fhir_client = get_aidbox_fhir_client(aidbox_client)
-    return is_fhir, aidbox_client, fhir_client, fhir_client if is_fhir else aidbox_client
+    return (
+        is_fhir,
+        aidbox_client,
+        fhir_client,
+        fhir_client if is_fhir else aidbox_client,
+    )
 
 
 @dataclass
@@ -85,8 +93,9 @@ def prepare_args(fn):
 
 def aidbox_operation(method, path, **kwrgs):
     def register(fn):
-        sdk.operation(method, ["Organization", {"name": "org_id"}, "fhir"] + path, **kwrgs)(fn)
-        sdk.operation(method, path, **kwrgs)(fn)
+        sdk.operation(
+            method, ["Organization", {"name": "org_id"}, "fhir"] + path, **kwrgs
+        )(fn)
         sdk.operation(method, ["fhir"] + path, **kwrgs)(fn)
         return fn
 

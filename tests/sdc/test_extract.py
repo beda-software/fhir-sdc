@@ -309,7 +309,7 @@ async def test_extract_fails_because_of_constraint_check(fhir_client, safe_db):
                                 requirements="v2 should be the same as v1",
                                 severity="error",
                                 human="v2 is not equal to v1",
-                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                expression="%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')"
                             )
                         ],
                     },
@@ -362,7 +362,7 @@ async def test_extract_using_list_endpoint_fails_because_of_constraint_check_lis
                                 requirements="v2 should be the same as v1",
                                 severity="error",
                                 human="v2 is not equal to v1",
-                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                expression="%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')"
                             )
                         ],
                     },
