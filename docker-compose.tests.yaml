@@ -21,7 +21,7 @@ services:
       fhirpath_mapping:
         condition: service_started
   aidbox:
-    image: healthsamurai/aidboxone:latest
+    image: healthsamurai/aidboxone:stable
     depends_on:
       - aidbox-db
     links:

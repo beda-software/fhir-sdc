@@ -229,7 +229,7 @@ async def test_decimal_extraction(fhir_client, safe_db):
                 "resourceType": "Bundle",
                 "entry": [
                     {
-                        "request": {"method": "post", "url": "Location"},
+                        "request": {"method": "POST", "url": "Location"},
                         "resource": {
                             "resourceType": "Location",
                             "position": {

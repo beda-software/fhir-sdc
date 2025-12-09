@@ -1,5 +1,5 @@
 import pytest
-from fhirpy.base.lib import OperationOutcome
+from fhirpy.base.exceptions import OperationOutcome
 
 from tests.factories import (
     create_questionnaire,
