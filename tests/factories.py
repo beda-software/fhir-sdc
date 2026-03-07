@@ -1,3 +1,11 @@
+from app.sdc.getters import (
+    INITIAL_EXPRESSION_URL,
+    ITEM_POPULATION_CONTEXT_URL,
+    LAUNCH_CONTEXT_URL,
+    SOURCE_QUERIES_URL,
+    VARIABLE_URL,
+)
+
 QUESTIONNAIRE_PROFILE_URL = (
     "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
 )
@@ -63,7 +71,7 @@ async def create_address_questionnaire(fhir_client):
 
 def make_launch_context_ext(name, type_):
     return {
-        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext",
+        "url": LAUNCH_CONTEXT_URL,
         "extension": [
             {
                 "url": "name",
@@ -79,28 +87,28 @@ def make_launch_context_ext(name, type_):
 
 def make_source_queries_ext(reference):
     return {
-        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-sourceQueries",
+        "url": SOURCE_QUERIES_URL,
         "valueReference": {"reference": reference},
     }
 
 
 def make_item_population_context_ext(expression):
     return {
-        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext",
+        "url": ITEM_POPULATION_CONTEXT_URL,
         "valueExpression": {"language": "text/fhirpath", "expression": expression},
     }
 
 
 def make_initial_expression_ext(expression):
     return {
-        "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression",
+        "url": INITIAL_EXPRESSION_URL,
         "valueExpression": {"language": "text/fhirpath", "expression": expression},
     }
 
 
 def make_variable_ext(name, expression):
     return {
-        "url": "http://hl7.org/fhir/StructureDefinition/variable",
+        "url": VARIABLE_URL,
         "valueExpression": {
             "name": name,
             "language": "text/fhirpath",
