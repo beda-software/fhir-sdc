@@ -16,6 +16,252 @@ from tests.factories import (
 
 
 @pytest.mark.asyncio
+async def test_initial_populate(fhir_client, safe_db):
+    """Item with static 'initial' (no initialExpression) is pre-filled in the response."""
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "prefilled",
+                    "initial": [{"valueString": "prefilled value"}],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {
+                "linkId": "prefilled",
+                "answer": [{"valueString": "prefilled value"}],
+            },
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db):
+    """
+    Cover all get_type() branches: string, integer, decimal, date, dateTime, time,
+    boolean, text, email, phone, display, url, reference, quantity, attachment,
+    choice (valueCoding and valueString).
+    Uses simple constants or launch context for initial expressions.
+    """
+    practitioner = fhir_client.resource(
+        "Practitioner",
+        **{
+            "name": [{"family": "Smith", "given": ["John"]}],
+        },
+    )
+    await practitioner.save()
+
+    patient = {
+        "resourceType": "Patient",
+        "id": "patient-1",
+        "generalPractitioner": [{"reference": f"Practitioner/{practitioner['id']}"}],
+    }
+
+    observation = fhir_client.resource(
+        "Observation",
+        **{
+            "status": "final",
+            "code": {"coding": [{"system": "http://loinc.org", "code": "1234-5"}]},
+            "valueQuantity": {
+                "value": 100,
+                "unit": "mg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mg",
+            },
+        },
+    )
+    await observation.save()
+
+    document_reference = fhir_client.resource(
+        "DocumentReference",
+        **{
+            "status": "current",
+            "content": [
+                {
+                    "attachment": {
+                        "contentType": "application/pdf",
+                        "url": "http://example.com/doc.pdf",
+                    }
+                }
+            ],
+        },
+    )
+    await document_reference.save()
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("Patient", "Patient"),
+                make_launch_context_ext("Observation", "Observation"),
+                make_launch_context_ext("DocumentReference", "DocumentReference"),
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "string",
+                    "extension": [make_initial_expression_ext("'string-val'")],
+                },
+                {
+                    "type": "integer",
+                    "linkId": "integer",
+                    "extension": [make_initial_expression_ext("42")],
+                },
+                {
+                    "type": "decimal",
+                    "linkId": "decimal",
+                    "extension": [make_initial_expression_ext("3.14")],
+                },
+                {
+                    "type": "date",
+                    "linkId": "date",
+                    "extension": [make_initial_expression_ext("'2024-01-15'")],
+                },
+                {
+                    "type": "dateTime",
+                    "linkId": "dateTime",
+                    "extension": [make_initial_expression_ext("'2024-01-15T12:00:00Z'")],
+                },
+                {
+                    "type": "time",
+                    "linkId": "time",
+                    "extension": [make_initial_expression_ext("'12:30:00'")],
+                },
+                {
+                    "type": "boolean",
+                    "linkId": "boolean",
+                    "extension": [make_initial_expression_ext("true")],
+                },
+                {
+                    "type": "text",
+                    "linkId": "text",
+                    "extension": [make_initial_expression_ext("'text-val'")],
+                },
+                {
+                    "type": "display",
+                    "linkId": "display",
+                    "extension": [make_initial_expression_ext("'display-val'")],
+                },
+                {
+                    "type": "reference",
+                    "linkId": "reference",
+                    "extension": [
+                        make_initial_expression_ext("%Patient.generalPractitioner.first()")
+                    ],
+                },
+                {
+                    "type": "reference",
+                    "linkId": "reference-resource",
+                    "extension": [make_initial_expression_ext("%DocumentReference")],
+                },
+                {
+                    "type": "quantity",
+                    "linkId": "quantity",
+                    "extension": [make_initial_expression_ext("%Observation.valueQuantity")],
+                },
+                {
+                    "type": "attachment",
+                    "linkId": "attachment",
+                    "extension": [
+                        make_initial_expression_ext("%DocumentReference.content.attachment.first()")
+                    ],
+                },
+                {
+                    "type": "choice",
+                    "linkId": "choice-valueCoding",
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "code": "CODE1",
+                                "system": "http://example.org",
+                                "display": "Option 1",
+                            }
+                        },
+                    ],
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%Questionnaire.repeat(item).where(linkId='choice-valueCoding').answerOption.valueCoding.first()"
+                        )
+                    ],
+                },
+                {
+                    "type": "choice",
+                    "linkId": "choice-valueString",
+                    "answerOption": [{"valueString": "opt-a"}],
+                    "extension": [make_initial_expression_ext("'opt-a'")],
+                },
+            ],
+        },
+    )
+
+    qr = await q.execute(
+        "$populate",
+        data=make_parameters(
+            Patient=patient,
+            Observation=observation,
+            DocumentReference=document_reference,
+        ),
+    )
+
+    items = qr["item"]
+    by_link_id = {it["linkId"]: it for it in items}
+
+    assert by_link_id["string"]["answer"] == [{"valueString": "string-val"}]
+    assert by_link_id["integer"]["answer"] == [{"valueInteger": 42}]
+    assert by_link_id["decimal"]["answer"] == [{"valueDecimal": 3.14}]
+    assert by_link_id["date"]["answer"] == [{"valueDate": "2024-01-15"}]
+    assert by_link_id["dateTime"]["answer"] == [{"valueDateTime": "2024-01-15T12:00:00Z"}]
+    assert by_link_id["time"]["answer"] == [{"valueTime": "12:30:00"}]
+    assert by_link_id["boolean"]["answer"] == [{"valueBoolean": True}]
+    assert by_link_id["text"]["answer"] == [{"valueString": "text-val"}]
+    assert by_link_id["display"]["answer"] == [{"valueString": "display-val"}]
+    ref_answer = by_link_id["reference"]["answer"][0].get("valueReference")
+    assert ref_answer.get("reference") == f"Practitioner/{practitioner['id']}"
+    ref_resource_answer = by_link_id["reference-resource"]["answer"][0].get("valueReference")
+    assert ref_resource_answer.get("reference") == f"DocumentReference/{document_reference['id']}"
+    assert by_link_id["quantity"]["answer"] == [
+        {
+            "valueQuantity": {
+                "value": 100,
+                "unit": "mg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mg",
+            }
+        }
+    ]
+    assert by_link_id["attachment"]["answer"] == [
+        {
+            "valueAttachment": {
+                "contentType": "application/pdf",
+                "url": "http://example.com/doc.pdf",
+            }
+        }
+    ]
+    assert by_link_id["choice-valueCoding"]["answer"] == [
+        {
+            "valueCoding": {
+                "code": "CODE1",
+                "system": "http://example.org",
+                "display": "Option 1",
+            }
+        }
+    ]
+    assert by_link_id["choice-valueString"]["answer"] == [{"valueString": "opt-a"}]
+
+
+@pytest.mark.asyncio
 async def test_initial_expression_populate(fhir_client, safe_db):
     q = await create_questionnaire(
         fhir_client,

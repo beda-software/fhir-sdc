@@ -1,8 +1,9 @@
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
-from .utils import get_type, load_source_queries, validate_context
 from app.cached_fhirpath import fhirpath
+
+from .utils import get_type, load_source_queries, normalize_answer_value, validate_context
 
 
 async def populate(client, fce_questionnaire, env):
@@ -14,7 +15,7 @@ async def populate(client, fce_questionnaire, env):
         # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
         env["QuestionnaireResponse"] = {
             "resourceType": "QuestionnaireResponse",
-            "status": "in-progress"
+            "status": "in-progress",
         }
 
     await load_source_queries(client, fce_questionnaire, env)
@@ -65,11 +66,11 @@ def _handle_item(item, env, context):
         except Exception as e:
             raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
         if data:
-            type = get_type(item, data)
+            type_ = get_type(item, data)
             if item.get("repeats") is True:
-                answers = [{"value": {type: d}} for d in data]
+                answers = [{"value": {type_: normalize_answer_value(type_, d)}} for d in data]
             else:
-                answers = [{"value": {type: data[0]}}]
+                answers = [{"value": {type_: normalize_answer_value(type_, data[0])}}]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:
