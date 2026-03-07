@@ -39,16 +39,17 @@ def get_type(item, data):
         type = "decimal"
     elif type == "attachment":
         type = "Attachment"
-    elif type == "email":
-        type = "string"
-    elif type == "phone":
-        type = "string"
     elif type == "display":
         type = "string"
     elif type == "reference":
         type = "Reference"
     elif type == "quantity":
         type = "Quantity"
+    # TODO: deprecate email and phone
+    elif type == "email":
+        type = "string"
+    elif type == "phone":
+        type = "string"
 
     return type
 
