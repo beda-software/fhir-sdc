@@ -2,7 +2,7 @@ from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
 from .getters import get_initial_expression, get_item_context, get_item_population_context, get_launch_context, get_variable
-from .utils import get_type, load_source_queries, make_value_key, validate_context
+from .utils import get_type, load_source_queries, make_value_key, normalize_answer_value, validate_context
 from app.cached_fhirpath import fhirpath
 
 
@@ -91,7 +91,9 @@ def _handle_item(item, env, context):
             )
             if data and len(data):
                 type_ = get_type(item, data)
-                answers.extend([{make_value_key(type_): d} for d in data])
+                answers.extend(
+                    [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
+                )
         if answers:
             root_item["answer"] = answers
     elif initial_expression:
@@ -105,9 +107,13 @@ def _handle_item(item, env, context):
         if data and len(data):
             type_ = get_type(item, data)
             if item.get("repeats") is True:
-                answers = [{make_value_key(type_): d} for d in data]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, d)} for d in data
+                ]
             else:
-                answers = [{make_value_key(type_): data[0]}]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, data[0])}
+                ]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:

@@ -50,11 +50,24 @@ async def test_initial_populate(fhir_client, safe_db):
 @pytest.mark.asyncio
 async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db):
     """
-    Cover all get_type() branches: string, integer, decimal, text, email, phone,
-    display, reference, quantity, attachment, choice (valueCoding and valueString).
+    Cover all get_type() branches: string, integer, decimal, date, dateTime, time,
+    boolean, text, email, phone, display, url, reference, quantity, attachment,
+    choice (valueCoding and valueString).
     Uses simple constants or launch context for initial expressions.
     """
-    patient = {"resourceType": "Patient", "id": "patient-1"}
+    practitioner = fhir_client.resource(
+        "Practitioner",
+        **{
+            "name": [{"family": "Smith", "given": ["John"]}],
+        },
+    )
+    await practitioner.save()
+
+    patient = {
+        "resourceType": "Patient",
+        "id": "patient-1",
+        "generalPractitioner": [{"reference": f"Practitioner/{practitioner['id']}"}],
+    }
 
     observation = fhir_client.resource(
         "Observation",
@@ -92,7 +105,7 @@ async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db
         {
             "status": "active",
             "extension": [
-                make_launch_context_ext("patient", "Patient"),
+                make_launch_context_ext("Patient", "Patient"),
                 make_launch_context_ext("Observation", "Observation"),
                 make_launch_context_ext("DocumentReference", "DocumentReference"),
             ],
@@ -113,6 +126,26 @@ async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db
                     "extension": [make_initial_expression_ext("3.14")],
                 },
                 {
+                    "type": "date",
+                    "linkId": "date",
+                    "extension": [make_initial_expression_ext("'2024-01-15'")],
+                },
+                {
+                    "type": "dateTime",
+                    "linkId": "dateTime",
+                    "extension": [make_initial_expression_ext("'2024-01-15T12:00:00Z'")],
+                },
+                {
+                    "type": "time",
+                    "linkId": "time",
+                    "extension": [make_initial_expression_ext("'12:30:00'")],
+                },
+                {
+                    "type": "boolean",
+                    "linkId": "boolean",
+                    "extension": [make_initial_expression_ext("true")],
+                },
+                {
                     "type": "text",
                     "linkId": "text",
                     "extension": [make_initial_expression_ext("'text-val'")],
@@ -123,10 +156,26 @@ async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db
                     "extension": [make_initial_expression_ext("'display-val'")],
                 },
                 {
+                    "type": "url",
+                    "linkId": "url",
+                    "extension": [make_initial_expression_ext("'https://example.com'")],
+                },
+                {
                     "type": "reference",
                     "linkId": "reference",
                     "extension": [
-                        make_initial_expression_ext("'Patient/' + %patient.id")
+                        make_initial_expression_ext(
+                            "%Patient.generalPractitioner.first()"
+                        )
+                    ],
+                },
+                {
+                    "type": "reference",
+                    "linkId": "reference-resource",
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%DocumentReference"
+                        )
                     ],
                 },
                 {
@@ -173,27 +222,35 @@ async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db
         },
     )
 
-    p = await q.execute(
+    qr = await q.execute(
         "$populate",
         data=make_parameters(
-            patient=patient,
+            Patient=patient,
             Observation=observation,
             DocumentReference=document_reference,
         ),
     )
+    await fhir_client.resource("QuestionnaireResponse", **qr).save()
 
-    items = p["item"]
+    items = qr["item"]
     by_link_id = {it["linkId"]: it for it in items}
 
     assert by_link_id["string"]["answer"] == [{"valueString": "string-val"}]
     assert by_link_id["integer"]["answer"] == [{"valueInteger": 42}]
     assert by_link_id["decimal"]["answer"] == [{"valueDecimal": 3.14}]
+    assert by_link_id["date"]["answer"] == [{"valueDate": "2024-01-15"}]
+    assert by_link_id["dateTime"]["answer"] == [{"valueDateTime": "2024-01-15T12:00:00Z"}]
+    assert by_link_id["time"]["answer"] == [{"valueTime": "12:30:00"}]
+    assert by_link_id["boolean"]["answer"] == [{"valueBoolean": True}]
     assert by_link_id["text"]["answer"] == [{"valueString": "text-val"}]
     assert by_link_id["display"]["answer"] == [{"valueString": "display-val"}]
+    assert by_link_id["url"]["answer"] == [{"valueUri": "https://example.com"}]
     ref_answer = by_link_id["reference"]["answer"][0].get("valueReference")
-    assert ref_answer == "Patient/patient-1" or (
-        isinstance(ref_answer, dict) and ref_answer.get("reference") == "Patient/patient-1"
+    assert ref_answer.get("reference") == f"Practitioner/{practitioner['id']}"
+    ref_resource_answer = by_link_id["reference-resource"]["answer"][0].get(
+        "valueReference"
     )
+    assert ref_resource_answer.get("reference") == f"DocumentReference/{document_reference['id']}"
     assert by_link_id["quantity"]["answer"] == [
         {
             "valueQuantity": {

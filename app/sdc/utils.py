@@ -37,6 +37,14 @@ def get_type(item, data):
         type = "integer"
     elif type == "decimal":
         type = "decimal"
+    elif type == "date":
+        type = "date"
+    elif type == "dateTime":
+        type = "dateTime"
+    elif type == "time":
+        type = "time"
+    elif type == "boolean":
+        type = "boolean"
     elif type == "attachment":
         type = "Attachment"
     elif type == "display":
@@ -45,6 +53,8 @@ def get_type(item, data):
         type = "Reference"
     elif type == "quantity":
         type = "Quantity"
+    elif type == "url":
+        type = "uri"  # FHIR uses valueUri for url item type
     # TODO: deprecate email and phone
     elif type == "email":
         type = "string"
@@ -54,8 +64,21 @@ def get_type(item, data):
     return type
 
 
-def make_value_key(type_: str):
-    return f"value{type_.capitalize()}"
+def make_value_key(type_: str) -> str:
+    return f"value{type_[0].upper()}{type_[1:]}"
+
+
+def normalize_answer_value(type_: str, value):
+    # Resource (that contains resourceType and id) should be converted to Reference
+    # It's according to the spec of $populate
+    if (
+        type_ == "Reference"
+        and isinstance(value, dict)
+        and "resourceType" in value
+        and "id" in value
+    ):
+        return {"reference": f"{value['resourceType']}/{value['id']}"}
+    return value
 
 
 def walk_dict(d, transform):
@@ -182,6 +205,7 @@ async def load_source_queries(client, fce_questionnaire, env):
             else source_query.get("localRef")
         )
         if ref:
+            # TODO: raise a clear error
             raw_bundle = contained[ref]
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
