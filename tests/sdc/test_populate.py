@@ -11,6 +11,7 @@ from tests.factories import (
     make_item_population_context_ext,
     make_questionnaire,
     make_source_queries_ext,
+    make_variable_ext,
 )
 
 
@@ -930,5 +931,128 @@ async def test_initial_expression_resource_env_populate(fhir_client, safe_db):
         "item": [
             {"linkId": "q-1", "answer": [{"valueString": "constant"}]},
             {"linkId": "q-2", "answer": [{"valueString": "constant"}]},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_variable_root_level_populate(fhir_client, safe_db):
+    """
+    Variables on Questionnaire root and then use in initial expression.
+    """
+    patient = {"resourceType": "Patient", "id": "patient-123"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("patient", "Patient"),
+                make_variable_ext("PatientId", "%patient.id"),
+                make_variable_ext("PatientReference", "'Patient/' + %PatientId"),
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "q-1",
+                    "extension": [
+                        make_initial_expression_ext("%PatientReference"),
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters(patient=patient))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-123"}]},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_variable_question_level_populate(fhir_client, safe_db):
+    """
+    Variables on question level and then use in initial expression.
+    """
+    patient = {"resourceType": "Patient", "id": "patient-456"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_launch_context_ext("patient", "Patient")],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "q-1",
+                    "extension": [
+                        make_variable_ext("PatientId", "%patient.id"),
+                        make_variable_ext("PatientReference", "'Patient/' + %PatientId"),
+                        make_initial_expression_ext("%PatientReference"),
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters(patient=patient))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-456"}]},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_variable_group_level_populate(fhir_client, safe_db):
+    """
+    Variables on group level and then use in initial expression.
+    """
+    patient = {"resourceType": "Patient", "id": "patient-789"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_launch_context_ext("patient", "Patient")],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "g-1",
+                    "extension": [
+                        make_variable_ext("PatientId", "%patient.id"),
+                        make_variable_ext("PatientReference", "'Patient/' + %PatientId"),
+                    ],
+                    "item": [
+                        {
+                            "type": "string",
+                            "linkId": "q-1",
+                            "extension": [
+                                make_initial_expression_ext("%PatientReference"),
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters(patient=patient))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {
+                "linkId": "g-1",
+                "item": [
+                    {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-789"}]},
+                ],
+            },
         ],
     }

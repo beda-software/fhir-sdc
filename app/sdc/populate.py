@@ -1,7 +1,7 @@
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
-from .getters import get_initial_expression, get_item_context, get_item_population_context, get_launch_context
+from .getters import get_initial_expression, get_item_context, get_item_population_context, get_launch_context, get_variable
 from .utils import get_type, load_source_queries, make_value_key, validate_context
 from app.cached_fhirpath import fhirpath
 
@@ -29,6 +29,8 @@ async def populate(client, fhir_questionnaire, env):
     }
     env["resource"] = root
     env["questionnaire"] = env["Questionnaire"]
+    for variable in get_variable(exts):
+        env[variable["name"]] = fhirpath({}, variable["expression"], env)
 
     for item in fhir_questionnaire["item"]:
         root["item"].extend(_handle_item(item, env, {}))
@@ -47,6 +49,8 @@ def _handle_item(item, env, context):
 
 
     item_exts = item.get("extension", [])
+    for variable in get_variable(item_exts):
+        env[variable["name"]] = fhirpath(context, variable["expression"], env)
 
     item_context = get_item_context(item_exts)
     if item_context:
