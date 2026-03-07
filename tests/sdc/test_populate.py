@@ -786,3 +786,149 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
         "questionnaire": q.id,
         "item": [{"linkId": "last-appointment"}],
     }
+
+
+@pytest.mark.asyncio
+async def test_initial_expression_questionnaire_env_populate(fhir_client, safe_db):
+    """
+    In initial expressions, %questionnaire points to the Questionnaire 
+    """
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "choice",
+                    "linkId": "q-1",
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "code": "ABC",
+                                "system": "http://example.org",
+                                "display": "Option ABC",
+                            }
+                        },   
+                    ],
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%questionnaire.item.where(linkId='q-1').answerOption.valueCoding.first()"
+                        )
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1", "answer": [{"valueCoding": {"code": "ABC", "system": "http://example.org", "display": "Option ABC"}}]},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_initial_expression_qitem_env_populate(fhir_client, safe_db):
+    """
+    In initial expressions, %qitem points to the current question item definition.
+    Same content in q-1 (root) and q-2 (inside g-1): each uses %qitem to get its own answerOption.
+    """
+    q_item_with_qitem = {
+        "type": "choice",
+        "answerOption": [
+            {
+                "valueCoding": {
+                    "code": "FROM_QITEM",
+                    "system": "http://example.org",
+                    "display": "From qitem",
+                }
+            },
+        ],
+        "extension": [
+            make_initial_expression_ext(
+                "%qitem.answerOption.valueCoding.first()"
+            )
+        ],
+    }
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {**q_item_with_qitem, "linkId": "q-1"},
+                {
+                    "type": "group",
+                    "linkId": "g-1",
+                    "item": [
+                        {**q_item_with_qitem, "linkId": "q-2"},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {
+                "linkId": "q-1",
+                "answer": [{"valueCoding": {"code": "FROM_QITEM", "system": "http://example.org", "display": "From qitem"}}],
+            },
+            {
+                "linkId": "g-1",
+                "item": [
+                    {
+                        "linkId": "q-2",
+                        "answer": [{"valueCoding": {"code": "FROM_QITEM", "system": "http://example.org", "display": "From qitem"}}],
+                    }
+                ],
+            },
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_initial_expression_resource_env_populate(fhir_client, safe_db):
+    """
+    In initial expressions, %resource points to the QuestionnaireResponse being built. 
+    """
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "q-1",
+                    "extension": [make_initial_expression_ext("'constant'")],
+                },
+                {
+                    "type": "string",
+                    "linkId": "q-2",
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%resource.item.where(linkId='q-1').answer.valueString.first()"
+                        )
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1", "answer": [{"valueString": "constant"}]},
+            {"linkId": "q-2", "answer": [{"valueString": "constant"}]},
+        ],
+    }

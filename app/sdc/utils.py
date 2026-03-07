@@ -10,6 +10,8 @@ from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
 from app.cached_fhirpath import fhirpath
+from app.sdc.getters import get_source_queries
+from app.sdc.typings import LaunchContext
 from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
@@ -18,9 +20,13 @@ r4 = models["r4"]
 def get_type(item, data):
     type = item["type"]
     if type == "choice" or type == "open-choice":
-        option_type = get_by_path(item, ["answerOption", 0, "value"])
+        option_type = [
+            key.removeprefix("value")
+            for key in get_by_path(item, ["answerOption", 0], {}).keys()
+            if key.startswith("value")
+        ]
         if option_type:
-            type = next(iter(option_type.keys()))
+            type = next(iter(option_type))
         else:
             type = "Coding"
         if isinstance(data[0], str):
@@ -47,12 +53,17 @@ def get_type(item, data):
     return type
 
 
+def make_value_key(type_: str):
+    return f"value{type_.capitalize()}"
+
+
 def walk_dict(d, transform):
     result_dict = copy.deepcopy(d)
     for k, v in result_dict.items():
         if is_list(v):
             result_dict[k] = [
-                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v
+                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k)
+                for vi in v
             ]
         elif is_mapping(v):
             result_dict[k] = walk_dict(v, transform)
@@ -76,7 +87,9 @@ def prepare_link_ids(questionnaire, variables):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
+    return walk_dict(
+        raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True)
+    )
 
 
 def resolve_string_template(i, env, encode_result=False):
@@ -140,7 +153,7 @@ def parse_parameter_value(parameter, is_fhir: bool):
 async def load_source_queries(client, fce_questionnaire, env):
     # Previously we used invalid format for localRef Bundle#id
     # But according to the specification, local ref to contained resource should be #id
-    # And since in Aidbox format we have localRef without leading #, 
+    # And since in Aidbox format we have localRef without leading #,
     # contained resources are accessible via id
     # But for backward compatibility they are also accessible by Bundle#id
     contained_compat = {
@@ -148,19 +161,27 @@ async def load_source_queries(client, fce_questionnaire, env):
         for item in fce_questionnaire.get("contained", [])
     }
     contained_new = {
-        item['id']: item
-        for item in fce_questionnaire.get("contained", [])
+        item["id"]: item for item in fce_questionnaire.get("contained", [])
     }
     contained = {**contained_compat, **contained_new}
 
-    source_queries = fce_questionnaire.get("sourceQueries", {})
+    # TODO: get rid of FCE format completely
+    source_queries_fce = fce_questionnaire.get("sourceQueries", {})
+    source_queries_fhir = get_source_queries(fce_questionnaire.get("extension", []))
+    source_queries = [*source_queries_fce, *source_queries_fhir]
 
     if isinstance(source_queries, dict):
         source_queries = [source_queries]
 
     for source_query in source_queries:
-        if "localRef" in source_query:
-            raw_bundle = contained[source_query["localRef"]]
+        # FHIR reference contains #, while FCE localRef does not
+        ref = (
+            source_query["reference"].removeprefix("#")
+            if "reference" in source_query
+            else source_query.get("localRef")
+        )
+        if ref:
+            raw_bundle = contained[ref]
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await client.execute("/", data=bundle)
@@ -178,14 +199,16 @@ def validate_assemble_context(assemble_context: list[str], env):
                 }
             )
     if len(errors) > 0:
-        raise ConstraintCheckOperationOutcome(errors)   
+        raise ConstraintCheckOperationOutcome(errors)
 
-def validate_context(context_definition, env):
+
+def validate_context(context_definition: list[LaunchContext], env):
     all_vars = env.keys()
     errors = []
     for item in context_definition:
-        name = item["name"]
-        if not isinstance(name, str):
+        if isinstance(item["name"], str):
+            name = item["name"]
+        else:
             name = item["name"]["code"]
         if name not in all_vars:
             errors.append(

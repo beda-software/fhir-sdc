@@ -222,19 +222,12 @@ async def populate_questionnaire(request: AidboxSdcRequest):
     if "Questionnaire" not in env:
         raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
-    fce_questionnaire = (
-        await to_first_class_extension(env["Questionnaire"], request.aidbox_client)
-        if request.is_fhir
-        else env["Questionnaire"]
-    )
     client = get_user_sdk_client(
         request.request, request.client, env.get(EXTERNAL_FHIR_BASE_URL_PARAM_KEY)
     )
 
-    fce_populated_qr = await populate(client, fce_questionnaire, env)
-    if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
-    return web.json_response(fce_populated_qr, dumps=json.dumps)
+    populated_qr = await populate(client, env["Questionnaire"], env)
+    return web.json_response(populated_qr, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
@@ -245,18 +238,15 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
         .search(_id=request.route_params["id"])
         .get()
     )
-    fce_questionnaire = await to_first_class_extension(fhir_questionnaire, request.aidbox_client)
     env = parameter_to_env(request.resource, request.is_fhir)
-    env["Questionnaire"] = fhir_questionnaire if request.is_fhir else fce_questionnaire
+    env["Questionnaire"] = fhir_questionnaire
     client = get_user_sdk_client(
         request.request, request.client, env.get(EXTERNAL_FHIR_BASE_URL_PARAM_KEY)
     )
 
-    fce_populated_qr = await populate(client, fce_questionnaire, env)
+    populated_qr = await populate(client, env["Questionnaire"], env)
 
-    if request.is_fhir:
-        fce_populated_qr = await from_first_class_extension(fce_populated_qr, request.aidbox_client)
-    return web.json_response(fce_populated_qr, dumps=json.dumps)
+    return web.json_response(populated_qr, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)

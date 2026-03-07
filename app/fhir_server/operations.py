@@ -219,9 +219,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
             status=422,
         )
 
-    questionnaire = to_first_class_extension(questionnaire_data)
-    populated_resource = await populate(client, questionnaire, env)
-    populated_resource = from_first_class_extension(populated_resource)
+    populated_resource = await populate(client, questionnaire_data, env)
     return web.json_response(populated_resource)
 
 
@@ -232,10 +230,8 @@ async def populate_questionnaire_instance(request: web.BaseRequest):
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
     env = parameter_to_env(request["resource"])
-    converted = to_first_class_extension(questionnaire)
-    env["Questionnaire"] = converted
-    populated_resource = await populate(client, converted, env)
-    populated_resource = from_first_class_extension(populated_resource)
+    env["Questionnaire"] = questionnaire
+    populated_resource = await populate(client, questionnaire, env)
 
     return web.json_response(populated_resource)
 
