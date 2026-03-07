@@ -23,6 +23,7 @@ async def populate(client, fhir_questionnaire, env):
     await load_source_queries(client, fhir_questionnaire, env)
 
     root = {
+        **env["QuestionnaireResponse"],
         "resourceType": "QuestionnaireResponse",
         "questionnaire": fhir_questionnaire.get("id"),
         "item": [],

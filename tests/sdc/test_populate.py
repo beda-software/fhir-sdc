@@ -36,6 +36,7 @@ async def test_initial_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
@@ -250,6 +251,7 @@ async def test_initial_expression_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
@@ -285,6 +287,7 @@ async def test_initial_expression_populate_using_list_endpoint(fhir_client, safe
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q["id"],
         "item": [
             {
@@ -359,6 +362,7 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
         ],
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
     }
 
 
@@ -429,6 +433,7 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
         ],
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
     }
 
 
@@ -526,6 +531,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
         ],
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
     }
 
 
@@ -625,6 +631,7 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
         ],
         "questionnaire": q.id,
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
     }
 
 
@@ -685,6 +692,7 @@ async def test_source_query_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
@@ -774,6 +782,7 @@ async def test_multiple_answers_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
@@ -884,6 +893,7 @@ async def test_fhirpath_success_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {"linkId": "patientName", "answer": [{"valueString": "Peter Chalmers"}]}
@@ -992,6 +1002,7 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [{"linkId": "last-appointment"}],
     }
@@ -1033,6 +1044,7 @@ async def test_initial_expression_questionnaire_env_populate(fhir_client, safe_d
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {"linkId": "q-1", "answer": [{"valueCoding": {"code": "ABC", "system": "http://example.org", "display": "Option ABC"}}]},
@@ -1084,6 +1096,7 @@ async def test_initial_expression_qitem_env_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
@@ -1135,6 +1148,7 @@ async def test_initial_expression_resource_env_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {"linkId": "q-1", "answer": [{"valueString": "constant"}]},
@@ -1174,6 +1188,7 @@ async def test_variable_root_level_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-123"}]},
@@ -1210,6 +1225,7 @@ async def test_variable_question_level_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-456"}]},
@@ -1254,6 +1270,7 @@ async def test_variable_group_level_populate(fhir_client, safe_db):
 
     assert p == {
         "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
         "questionnaire": q.id,
         "item": [
             {
