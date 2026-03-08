@@ -1,9 +1,22 @@
 from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
 
-from .getters import get_initial_expression, get_item_context, get_item_population_context, get_launch_context, get_variable
-from .utils import get_type, load_source_queries, make_value_key, normalize_answer_value, validate_context
 from app.cached_fhirpath import fhirpath
+
+from .getters import (
+    get_initial_expression,
+    get_item_context,
+    get_item_population_context,
+    get_launch_context,
+    get_variable,
+)
+from .utils import (
+    get_type,
+    load_source_queries,
+    make_value_key,
+    normalize_answer_value,
+    validate_context,
+)
 
 
 async def populate(client, fhir_questionnaire, env):
@@ -51,7 +64,6 @@ def _handle_item(item, env, context):
             new_item["text"] = item["text"]
         return new_item
 
-
     item_exts = item.get("extension", [])
     for variable in get_variable(item_exts):
         env[variable["name"]] = fhirpath(context, variable["expression"], env)
@@ -64,17 +76,13 @@ def _handle_item(item, env, context):
     if item_population_context:
         context = fhirpath(context, item_population_context["expression"], env)
 
-    if (
-        item["type"] == "group"
-        and item.get("repeats", False) is True
-        and is_list(context)
-    ):
+    if item["type"] == "group" and item.get("repeats", False) is True and is_list(context):
         root_items = []
 
         for c in context:
             populated_items = []
-            for i in item["item"]:
-                populated_items.extend(_handle_item(i, env, c))
+            for subitem in item["item"]:
+                populated_items.extend(_handle_item(subitem, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 
@@ -84,39 +92,18 @@ def _handle_item(item, env, context):
     root_item = init_item()
 
     initial_expression = get_initial_expression(item_exts)
-    if context and initial_expression and item.get("repeats", False) is True:
-        answers = []
-        for item_context in context:
-            data = fhirpath(
-                item_context,
-                initial_expression["expression"],
-                env,
-            )
-            if data and len(data):
-                type_ = get_type(item, data)
-                answers.extend(
-                    [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
-                )
-        if answers:
-            root_item["answer"] = answers
-    elif initial_expression:
+    if initial_expression:
         answers = []
         try:
             data = fhirpath(context, initial_expression["expression"], env)
         except Exception as e:
-            raise OperationOutcome(
-                f'Error: "{initial_expression["expression"]}" - {str(e)}'
-            )
-        if data and len(data):
+            raise OperationOutcome(f'Error: "{initial_expression["expression"]}" - {str(e)}')
+        if data:
             type_ = get_type(item, data)
             if item.get("repeats") is True:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, d)} for d in data
-                ]
+                answers = [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
             else:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, data[0])}
-                ]
+                answers = [{make_value_key(type_): normalize_answer_value(type_, data[0])}]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:
@@ -124,8 +111,8 @@ def _handle_item(item, env, context):
 
     if "item" in item:
         populated_items = []
-        for i in item["item"]:
-            populated_items.extend(_handle_item(i, env, context))
+        for subitem in item["item"]:
+            populated_items.extend(_handle_item(subitem, env, context))
 
         root_item["item"] = populated_items
 
