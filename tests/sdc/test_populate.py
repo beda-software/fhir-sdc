@@ -1,4 +1,5 @@
 import json
+from fhirpy.base.exceptions import OperationOutcome
 import pytest
 from decimal import Decimal
 from fhirpathpy import evaluate
@@ -1338,3 +1339,53 @@ async def test_variable_group_level_populate(fhir_client, safe_db):
             },
         ],
     }
+
+
+@pytest.mark.asyncio
+async def test_variable_defined_in_one_group_not_visible_in_sibling_group_populate(
+    fhir_client, safe_db
+):
+    """
+    Variable defined in one group must not be visible in a sibling group.
+    """
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "g-first",
+                    "extension": [
+                        make_variable_ext("SiblingVar", "'from-first-group'"),
+                    ],
+                    "item": [
+                        {
+                            "type": "string",
+                            "linkId": "q-in-first",
+                            "extension": [
+                                make_initial_expression_ext("%SiblingVar"),
+                            ],
+                        },
+                    ],
+                },
+                {
+                    "type": "group",
+                    "linkId": "g-second",
+                    "item": [
+                        {
+                            "type": "string",
+                            "linkId": "q-in-second",
+                            "extension": [
+                                make_initial_expression_ext("%SiblingVar"),
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+
+    with pytest.raises(OperationOutcome) as exc:
+        await q.execute("$populate", data=make_parameters())
+        assert exc.value.resource["issue"][0]["code"] == "invalid"

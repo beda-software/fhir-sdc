@@ -40,6 +40,9 @@ async def populate(client, fhir_questionnaire, env):
 
 
 def _handle_item(item, env, context):
+    # Make a copy of the env to populate with variables for nested items
+    env = env.copy()
+
     env["qitem"] = item
 
     def init_item():
