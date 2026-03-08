@@ -48,8 +48,8 @@ def _handle_item(item, env, context):
 
         for c in context:
             populated_items = []
-            for i in item["item"]:
-                populated_items.extend(_handle_item(i, env, c))
+            for subitem in item["item"]:
+                populated_items.extend(_handle_item(subitem, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 
@@ -58,26 +58,13 @@ def _handle_item(item, env, context):
 
     root_item = init_item()
 
-    if context and "initialExpression" in item and item.get("repeats", False) is True:
-        answers = []
-        for item_context in context:
-            data = fhirpath(
-                item_context,
-                item["initialExpression"]["expression"],
-                env,
-            )
-            if data and len(data):
-                type = get_type(item, data)
-                answers.extend([{"value": {type: d}} for d in data])
-        if answers:
-            root_item["answer"] = answers
-    elif "initialExpression" in item:
+    if "initialExpression" in item:
         answers = []
         try:
             data = fhirpath(context, item["initialExpression"]["expression"], env)
         except Exception as e:
             raise OperationOutcome(f'Error: "{item["initialExpression"]["expression"]}" - {str(e)}')
-        if data and len(data):
+        if data:
             type = get_type(item, data)
             if item.get("repeats") is True:
                 answers = [{"value": {type: d}} for d in data]
@@ -90,8 +77,8 @@ def _handle_item(item, env, context):
 
     if "item" in item:
         populated_items = []
-        for i in item["item"]:
-            populated_items.extend(_handle_item(i, env, context))
+        for subitem in item["item"]:
+            populated_items.extend(_handle_item(subitem, env, context))
 
         root_item["item"] = populated_items
 
