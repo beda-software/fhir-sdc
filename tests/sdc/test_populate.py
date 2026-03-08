@@ -95,7 +95,6 @@ async def test_item_context_with_repeats_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.name"),
             ],
             "item": [
                 {
@@ -157,7 +156,6 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.address"),
             ],
             "item": [
                 {
@@ -216,6 +214,243 @@ async def test_item_context_with_repeating_group_populate(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
+async def test_item_context_with_repeating_group_populate_repeating_item(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("Location", "Location"),
+            ],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "schedules",
+                    "repeats": True,
+                    "extension": [make_item_population_context_ext("%Location.hoursOfOperation")],
+                    "item": [
+                        {
+                            "type": "choice",
+                            "linkId": "day-of-the-week",
+                            "repeats": True,
+                            "answerOption": [
+                                {
+                                    "valueCoding": {
+                                        "code": "sun",
+                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                        "display": "Sunday",
+                                    }
+                                },
+                                {
+                                    "valueCoding": {
+                                        "code": "mon",
+                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                        "display": "Monday",
+                                    }
+                                },
+                                {
+                                    "valueCoding": {
+                                        "code": "tue",
+                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                        "display": "Tuesday",
+                                    }
+                                },
+                                {
+                                    "valueCoding": {
+                                        "code": "wed",
+                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                        "display": "Wednesday",
+                                    }
+                                },
+                            ],
+                            "extension": [
+                                make_initial_expression_ext(
+                                    "%Questionnaire.repeat(item).where(linkId='day-of-the-week').answerOption.valueCoding.where(code in %context.daysOfWeek)"
+                                )
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+
+    launch_location = {
+        "resourceType": "Location",
+        "name": "Location 1",
+        "hoursOfOperation": [
+            {
+                "openingTime": "09:00:00",
+                "daysOfWeek": ["sun", "mon"],
+            },
+            {
+                "openingTime": "09:00:00",
+                "daysOfWeek": ["tue", "wed"],
+            },
+        ],
+    }
+
+    p = await q.execute("$populate", data=make_parameters(Location=launch_location))
+
+    assert p == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "linkId": "day-of-the-week",
+                        "answer": [
+                            {
+                                "valueCoding": {
+                                    "code": "sun",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Sunday",
+                                }
+                            },
+                            {
+                                "valueCoding": {
+                                    "code": "mon",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Monday",
+                                }
+                            },
+                        ],
+                    }
+                ],
+                "linkId": "schedules",
+            },
+            {
+                "item": [
+                    {
+                        "linkId": "day-of-the-week",
+                        "answer": [
+                            {
+                                "valueCoding": {
+                                    "code": "tue",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Tuesday",
+                                }
+                            },
+                            {
+                                "valueCoding": {
+                                    "code": "wed",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Wednesday",
+                                }
+                            },
+                        ],
+                    }
+                ],
+                "linkId": "schedules",
+            },
+        ],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
+@pytest.mark.asyncio
+async def test_item_context_with_repeating_group_populate_repeating_item_static(
+    fhir_client, safe_db
+):
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("Location", "Location"),
+            ],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "schedules",
+                    "repeats": True,
+                    "extension": [make_item_population_context_ext("%Location.hoursOfOperation")],
+                    "item": [
+                        {
+                            "type": "choice",
+                            "linkId": "day-of-the-week",
+                            "repeats": True,
+                            "answerOption": [
+                                {
+                                    "valueCoding": {
+                                        "code": "sun",
+                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                        "display": "Sunday",
+                                    }
+                                },
+                            ],
+                            "extension": [
+                                make_initial_expression_ext(
+                                    "%Questionnaire.repeat(item).where(linkId='day-of-the-week').answerOption.valueCoding.where(code in 'sun')"
+                                )
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    )
+
+    launch_location = {
+        "resourceType": "Location",
+        "name": "Location 1",
+        "hoursOfOperation": [
+            {
+                "openingTime": "09:00:00",
+                "daysOfWeek": ["sun", "mon"],
+            },
+            {
+                "openingTime": "09:00:00",
+                "daysOfWeek": ["tue", "wed"],
+            },
+        ],
+    }
+
+    p = await q.execute("$populate", data=make_parameters(Location=launch_location))
+
+    assert p == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "linkId": "day-of-the-week",
+                        "answer": [
+                            {
+                                "valueCoding": {
+                                    "code": "sun",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Sunday",
+                                }
+                            },
+                        ],
+                    }
+                ],
+                "linkId": "schedules",
+            },
+            {
+                "item": [
+                    {
+                        "linkId": "day-of-the-week",
+                        "answer": [
+                            {
+                                "valueCoding": {
+                                    "code": "sun",
+                                    "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                    "display": "Sunday",
+                                }
+                            },
+                        ],
+                    }
+                ],
+                "linkId": "schedules",
+            },
+        ],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+    }
+
+
+@pytest.mark.asyncio
 async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
     fhir_client, safe_db
 ):
@@ -225,7 +460,6 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_launch_context_ext("LaunchEncounter", "Encounter"),
             ],
             "item": [
                 {
@@ -242,8 +476,12 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         {
                             "type": "string",
                             "repeats": True,
-                            "linkId": "encounter-id",
-                            "extension": [make_initial_expression_ext("%LaunchEncounter.id")],
+                            "linkId": "practitioner-refs",
+                            "extension": [
+                                make_initial_expression_ext(
+                                    "%LaunchPatient.generalPractitioner.reference"
+                                )
+                            ],
                         },
                     ],
                 },
@@ -253,15 +491,17 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
 
     launch_patient = {
         "resourceType": "Patient",
-        "id": "patienit-id",
+        "id": "patient-id",
         "address": [{"city": "San Francisco"}, {"city": "San Diego"}],
+        "generalPractitioner": [
+            {"reference": "Practitioner/p1"},
+            {"reference": "Practitioner/p2"},
+        ],
     }
-
-    launch_encounter = {"resourceType": "Encounter", "id": "encounter-example"}
 
     p = await q.execute(
         "$populate",
-        data=make_parameters(LaunchPatient=launch_patient, LaunchEncounter=launch_encounter),
+        data=make_parameters(LaunchPatient=launch_patient),
     )
 
     assert p == {
@@ -275,9 +515,10 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         ],
                     },
                     {
-                        "linkId": "encounter-id",
+                        "linkId": "practitioner-refs",
                         "answer": [
-                            {"valueString": "encounter-example"},
+                            {"valueString": "Practitioner/p1"},
+                            {"valueString": "Practitioner/p2"},
                         ],
                     },
                 ],
@@ -292,9 +533,10 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
                         ],
                     },
                     {
-                        "linkId": "encounter-id",
+                        "linkId": "practitioner-refs",
                         "answer": [
-                            {"valueString": "encounter-example"},
+                            {"valueString": "Practitioner/p1"},
+                            {"valueString": "Practitioner/p2"},
                         ],
                     },
                 ],
@@ -314,7 +556,6 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_item_population_context_ext("%LaunchPatient.address"),
             ],
             "item": [
                 {
