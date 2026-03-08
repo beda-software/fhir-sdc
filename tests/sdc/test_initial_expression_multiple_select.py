@@ -1,131 +1,89 @@
 import pytest
 
-from app.sdc.populate import populate
+from tests.factories import (
+    create_questionnaire,
+    make_initial_expression_ext,
+    make_item_population_context_ext,
+    make_launch_context_ext,
+    make_parameters,
+)
 
 questionnaire = {
-  "meta": {
-    "profile": [
-      "https://emr-core.beda.software/StructureDefinition/fhir-emr-questionnaire"
+    "resourceType": "Questionnaire",
+    "status": "active",
+    "id": "edit-schedule",
+    "url": "edit-schedule",
+    "extension": [
+        make_launch_context_ext("Schedule", "Schedule"),
     ],
-  },
-  "launchContext": [
-    {
-      "name": {
-        "code": "Schedule"
-      },
-      "type": [
-        "Schedule"
-      ],
-      "description": "Schedule to edit"
-    }
-  ],
-  "name": "edit-schedule",
-  "item": [
-    {
-      "item": [
+    "item": [
         {
-          "item": [
-            {
-              "text": "Day of the week",
-              "type": "choice",
-              "linkId": "day-of-the-week",
-              "repeats": True,
-              "answerOption": [
+            "type": "group",
+            "linkId": "time-period",
+            "repeats": True,
+            "extension": [
+                make_item_population_context_ext(
+                    "%Schedule.extension.where(url='http://example.com')"
+                )
+            ],
+            "item": [
                 {
-                  "value": {
-                    "Coding": {
-                      "code": "sun",
-                      "system": "http://hl7.org/fhir/ValueSet/days-of-week",
-                      "display": "Sunday"
-                    }
-                  }
+                    "type": "choice",
+                    "linkId": "day-of-the-week",
+                    "repeats": True,
+                    "answerOption": [
+                        {
+                            "valueCoding": {
+                                "code": "sun",
+                                "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                "display": "Sunday",
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "code": "mon",
+                                "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                "display": "Monday",
+                            }
+                        },
+                        {
+                            "valueCoding": {
+                                "code": "tue",
+                                "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                "display": "Tuesday",
+                            }
+                        },
+                    ],
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%Questionnaire.repeat(item).where(linkId='day-of-the-week').answerOption.valueCoding.where(code in 'sun')"
+                        )
+                    ],
                 },
-                {
-                  "value": {
-                    "Coding": {
-                      "code": "mon",
-                      "system": "http://hl7.org/fhir/ValueSet/days-of-week",
-                      "display": "Monday"
-                    }
-                  }
-                },
-                {
-                  "value": {
-                    "Coding": {
-                      "code": "tue",
-                      "system": "http://hl7.org/fhir/ValueSet/days-of-week",
-                      "display": "Tuesday"
-                    }
-                  }
-                }
-              ],
-              "initialExpression": {
-                "language": "text/fhirpath",
-                "expression": "%Questionnaire.repeat(item).where(linkId='day-of-the-week').answerOption.valueCoding.where(code in 'sun')"
-              }
-            },
-            {
-              "text": "Time start",
-              "type": "time",
-              "linkId": "time-start",
-              "initialExpression": {
-                "language": "text/fhirpath",
-                "expression": "%context.valueTiming.repeat.timeOfDay"
-              }
-            }
-          ],
-          "text": "Time period",
-          "type": "group",
-          "linkId": "time-period",
-          "repeats": True,
-          "itemPopulationContext": {
-            "language": "text/fhirpath",
-            "expression": "%Schedule.extension.where(url='http://example.com')"
-          }
+            ],
         }
-      ],
-      "type": "group",
-      "linkId": "root-group"
-    }
-  ],
-  "mapping": [
-    {
-      "id": "edit-schedule-extract",
-      "resourceType": "Mapping"
-    }
-  ],
-  "resourceType": "Questionnaire",
-  "title": "Edit Schedule",
-  "status": "active",
-  "id": "edit-schedule",
-  "url": "edit-schedule"
+    ],
 }
 
 env = {
+    "Practitioner": {
+        "resourceType": "Practitioner",
+        "id": "p1",
+    },
     "Schedule": {
-        "actor": [
-            {
-                "reference": "Patient/Patient1"
-            }
-        ],
+        "actor": [{"reference": "Practitioner/p1"}],
         "extension": [
             {
                 "url": "http://example.com",
-                "value":{
-                    "Timing": {
-                        "repeat": {
-                            "dayOfWeek": [
-                                "mon",
-                                "tue"
-                            ],
-                        }
+                "valueTiming": {
+                    "repeat": {
+                        "dayOfWeek": ["mon", "tue"],
                     }
-                }
+                },
             }
         ],
         "resourceType": "Schedule",
     },
-    "Questionnaire": questionnaire
 }
 
 expected_qr = {
@@ -133,40 +91,31 @@ expected_qr = {
     "questionnaire": questionnaire["id"],
     "item": [
         {
-            "linkId": "root-group",
+            "linkId": "time-period",
             "item": [
                 {
-                    "linkId": "time-period",
-                    "item": [
+                    "linkId": "day-of-the-week",
+                    "answer": [
                         {
-                            "linkId": "day-of-the-week",
-                            "answer": [
-                                {
-                                    "valueCoding": {
-                                        "code": "sun",
-                                        "system": "http://hl7.org/fhir/ValueSet/days-of-week",
-                                        "display": "Sunday"
-                                    }
-                                }
-                            ]
-                        },
-                    ]
-                }
-            ]
+                            "valueCoding": {
+                                "code": "sun",
+                                "system": "http://hl7.org/fhir/ValueSet/days-of-week",
+                                "display": "Sunday",
+                            }
+                        }
+                    ],
+                },
+            ],
         }
     ],
-    "status": "completed"
 }
 
 
 @pytest.mark.asyncio
-async def test_initial_expression_multiple_select(aidbox_client, safe_db):
-    schedule_example = aidbox_client.resource("Schedule", **env["Schedule"])
-
-    await schedule_example.save()
-
-    assert schedule_example.id is not None
-
-    questionnaire_response = await populate(aidbox_client, questionnaire, env)
+async def test_initial_expression_multiple_select(fhir_client, safe_db):
+    q = await create_questionnaire(fhir_client, questionnaire)
+    questionnaire_response = await q.execute(
+        "$populate", data=make_parameters(**env)
+    )
 
     assert questionnaire_response == expected_qr
