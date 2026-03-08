@@ -1,5 +1,4 @@
 import copy
-
 from urllib.parse import quote
 
 from fhirpathpy.models import models
@@ -12,6 +11,7 @@ from funcy.types import is_list, is_mapping
 from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
 from app.sdc.typings import LaunchContext
+
 from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
@@ -86,8 +86,7 @@ def walk_dict(d, transform):
     for k, v in result_dict.items():
         if is_list(v):
             result_dict[k] = [
-                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k)
-                for vi in v
+                walk_dict(vi, transform) if is_mapping(vi) else transform(vi, k) for vi in v
             ]
         elif is_mapping(v):
             result_dict[k] = walk_dict(v, transform)
@@ -111,9 +110,7 @@ def prepare_link_ids(questionnaire, variables):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(
-        raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True)
-    )
+    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
 
 
 def resolve_string_template(i, env, encode_result=False):
@@ -184,9 +181,7 @@ async def load_source_queries(client, fce_questionnaire, env):
         f"{item['resourceType']}#{item['id']}": item
         for item in fce_questionnaire.get("contained", [])
     }
-    contained_new = {
-        item["id"]: item for item in fce_questionnaire.get("contained", [])
-    }
+    contained_new = {item["id"]: item for item in fce_questionnaire.get("contained", [])}
     contained = {**contained_compat, **contained_new}
 
     # TODO: get rid of FCE format completely
