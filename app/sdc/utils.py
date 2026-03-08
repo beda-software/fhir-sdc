@@ -1,5 +1,4 @@
 import copy
-
 from urllib.parse import quote
 
 from fhirpathpy.models import models
@@ -10,6 +9,7 @@ from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 
 from app.cached_fhirpath import fhirpath
+
 from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
@@ -31,6 +31,14 @@ def get_type(item, data):
         type = "integer"
     elif type == "decimal":
         type = "decimal"
+    elif type == "date":
+        type = "date"
+    elif type == "dateTime":
+        type = "dateTime"
+    elif type == "time":
+        type = "time"
+    elif type == "boolean":
+        type = "boolean"
     elif type == "attachment":
         type = "Attachment"
     elif type == "email":
@@ -43,8 +51,26 @@ def get_type(item, data):
         type = "Reference"
     elif type == "quantity":
         type = "Quantity"
+    # TODO: deprecate email and phone
+    elif type == "email":
+        type = "string"
+    elif type == "phone":
+        type = "string"
 
     return type
+
+
+def normalize_answer_value(type_: str, value):
+    # Resource (that contains resourceType and id) should be converted to Reference
+    # It's according to the spec of $populate
+    if (
+        type_ == "Reference"
+        and isinstance(value, dict)
+        and "resourceType" in value
+        and "id" in value
+    ):
+        return {"reference": f"{value['resourceType']}/{value['id']}"}
+    return value
 
 
 def walk_dict(d, transform):
@@ -140,17 +166,14 @@ def parse_parameter_value(parameter, is_fhir: bool):
 async def load_source_queries(client, fce_questionnaire, env):
     # Previously we used invalid format for localRef Bundle#id
     # But according to the specification, local ref to contained resource should be #id
-    # And since in Aidbox format we have localRef without leading #, 
+    # And since in Aidbox format we have localRef without leading #,
     # contained resources are accessible via id
     # But for backward compatibility they are also accessible by Bundle#id
     contained_compat = {
         f"{item['resourceType']}#{item['id']}": item
         for item in fce_questionnaire.get("contained", [])
     }
-    contained_new = {
-        item['id']: item
-        for item in fce_questionnaire.get("contained", [])
-    }
+    contained_new = {item["id"]: item for item in fce_questionnaire.get("contained", [])}
     contained = {**contained_compat, **contained_new}
 
     source_queries = fce_questionnaire.get("sourceQueries", {})
@@ -178,7 +201,8 @@ def validate_assemble_context(assemble_context: list[str], env):
                 }
             )
     if len(errors) > 0:
-        raise ConstraintCheckOperationOutcome(errors)   
+        raise ConstraintCheckOperationOutcome(errors)
+
 
 def validate_context(context_definition, env):
     all_vars = env.keys()
