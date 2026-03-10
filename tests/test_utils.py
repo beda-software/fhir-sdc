@@ -60,9 +60,7 @@ def test_prepare_bundle_encode_params():
         ],
     }
 
-    assert prepare_bundle(
-        bundle_entry, {"QuestionnaireResponse": questionnaire_response}
-    ) == {
+    assert prepare_bundle(bundle_entry, {"QuestionnaireResponse": questionnaire_response}) == {
         "request": {
             "method": "GET",
             "url": "/Patient?email=test%2B1%40example.com",
@@ -99,15 +97,9 @@ def test_prepare_link_ids_does_not_encode_params():
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
                 "extension": [
-                    {
-                        "url": "name",
-                        "valueString": "prefix"
-                    },
-                    {
-                        "url": "type",
-                        "valueString": "string"
-                    }
-                ]
+                    {"url": "name", "valueString": "prefix"},
+                    {"url": "type", "valueString": "string"},
+                ],
             }
         ],
         "item": [
@@ -134,15 +126,9 @@ def test_prepare_link_ids_does_not_encode_params():
             {
                 "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext",
                 "extension": [
-                    {
-                        "url": "name",
-                        "valueString": "prefix"
-                    },
-                    {
-                        "url": "type",
-                        "valueString": "string"
-                    }
-                ]
+                    {"url": "name", "valueString": "prefix"},
+                    {"url": "type", "valueString": "string"},
+                ],
             }
         ],
         "item": [
@@ -194,7 +180,7 @@ def test_resolve_string_template(answer_type, values, expected):
         + "}}"
     )
     result = resolve_string_template(
-        template_input, {"QuestionnaireResponse": questionnaire_response}
+        {}, template_input, {"QuestionnaireResponse": questionnaire_response}
     )
     assert result == expected
 
@@ -218,9 +204,7 @@ def test_fpml():
         "resourceType": "Patient",
         "id": "{{ %QuestionnaireResponse.answers('patientId') }}",
     }
-    result = resolve_fpml_template(
-        template, {"QuestionnaireResponse": questionnaire_response}
-    )
+    result = resolve_fpml_template(template, {"QuestionnaireResponse": questionnaire_response})
     assert result == {"resourceType": "Patient", "id": "1"}
 
 

@@ -97,5 +97,6 @@ async def test_populate_v3(fhir_client, safe_db):
             },
         ],
         "questionnaire": questionnaire["id"],
+        "status": "in-progress",
         "resourceType": "QuestionnaireResponse",
     }

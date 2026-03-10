@@ -256,5 +256,6 @@ async def test_assemble_then_populate(fhir_client, safe_db):
             },
         ],
         "questionnaire": None,
+        "status": "in-progress",
         "resourceType": "QuestionnaireResponse",
     }

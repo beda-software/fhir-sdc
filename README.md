@@ -12,8 +12,9 @@ In order to use extraction on behalf of the user, the Aidbox should be configure
 For new installations, you must specify the following environment variables:
 ```
 CONSTRAINT_LEGACY_BEHAVIOR=False
-CREATE_MANIFEST_ATTRS=False
 ```
+
+**NOTE:** In fhir-sdc@3.x.x will be enforced to be explicitly set to false. 
 
 ## Further plans:
 - JUTE-based population

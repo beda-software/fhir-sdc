@@ -3,8 +3,8 @@ from funcy.seqs import concat, distinct, flatten
 
 from .utils import (
     apply_converter_for_resources,
+    prepare_assemble_variables,
     prepare_link_ids,
-    prepare_variables,
     validate_assemble_context,
 )
 
@@ -99,7 +99,7 @@ def _load_sub_questionnaire(root_elements, parent_item, item, sub_questionnaire_
     if "subQuestionnaire" in item:
         fce_subq = sub_questionnaire_ids_map[item["subQuestionnaire"]]
 
-        variables = prepare_variables(item)
+        variables = prepare_assemble_variables(item)
         if _validate_assemble_context(fce_subq, variables):
             fce_subq = prepare_link_ids(fce_subq, variables)
 

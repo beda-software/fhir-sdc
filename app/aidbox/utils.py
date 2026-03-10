@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
 from fhirpy import AsyncFHIRClient
 from fhirpy.base import AsyncClient
+from fhirpy.base.exceptions import OperationOutcome
 
 from .sdk import sdk
 
@@ -71,6 +72,8 @@ class AidboxSdcRequest:
 def prepare_args(fn):
     def wrap(operation, request):
         is_fhir, aidbox_client, fhir_client, client = get_clients(operation, request)
+        if not is_fhir:
+            raise OperationOutcome(reason="fhir-sdc@2.x.x support only FHIR endpoints")
         request = AidboxSdcRequest(
             is_fhir,
             aidbox_client,
