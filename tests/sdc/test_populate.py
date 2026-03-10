@@ -810,7 +810,7 @@ async def test_item_context_with_repeating_group_populate_from_nonlocal_context(
 
 
 @pytest.mark.asyncio
-async def test_item_context_without_repeats_populate(fhir_client, safe_db):
+async def test_item_population_context_without_repeats_populate(fhir_client, safe_db):
     q = await create_questionnaire(
         fhir_client,
         {
@@ -866,6 +866,117 @@ async def test_item_context_without_repeats_populate(fhir_client, safe_db):
             }
         ],
     }
+
+    p = await q.execute("$populate", data=make_parameters(LaunchPatient=launch_patient))
+
+    assert p == {
+        "item": [
+            {
+                "item": [
+                    {
+                        "answer": [{"valueString": "Sydney"}],
+                        "linkId": "city",
+                        "text": "City",
+                    },
+                    {
+                        "answer": [{"valueString": "Central park"}],
+                        "linkId": "line-1",
+                        "text": "Line 1",
+                    },
+                    {
+                        "answer": [{"valueString": "near metro station museum"}],
+                        "linkId": "line-2",
+                        "text": "Line 2",
+                    },
+                    {
+                        "answer": [{"valueString": "Australia"}],
+                        "linkId": "Country",
+                        "text": "Country",
+                    },
+                ],
+                "linkId": "address",
+                "text": "Address",
+            }
+        ],
+        "questionnaire": q.id,
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+    }
+
+
+@pytest.mark.asyncio
+async def test_named_item_population_context_without_repeats_populate(fhir_client, safe_db):
+    """
+    Named itemPopulationContext on a non-repeating parent group (Parent) and
+    child items referring to %Parent.* instead of bare field names.
+    """
+    launch_patient = {
+        "resourceType": "Patient",
+        "id": "patient-id",
+        "address": [
+            {
+                "city": "Sydney",
+                "line": ["Central park", "near metro station museum"],
+                "country": "Australia",
+            }
+        ],
+    }
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+            ],
+            "item": [
+                {
+                    "text": "Address",
+                    "type": "group",
+                    "linkId": "address",
+                    "extension": [
+                        make_item_population_context_ext(
+                            "%LaunchPatient.address.first()", name="Parent"
+                        )
+                    ],
+                    "item": [
+                        {
+                            "text": "City",
+                            "linkId": "city",
+                            "type": "string",
+                            "extension": [
+                                make_initial_expression_ext("%Parent.city"),
+                            ],
+                        },
+                        {
+                            "text": "Line 1",
+                            "linkId": "line-1",
+                            "type": "string",
+                            "extension": [
+                                make_initial_expression_ext("%Parent.line[0]"),
+                            ],
+                        },
+                        {
+                            "text": "Line 2",
+                            "linkId": "line-2",
+                            "type": "string",
+                            "extension": [
+                                make_initial_expression_ext("%Parent.line[1]"),
+                            ],
+                        },
+                        {
+                            "text": "Country",
+                            "linkId": "Country",
+                            "type": "string",
+                            "extension": [
+                                make_initial_expression_ext("%Parent.country"),
+                            ],
+                        },
+                    ],
+                }
+            ],
+        },
+    )
 
     p = await q.execute("$populate", data=make_parameters(LaunchPatient=launch_patient))
 
@@ -1710,5 +1821,130 @@ async def test_variable_x_fhir_query_empty_resolves_to_none_populate(fhir_client
         "questionnaire": q.id,
         "item": [
             {"linkId": "q-1"},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_named_item_population_context_parent_child_repeating_populate(fhir_client, safe_db):
+    """
+    Named itemPopulationContext on a repeating parent group (Parent) and a nested
+    child group (Child), used together in an initialExpression.
+    """
+    observation = {
+        "resourceType": "Observation",
+        "id": "obs-1",
+        "effectiveTiming": {
+            "repeat": [
+                {"duration": 1, "dayOfWeek": ["mon", "tue"]},
+                {"duration": 2, "dayOfWeek": ["sun", "mon"]},
+            ]
+        },
+    }
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("Observation", "Observation"),
+            ],
+            "item": [
+                {
+                    "type": "group",
+                    "linkId": "parent",
+                    "repeats": True,
+                    "extension": [
+                        make_item_population_context_ext(
+                            "%Observation.effectiveTiming.repeat", name="Parent"
+                        ),
+                    ],
+                    "item": [
+                        {
+                            "type": "group",
+                            "linkId": "child",
+                            "repeats": True,
+                            "extension": [
+                                make_item_population_context_ext("%Parent.dayOfWeek", name="Child"),
+                            ],
+                            "item": [
+                                {
+                                    "type": "string",
+                                    "linkId": "q-1",
+                                    "extension": [
+                                        make_initial_expression_ext(
+                                            "%Parent.duration.toString() & ': ' & %Child"
+                                        ),
+                                    ],
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters(Observation=observation))
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+        "questionnaire": q.id,
+        "item": [
+            {
+                "linkId": "parent",
+                "item": [
+                    {
+                        "linkId": "child",
+                        "item": [
+                            {
+                                "linkId": "q-1",
+                                "answer": [
+                                    {"valueString": "1: mon"},
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "linkId": "child",
+                        "item": [
+                            {
+                                "linkId": "q-1",
+                                "answer": [
+                                    {"valueString": "1: tue"},
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
+            {
+                "linkId": "parent",
+                "item": [
+                    {
+                        "linkId": "child",
+                        "item": [
+                            {
+                                "linkId": "q-1",
+                                "answer": [
+                                    {"valueString": "2: sun"},
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "linkId": "child",
+                        "item": [
+                            {
+                                "linkId": "q-1",
+                                "answer": [
+                                    {"valueString": "2: mon"},
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
         ],
     }

@@ -90,10 +90,14 @@ def make_source_queries_ext(reference):
     }
 
 
-def make_item_population_context_ext(expression):
+def make_item_population_context_ext(expression, name=None):
     return {
         "url": ITEM_POPULATION_CONTEXT_URL,
-        "valueExpression": {"language": "text/fhirpath", "expression": expression},
+        "valueExpression": {
+            "language": "text/fhirpath",
+            "expression": expression,
+            **({"name": name} if name else {}),
+        },
     }
 
 
