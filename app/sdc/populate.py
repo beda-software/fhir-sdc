@@ -1,7 +1,4 @@
-from fhirpy.base.exceptions import OperationOutcome
 from funcy import is_list
-
-from app.cached_fhirpath import fhirpath
 
 from .getters import (
     get_initial_expression,
@@ -15,6 +12,7 @@ from .utils import (
     load_source_queries,
     make_value_key,
     normalize_answer_value,
+    resolve_expression,
     validate_context,
 )
 
@@ -44,15 +42,17 @@ async def populate(client, fhir_questionnaire, env):
     env["resource"] = root
     env["questionnaire"] = env["Questionnaire"]
     for variable in get_variable(exts):
-        env[variable["name"]] = fhirpath({}, variable["expression"], env)
+        env[variable["name"]] = await resolve_expression(
+            client, {}, variable, env, f"variable.{variable['name']}"
+        )
 
     for item in fhir_questionnaire["item"]:
-        root["item"].extend(_handle_item(item, env, {}))
+        root["item"].extend(await _handle_item(client, item, env, {}))
 
     return root
 
 
-def _handle_item(item, env, context):
+async def _handle_item(client, item, env, context):
     # Make a copy of the env to populate with variables for nested items
     env = env.copy()
 
@@ -66,15 +66,25 @@ def _handle_item(item, env, context):
 
     item_exts = item.get("extension", [])
     for variable in get_variable(item_exts):
-        env[variable["name"]] = fhirpath(context, variable["expression"], env)
+        env[variable["name"]] = await resolve_expression(
+            client,
+            context,
+            variable,
+            env,
+            f"{item['linkId']}.variable.{variable['name']}",
+        )
 
     item_context = get_item_context(item_exts)
     if item_context:
-        context = fhirpath(context, item_context["expression"], env)
+        context = await resolve_expression(
+            client, context, item_context, env, f"{item['linkId']}.itemContext"
+        )
 
     item_population_context = get_item_population_context(item_exts)
     if item_population_context:
-        context = fhirpath(context, item_population_context["expression"], env)
+        context = await resolve_expression(
+            client, context, item_population_context, env, f"{item['linkId']}.itemPopulationContext"
+        )
 
     if item["type"] == "group" and item.get("repeats", False) is True and is_list(context):
         root_items = []
@@ -82,7 +92,7 @@ def _handle_item(item, env, context):
         for c in context:
             populated_items = []
             for subitem in item["item"]:
-                populated_items.extend(_handle_item(subitem, env, c))
+                populated_items.extend(await _handle_item(client, subitem, env, c))
             root_item = init_item()
             root_item["item"] = populated_items
 
@@ -94,10 +104,9 @@ def _handle_item(item, env, context):
     initial_expression = get_initial_expression(item_exts)
     if initial_expression:
         answers = []
-        try:
-            data = fhirpath(context, initial_expression["expression"], env)
-        except Exception as e:
-            raise OperationOutcome(f'Error: "{initial_expression["expression"]}" - {str(e)}')
+        data = await resolve_expression(
+            client, context, initial_expression, env, f"{item['linkId']}.initialExpression"
+        )
         if data:
             type_ = get_type(item, data)
             if item.get("repeats") is True:
@@ -112,7 +121,7 @@ def _handle_item(item, env, context):
     if "item" in item:
         populated_items = []
         for subitem in item["item"]:
-            populated_items.extend(_handle_item(subitem, env, context))
+            populated_items.extend(await _handle_item(client, subitem, env, context))
 
         root_item["item"] = populated_items
 

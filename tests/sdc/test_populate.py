@@ -1111,12 +1111,12 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
                 {
                     "severity": "fatal",
                     "code": "invalid",
-                    "diagnostics": 'Error: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+                    "diagnostics": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
                 }
             ],
             "text": {
                 "status": "generated",
-                "div": 'Error: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+                "div": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
             },
         }
         return
@@ -1558,7 +1558,10 @@ async def test_variable_group_level_populate(fhir_client, safe_db):
             {
                 "linkId": "g-1",
                 "item": [
-                    {"linkId": "q-1", "answer": [{"valueString": "Patient/patient-789"}]},
+                    {
+                        "linkId": "q-1",
+                        "answer": [{"valueString": "Patient/patient-789"}],
+                    },
                 ],
             },
         ],
@@ -1613,3 +1616,99 @@ async def test_variable_defined_in_one_group_not_visible_in_sibling_group_popula
     with pytest.raises(OperationOutcome) as exc:
         await q.execute("$populate", data=make_parameters())
         assert exc.value.resource["issue"][0]["code"] == "invalid"
+
+
+@pytest.mark.asyncio
+async def test_variable_x_fhir_query_root_and_question_level_populate(fhir_client, safe_db):
+    """
+    Variables resolved via application/x-fhir-query on root and question levels
+    and then combined in an initial expression.
+    """
+    patient1 = fhir_client.resource(
+        "Patient",
+        **{
+            "id": "p1",
+            "name": [{"given": ["John"]}],
+        },
+    )
+    await patient1.save()
+
+    patient2 = fhir_client.resource(
+        "Patient",
+        **{
+            "id": "p2",
+            "name": [{"family": "Doe"}],
+        },
+    )
+    await patient2.save()
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_variable_ext("Patient1", "Patient/p1", "application/x-fhir-query")],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "q-1",
+                    "extension": [
+                        make_variable_ext("Patient2", "Patient/p2", "application/x-fhir-query"),
+                        make_initial_expression_ext(
+                            "%Patient1.name.given.first() + ' ' + %Patient2.name.family.first()"
+                        ),
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1", "answer": [{"valueString": "John Doe"}]},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_variable_x_fhir_query_empty_resolves_to_none_populate(fhir_client, safe_db):
+    """
+    application/x-fhir-query expression that resolves to an empty value
+    should not trigger a query and must behave as None.
+    """
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_variable_ext("Patient1", "Patient/{{ {} }}", "application/x-fhir-query")
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "q-1",
+                    "extension": [
+                        make_initial_expression_ext(
+                            "%Patient1.name.given.first() + ' ' + %Patient1.name.family.first()"
+                        ),
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+
+    assert p == {
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "q-1"},
+        ],
+    }

@@ -2,6 +2,7 @@ import copy
 from urllib.parse import quote
 
 from fhirpathpy.models import models
+from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from fpml import resolve_template
 from funcy.seqs import first
@@ -10,7 +11,7 @@ from funcy.types import is_list, is_mapping
 
 from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
-from app.sdc.typings import LaunchContext
+from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome
 
@@ -98,7 +99,7 @@ def walk_dict(d, transform):
 def update_link_id_or_question(variables):
     def _update_link_id_or_question(value, key):
         if key in ["linkId", "question"]:
-            return resolve_string_template(value, variables)
+            return resolve_string_template({}, value, variables)
         else:
             return value
 
@@ -110,16 +111,21 @@ def prepare_link_ids(questionnaire, variables):
 
 
 def prepare_bundle(raw_bundle, env):
-    return walk_dict(raw_bundle, lambda v, _k: resolve_string_template(v, env, encode_result=True))
+    return walk_dict(
+        raw_bundle,
+        lambda value, _k: resolve_string_template({}, value, env, encode_result=True),
+    )
 
 
-def resolve_string_template(i, env, encode_result=False):
-    if not isinstance(i, str):
-        return i
-    exprs = re_all(r"(?P<var>{{[\S\s]+?}})", i)
+def resolve_string_template(
+    context, expr: str, env, *, encode_result=False, return_null_if_unresolved=False
+):
+    if not isinstance(expr, str):
+        return expr
+    exprs = re_all(r"(?P<var>{{[\S\s]+?}})", expr)
     vs = {}
     for exp in exprs:
-        data = fhirpath({}, exp["var"][2:-2], env)
+        data = fhirpath(context, exp["var"][2:-2], env)
         if len(data) > 0:
             # NOTE: http://build.fhir.org/ig/HL7/sdc/expressions.html#x-fhir-query-enhancements
             # If the expression resolves to a collection of more than one value,
@@ -127,18 +133,22 @@ def resolve_string_template(i, env, encode_result=False):
             search_str = ",".join([str(item) for item in data])
             vs[exp["var"]] = quote(search_str) if encode_result else search_str
         else:
+            if return_null_if_unresolved:
+                return None
             vs[exp["var"]] = ""
-    res = i
+    res = expr
     for k, v in vs.items():
         res = res.replace(k, v)
 
     return res
 
 
-def prepare_variables(item):
+def prepare_assemble_variables(item):
+    # Assemble supports only fhirpath expressions
     variables = {}
     for var in item.get("variable", []):
-        variables[var["name"]] = fhirpath({}, var["expression"])
+        if var["language"] == "text/fhirpath":
+            variables[var["name"]] = fhirpath({}, var["expression"])
     return variables
 
 
@@ -304,3 +314,29 @@ async def apply_converter_for_resources(converter_fn, resources: list) -> list:
     fce_bundle = await converter_fn(bundle)
     result = [s["resource"] for s in fce_bundle["entry"]]
     return result
+
+
+async def resolve_expression(client, context, expression: Expression, env, path: str):
+    try:
+        if expression["language"] == "text/fhirpath":
+            return fhirpath(context, expression["expression"], env)
+        elif expression["language"] == "application/x-fhir-query":
+            url = resolve_string_template(
+                context,
+                expression["expression"],
+                env,
+                encode_result=True,
+                return_null_if_unresolved=True,
+            )
+            if url is None:
+                return None
+            return await client.execute(
+                url,
+                method="GET",
+            )
+    except Exception as e:
+        raise OperationOutcome(
+            f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
+        )
+
+    raise OperationOutcome(f"Unsupported expression language: {expression['language']} at {path}")

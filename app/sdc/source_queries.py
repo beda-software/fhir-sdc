@@ -10,5 +10,5 @@ def resolve_expression(resource):
     except KeyError as e:
         raise OperationOutcome(str(e))
 
-    resolved_expression = resolve_string_template(expression, env)
+    resolved_expression = resolve_string_template({}, expression, env)
     return resolved_expression

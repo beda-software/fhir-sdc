@@ -14,9 +14,7 @@ QUESTIONNAIRE_PROFILE_URL = (
 def make_parameters(**payload):
     return {
         "resourceType": "Parameters",
-        "parameter": [
-            {"name": name, "resource": resource} for name, resource in payload.items()
-        ],
+        "parameter": [{"name": name, "resource": resource} for name, resource in payload.items()],
     }
 
 
@@ -106,12 +104,12 @@ def make_initial_expression_ext(expression):
     }
 
 
-def make_variable_ext(name, expression):
+def make_variable_ext(name, expression, language="text/fhirpath"):
     return {
         "url": VARIABLE_URL,
         "valueExpression": {
             "name": name,
-            "language": "text/fhirpath",
+            "language": language,
             "expression": expression,
         },
     }
