@@ -1,3 +1,5 @@
+import logging
+
 from funcy import is_list
 
 from .getters import (
@@ -15,6 +17,8 @@ from .utils import (
     resolve_expression,
     validate_context,
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def populate(client, fhir_questionnaire, env):
@@ -75,7 +79,8 @@ async def _handle_item(client, item, env, context):
         )
 
     item_context = get_item_context(item_exts)
-    if item_context:
+    if item_context:  # pragma: no cover
+        logger.warning("itemContext is deprecated, use itemPopulationContext instead")
         context = await resolve_expression(
             client, context, item_context, env, f"{item['linkId']}.itemContext"
         )
@@ -83,13 +88,23 @@ async def _handle_item(client, item, env, context):
     item_population_context = get_item_population_context(item_exts)
     if item_population_context:
         context = await resolve_expression(
-            client, context, item_population_context, env, f"{item['linkId']}.itemPopulationContext"
+            client,
+            context,
+            item_population_context,
+            env,
+            f"{item['linkId']}.itemPopulationContext",
         )
+        if "name" in item_population_context:
+            env[item_population_context["name"]] = context
 
-    if item["type"] == "group" and item.get("repeats", False) is True and is_list(context):
+    is_repeating = item.get("repeats", False) is True
+
+    if item["type"] == "group" and is_repeating and is_list(context):
         root_items = []
 
         for c in context:
+            if item_population_context and "name" in item_population_context:
+                env[item_population_context["name"]] = c
             populated_items = []
             for subitem in item["item"]:
                 populated_items.extend(await _handle_item(client, subitem, env, c))
@@ -105,11 +120,15 @@ async def _handle_item(client, item, env, context):
     if initial_expression:
         answers = []
         data = await resolve_expression(
-            client, context, initial_expression, env, f"{item['linkId']}.initialExpression"
+            client,
+            context,
+            initial_expression,
+            env,
+            f"{item['linkId']}.initialExpression",
         )
         if data:
             type_ = get_type(item, data)
-            if item.get("repeats") is True:
+            if is_repeating:
                 answers = [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
             else:
                 answers = [{make_value_key(type_): normalize_answer_value(type_, data[0])}]
