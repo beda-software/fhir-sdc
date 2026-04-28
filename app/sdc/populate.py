@@ -22,6 +22,12 @@ logger = logging.getLogger(__name__)
 
 
 async def populate(client, fhir_questionnaire, env):
+    keys = env.keys()
+    for key in list(keys):
+        value = env[key]
+        if isinstance(value, dict) and value.get("resourceType") is None and value.get("reference") is not None:
+            env[key] = await client.reference(reference=value["reference"]).to_resource()
+
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
