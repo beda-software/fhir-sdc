@@ -59,6 +59,16 @@ async def populate(client, fhir_questionnaire, env):
     for item in fhir_questionnaire["item"]:
         root["item"].extend(await _handle_item(client, item, env, {}))
 
+    if env.get("useSDCAPI", False):
+        return {
+            "resourceType": "Parameters",
+            "parameter": [
+                {
+                    "name": "response",
+                    "resource": root
+                }
+            ]
+        }
     return root
 
 
