@@ -155,7 +155,13 @@ def prepare_assemble_variables(item):
 def parameter_to_env(resource, is_fhir: bool = True):
     env = {}
     for param in resource["parameter"]:
-        if "resource" in param:
+        if param["name"] == "context":
+            n = [p for p in param["part"] if p["name"] == "name"][0]["valueString"]
+            c = [p for p in param["part"] if p["name"] == "content"][0]
+            get = [k for k in c.keys() if k != "name"][0]
+            env[n] = c[get]
+            env["useSDCAPI"] = True
+        elif "resource" in param:
             env[param["name"]] = param["resource"]
         else:
             value = parse_parameter_value(param, is_fhir)

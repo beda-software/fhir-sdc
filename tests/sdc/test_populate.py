@@ -1948,3 +1948,77 @@ async def test_named_item_population_context_parent_child_repeating_populate(fhi
             },
         ],
     }
+
+@pytest.mark.asyncio
+async def test_initial_expression_populate_sdc_api(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "patientGiven",
+                    "extension": [make_initial_expression_ext("%LaunchPatient.name.given")],
+                },
+            ],
+        },
+    )
+
+    launch_patient = fhir_client.resource('Patient',
+        name= [{"given": ["John"]}]
+    )
+    await launch_patient.save()
+
+    patient_id = launch_patient["id"]
+
+    patient_ref = {
+        "reference": f"Patient/{patient_id}",
+        "display": "Dow, John"
+    }
+
+    p = await fhir_client.execute("Questionnaire/$populate", data={
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "questionnaire",
+                "resource": q
+            },
+            {
+                "name": "context",
+                "part": [
+                    {
+                        "name": "name",
+                        "valueString": "LaunchPatient"
+                    },
+                    {
+                        "name": "content",
+                        "valueReference": patient_ref
+                    }
+                ]
+            }
+        ]
+    })
+
+    assert p == {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "response",
+                "resource": {
+                    "resourceType": "QuestionnaireResponse",
+                    "status": "in-progress",
+                    "questionnaire": q.id,
+                    "item": [
+                        {
+                            "linkId": "patientGiven",
+                            "answer": [{"valueString": "John"}],
+                        }
+                    ],
+                }
+            }
+        ]
+    }
