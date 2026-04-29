@@ -156,9 +156,9 @@ def parameter_to_env(resource, is_fhir: bool = True):
     env = {}
     for param in resource["parameter"]:
         if param["name"] == "context":
-            n = [p for p in param['part'] if p['name'] == 'name'][0]['valueString']
-            c = [p for p in param['part'] if p['name'] == 'content'][0]
-            get = [k for k in c.keys() if k != 'name'][0]
+            n = [p for p in param["part"] if p["name"] == "name"][0]["valueString"]
+            c = [p for p in param["part"] if p["name"] == "content"][0]
+            get = [k for k in c.keys() if k != "name"][0]
             env[n] = c[get]
         elif "resource" in param:
             env[param["name"]] = param["resource"]
