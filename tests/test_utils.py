@@ -272,3 +272,41 @@ def test_parameter_to_env_skips_empty_launch_param():
     assert "launch-patientId" not in env
     assert env["Questionnaire"] == questionnaire
     assert env["QuestionnaireResponse"] == questionnaire_response
+
+def test_sdc_api_params():
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-1",
+        "status": "active",
+    }
+
+    patient_ref = {
+        "reference": "Patient/3bb82b9c-70b4-407e-ab0c-471b59b8daca",
+        "display": "Dow, John"
+    }
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "questionnaire",
+                "resource": questionnaire
+            },
+            {
+                "name": "context",
+                "part": [
+                    {
+                        "name": "name",
+                        "valueString": "Patient"
+                    },
+                    {
+                        "name": "content",
+                        "valueReference": patient_ref
+                    }
+                ]
+            }
+        ]
+    }
+    env = parameter_to_env(parameters, is_fhir=False)
+    assert env["useSDCAPI"] is True
+    assert env["Patient"] == patient_ref
