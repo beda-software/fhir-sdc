@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -333,25 +333,23 @@ async def test_parameter_to_env_subject_resolves(fhir_client, safe_db):
     assert env["subject"]["id"] == patient.id
 
 
-async def test_sdc_api_params():
-    resolved_patient = {
-        "resourceType": "Patient",
-        "id": "3bb82b9c-70b4-407e-ab0c-471b59b8daca",
-    }
-    ref_proxy = MagicMock()
-    ref_proxy.to_resource = AsyncMock(return_value=resolved_patient)
-    client = MagicMock()
-    client.reference = MagicMock(return_value=ref_proxy)
+@pytest.mark.asyncio
+async def test_sdc_api_params(fhir_client, safe_db):
+    patient = fhir_client.resource(
+        "Patient",
+        name=[{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    )
+    await patient.save()
 
     questionnaire = {
         "resourceType": "Questionnaire",
-        "id": "q-1",
+        "id": "q-sdc-api-params",
         "status": "active",
     }
 
     patient_ref = {
-        "reference": "Patient/3bb82b9c-70b4-407e-ab0c-471b59b8daca",
-        "display": "Dow, John",
+        "reference": f"Patient/{patient.id}",
+        "display": "Integration Patient",
     }
 
     parameters = {
@@ -367,7 +365,12 @@ async def test_sdc_api_params():
             },
         ],
     }
-    env = await parameter_to_env(client, parameters, is_fhir=False)
+
+    env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
+
     assert env["useSDCAPI"] is True
-    assert env["Patient"] == resolved_patient
-    client.reference.assert_called_once_with(reference=patient_ref["reference"])
+    resolved = env["Patient"]
+    assert resolved["resourceType"] == "Patient"
+    assert resolved["id"] == patient.id
+    assert resolved["name"][0]["family"] == "ApiParams"
+    assert resolved["name"][0]["given"] == ["SdcIntegration"]
