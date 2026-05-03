@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from app.sdc.utils import (
+    is_sdc_api,
     parameter_to_env,
     prepare_bundle,
     prepare_link_ids,
@@ -211,6 +212,62 @@ def test_fpml():
 
 
 @pytest.mark.parametrize(
+    ("payload", "expected"),
+    [
+        (None, False),
+        ({}, False),
+        ({"resourceType": "Patient", "id": "x"}, False),
+        ({"resourceType": "Parameters", "parameter": []}, False),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [{"name": "questionnaire", "resource": {}}],
+            },
+            False,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "Questionnaire", "resource": {}},
+                    {"name": "LaunchPatient", "resource": {"resourceType": "Patient"}},
+                ],
+            },
+            False,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "subject", "valueReference": {"reference": "Patient/1"}},
+                ],
+            },
+            True,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [{"name": "context", "part": []}],
+            },
+            True,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "context", "part": []},
+                    {"name": "subject", "valueReference": {"reference": "Patient/1"}},
+                ],
+            },
+            True,
+        ),
+    ],
+)
+def test_is_sdc_api(payload, expected):
+    assert is_sdc_api(payload) is expected
+
+
+@pytest.mark.parametrize(
     "is_fhir,launch_param",
     [
         (True, {"name": "launch-patientId", "valueString": "patient-123"}),
@@ -305,7 +362,7 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
 
     env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
 
-    assert env["useSDCAPI"] is True
+    assert is_sdc_api(parameters) is True
     resolved = env["Observation"]
     assert resolved["resourceType"] == "Observation"
     assert resolved["id"] == obs.id
@@ -328,7 +385,7 @@ async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db)
 
     env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
 
-    assert env["useSDCAPI"] is True
+    assert is_sdc_api(parameters) is True
     assert env["subject"]["resourceType"] == "Patient"
     assert env["subject"]["id"] == patient.id
 
@@ -349,7 +406,7 @@ async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_clie
 
     env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
 
-    assert "useSDCAPI" not in env
+    assert is_sdc_api(parameters) is False
     assert env["PatientRef"]["display"] == "Integration Patient"
     assert env["PatientRef"]["reference"] == f"Patient/{patient.id}"
 
@@ -389,7 +446,7 @@ async def test_sdc_api_params(fhir_client, safe_db):
 
     env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
 
-    assert env["useSDCAPI"] is True
+    assert is_sdc_api(parameters) is True
     resolved = env["Patient"]
     assert resolved["resourceType"] == "Patient"
     assert resolved["id"] == patient.id
@@ -426,7 +483,7 @@ async def test_sdc_api_params_with_resource(fhir_client, safe_db):
 
     env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
 
-    assert env["useSDCAPI"] is True
+    assert is_sdc_api(parameters) is True
     resolved = env["Patient"]
     assert resolved["resourceType"] == "Patient"
     assert resolved["name"][0]["family"] == "ApiParams"

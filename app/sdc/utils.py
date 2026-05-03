@@ -157,6 +157,13 @@ def prepare_assemble_variables(item):
     return variables
 
 
+def is_sdc_api(parameters: dict | None) -> bool:
+    """True when Parameters use SDC `$populate` input shape (`context` and/or `subject`)."""
+    if not parameters or parameters.get("resourceType") != "Parameters":
+        return False
+    return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
+
+
 async def parameter_to_env(
     client: AsyncFHIRClient, resource, is_fhir: bool = True
 ) -> dict[str, Any]:
@@ -173,7 +180,6 @@ async def parameter_to_env(
                 env[name] = await client.reference(
                     reference=value["valueReference"]["reference"]
                 ).to_resource()
-            env["useSDCAPI"] = True
         elif "resource" in param:
             env[param["name"]] = param["resource"]
         else:
@@ -183,7 +189,6 @@ async def parameter_to_env(
                     env[param["name"]] = await client.reference(
                         reference=value["reference"]
                     ).to_resource()
-                    env["useSDCAPI"] = True
                 else:
                     env[param["name"]] = value
     # Mapping parameters to fhir resource names

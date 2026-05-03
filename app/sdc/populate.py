@@ -21,7 +21,7 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env):
+async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
@@ -53,7 +53,7 @@ async def populate(client, fhir_questionnaire, env):
     for item in fhir_questionnaire["item"]:
         root["item"].extend(await _handle_item(client, item, env, {}))
 
-    if env.get("useSDCAPI", False):
+    if sdc_api:
         return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
     return root
 

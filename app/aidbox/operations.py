@@ -12,7 +12,12 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.exception import MissingParamOperationOutcome
-from ..sdc.utils import get_external_fhir_base_url_from_resource, parameter_to_env, validate_context
+from ..sdc.utils import (
+    get_external_fhir_base_url_from_resource,
+    is_sdc_api,
+    parameter_to_env,
+    validate_context,
+)
 from ..utils import get_extract_services
 from .settings import settings
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
@@ -236,7 +241,9 @@ async def populate_questionnaire(request: AidboxSdcRequest):
     if "Questionnaire" not in env:
         raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
-    populated_qr = await populate(client, env["Questionnaire"], env)
+    populated_qr = await populate(
+        client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
+    )
     return web.json_response(populated_qr, dumps=json.dumps)
 
 
@@ -257,7 +264,9 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
     env = await parameter_to_env(client, request.resource, request.is_fhir)
     env["Questionnaire"] = fhir_questionnaire
 
-    populated_qr = await populate(client, env["Questionnaire"], env)
+    populated_qr = await populate(
+        client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
+    )
 
     return web.json_response(populated_qr, dumps=json.dumps)
 

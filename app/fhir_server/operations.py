@@ -15,7 +15,7 @@ from ..sdc import (
     populate,
     resolve_expression,
 )
-from ..sdc.utils import parameter_to_env, validate_context
+from ..sdc.utils import is_sdc_api, parameter_to_env, validate_context
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
@@ -206,7 +206,8 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 @routes.post("/Questionnaire/$populate")
 async def populate_questionnaire_handler(request: web.BaseRequest):
     client = request.app["client"]
-    env = await parameter_to_env(client, await request.json())
+    body = await request.json()
+    env = await parameter_to_env(client, body)
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
         # TODO: return OperationOutcome
@@ -218,7 +219,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
             status=422,
         )
 
-    populated_resource = await populate(client, questionnaire_data, env)
+    populated_resource = await populate(client, questionnaire_data, env, sdc_api=is_sdc_api(body))
     return web.json_response(populated_resource)
 
 
@@ -228,9 +229,10 @@ async def populate_questionnaire_instance(request: web.BaseRequest):
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    env = await parameter_to_env(client, request["resource"])
+    body = await request.json()
+    env = await parameter_to_env(client, body)
     env["Questionnaire"] = questionnaire
-    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = await populate(client, questionnaire, env, sdc_api=is_sdc_api(body))
 
     return web.json_response(populated_resource)
 
