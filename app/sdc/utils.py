@@ -1,7 +1,9 @@
 import copy
+from typing import Any
 from urllib.parse import quote
 
 from fhirpathpy.models import models
+from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from fpml import resolve_template
@@ -152,14 +154,20 @@ def prepare_assemble_variables(item):
     return variables
 
 
-def parameter_to_env(resource, is_fhir: bool = True):
-    env = {}
+async def parameter_to_env(
+    client: AsyncFHIRClient, resource, is_fhir: bool = True
+) -> dict[str, Any]:
+    # TODO: add support resolving resources through local `data` or `dataEndpoint`
+    # TODO: according to spec https://build.fhir.org/ig/HL7/sdc/en/StructureDefinition-parameters-questionnaire-populate-in.html
+    env: dict[str, Any] = {}
     for param in resource["parameter"]:
         if param["name"] == "context":
-            n = [p for p in param["part"] if p["name"] == "name"][0]["valueString"]
-            c = [p for p in param["part"] if p["name"] == "content"][0]
-            get = [k for k in c.keys() if k != "name"][0]
-            env[n] = c[get]
+            parts = param["part"]
+            name = next(p for p in parts if p["name"] == "name")["valueString"]
+            value = next(p for p in parts if p["name"] == "content")
+            env[name] = await client.reference(
+                reference=value["valueReference"]["reference"]
+            ).to_resource()
             env["useSDCAPI"] = True
         elif "resource" in param:
             env[param["name"]] = param["resource"]

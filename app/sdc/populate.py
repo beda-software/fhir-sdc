@@ -22,12 +22,6 @@ logger = logging.getLogger(__name__)
 
 
 async def populate(client, fhir_questionnaire, env):
-    keys = env.keys()
-    for key in list(keys):
-        value = env[key]
-        if isinstance(value, dict) and value.get("resourceType") is None and value.get("reference") is not None:
-            env[key] = await client.reference(reference=value["reference"]).to_resource()
-
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
@@ -60,15 +54,7 @@ async def populate(client, fhir_questionnaire, env):
         root["item"].extend(await _handle_item(client, item, env, {}))
 
     if env.get("useSDCAPI", False):
-        return {
-            "resourceType": "Parameters",
-            "parameter": [
-                {
-                    "name": "response",
-                    "resource": root
-                }
-            ]
-        }
+        return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
     return root
 
 

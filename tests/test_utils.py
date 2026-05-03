@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 
 from app.sdc.utils import (
@@ -218,7 +220,8 @@ def test_fpml():
         ),
     ],
 )
-def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
+async def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
+    client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
         "id": "q-1",
@@ -238,7 +241,7 @@ def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
         ],
     }
 
-    env = parameter_to_env(parameters, is_fhir)
+    env = await parameter_to_env(client, parameters, is_fhir)
 
     assert env["questionnaire"] == questionnaire
     assert env["questionnaire_response"] == questionnaire_response
@@ -247,7 +250,8 @@ def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
     assert env["QuestionnaireResponse"] == questionnaire_response
 
 
-def test_parameter_to_env_skips_empty_launch_param():
+async def test_parameter_to_env_skips_empty_launch_param():
+    client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
         "id": "q-1",
@@ -267,13 +271,58 @@ def test_parameter_to_env_skips_empty_launch_param():
         ],
     }
 
-    env = parameter_to_env(parameters, is_fhir=False)
+    env = await parameter_to_env(client, parameters, is_fhir=False)
 
     assert "launch-patientId" not in env
     assert env["Questionnaire"] == questionnaire
     assert env["QuestionnaireResponse"] == questionnaire_response
 
-def test_sdc_api_params():
+
+@pytest.mark.asyncio
+async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db):
+    obs = fhir_client.resource(
+        "Observation",
+        status="final",
+        code={"text": "parameter-to-env-integration"},
+    )
+    await obs.save()
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "context",
+                "part": [
+                    {"name": "name", "valueString": "Observation"},
+                    {
+                        "name": "content",
+                        "valueReference": {"reference": f"Observation/{obs.id}"},
+                    },
+                ],
+            },
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+
+    assert env["useSDCAPI"] is True
+    resolved = env["Observation"]
+    assert resolved["resourceType"] == "Observation"
+    assert resolved["id"] == obs.id
+    assert resolved["status"] == "final"
+    assert resolved["code"]["text"] == "parameter-to-env-integration"
+
+
+async def test_sdc_api_params():
+    resolved_patient = {
+        "resourceType": "Patient",
+        "id": "3bb82b9c-70b4-407e-ab0c-471b59b8daca",
+    }
+    ref_proxy = MagicMock()
+    ref_proxy.to_resource = AsyncMock(return_value=resolved_patient)
+    client = MagicMock()
+    client.reference = MagicMock(return_value=ref_proxy)
+
     questionnaire = {
         "resourceType": "Questionnaire",
         "id": "q-1",
@@ -282,31 +331,23 @@ def test_sdc_api_params():
 
     patient_ref = {
         "reference": "Patient/3bb82b9c-70b4-407e-ab0c-471b59b8daca",
-        "display": "Dow, John"
+        "display": "Dow, John",
     }
 
     parameters = {
         "resourceType": "Parameters",
         "parameter": [
-            {
-                "name": "questionnaire",
-                "resource": questionnaire
-            },
+            {"name": "questionnaire", "resource": questionnaire},
             {
                 "name": "context",
                 "part": [
-                    {
-                        "name": "name",
-                        "valueString": "Patient"
-                    },
-                    {
-                        "name": "content",
-                        "valueReference": patient_ref
-                    }
-                ]
-            }
-        ]
+                    {"name": "name", "valueString": "Patient"},
+                    {"name": "content", "valueReference": patient_ref},
+                ],
+            },
+        ],
     }
-    env = parameter_to_env(parameters, is_fhir=False)
+    env = await parameter_to_env(client, parameters, is_fhir=False)
     assert env["useSDCAPI"] is True
-    assert env["Patient"] == patient_ref
+    assert env["Patient"] == resolved_patient
+    client.reference.assert_called_once_with(reference=patient_ref["reference"])
