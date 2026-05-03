@@ -161,17 +161,19 @@ def prepare_assemble_variables(item):
 async def parameter_to_env(
     client: AsyncFHIRClient, resource, is_fhir: bool = True
 ) -> dict[str, Any]:
-    # TODO: add support resolving resources through local `data` or `dataEndpoint`
-    # TODO: according to spec https://build.fhir.org/ig/HL7/sdc/en/StructureDefinition-parameters-questionnaire-populate-in.html
+    # TODO: add support for repeating values (with same name)
     env: dict[str, Any] = {}
     for param in resource["parameter"]:
         if param["name"] == "context":
             parts = param["part"]
             name = next(p for p in parts if p["name"] == "name")["valueString"]
             value = next(p for p in parts if p["name"] == "content")
-            env[name] = await client.reference(
-                reference=value["valueReference"]["reference"]
-            ).to_resource()
+            if "resource" in value:
+                env[name] = value["resource"]
+            else:
+                env[name] = await client.reference(
+                    reference=value["valueReference"]["reference"]
+                ).to_resource()
             env["useSDCAPI"] = True
         elif "resource" in param:
             env[param["name"]] = param["resource"]

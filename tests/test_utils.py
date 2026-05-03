@@ -374,3 +374,39 @@ async def test_sdc_api_params(fhir_client, safe_db):
     assert resolved["id"] == patient.id
     assert resolved["name"][0]["family"] == "ApiParams"
     assert resolved["name"][0]["given"] == ["SdcIntegration"]
+
+
+@pytest.mark.asyncio
+async def test_sdc_api_params_with_resource(fhir_client, safe_db):
+    patient = {
+        "resourceType": "Patient",
+        "name": [{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    }
+
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-sdc-api-params",
+        "status": "active",
+    }
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": questionnaire},
+            {
+                "name": "context",
+                "part": [
+                    {"name": "name", "valueString": "Patient"},
+                    {"name": "content", "resource": patient},
+                ],
+            },
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
+
+    assert env["useSDCAPI"] is True
+    resolved = env["Patient"]
+    assert resolved["resourceType"] == "Patient"
+    assert resolved["name"][0]["family"] == "ApiParams"
+    assert resolved["name"][0]["given"] == ["SdcIntegration"]
