@@ -19,6 +19,10 @@ from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
 
+# TODO: it's outside from spec, if it's only for data fetching,
+# TODO: better to use dataEndpoint and it should be handled in `parameter_to_env` function
+EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
+
 
 def get_type(item, data):
     type = item["type"]
@@ -172,9 +176,15 @@ async def parameter_to_env(
         elif "resource" in param:
             env[param["name"]] = param["resource"]
         else:
-            value = parse_parameter_value(param, is_fhir)
+            value, kind = parse_parameter_value(param, is_fhir)
             if value:
-                env[param["name"]] = value
+                if param["name"] == "subject" and kind == "Reference":
+                    env[param["name"]] = await client.reference(
+                        reference=value["reference"]
+                    ).to_resource()
+                    env["useSDCAPI"] = True
+                else:
+                    env[param["name"]] = value
     # Mapping parameters to fhir resource names
     questionnaire = env.get("questionnaire")
     if questionnaire:
@@ -185,14 +195,27 @@ async def parameter_to_env(
     return env
 
 
-def parse_parameter_value(parameter, is_fhir: bool):
+def parse_parameter_value(parameter, is_fhir: bool) -> tuple[Any, str]:
     if is_fhir:
         _name_key, value_key = parameter.keys()
-        return parameter[value_key]
-    else:
-        value = parameter["value"]
-        polimorphic_key = first(value.keys())
-        return value[polimorphic_key] if polimorphic_key else None
+        return parameter[value_key], value_key.removeprefix("value")
+
+    value = parameter["value"]
+    polimorphic_key = first(value.keys())
+    return value[polimorphic_key] if polimorphic_key else None, polimorphic_key
+
+
+def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: bool):
+    if not resource or resource.get("resourceType") != "Parameters":
+        return None
+    for param in resource.get("parameter", []):
+        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
+            continue
+        if "resource" in param:
+            continue
+        value, _key = parse_parameter_value(param, is_fhir)
+        return value or None
+    return None
 
 
 async def load_source_queries(client, fce_questionnaire, env):

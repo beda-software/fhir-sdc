@@ -12,14 +12,10 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.exception import MissingParamOperationOutcome
-from ..sdc.utils import parameter_to_env, parse_parameter_value, validate_context
+from ..sdc.utils import get_external_fhir_base_url_from_resource, parameter_to_env, validate_context
 from ..utils import get_extract_services
 from .settings import settings
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
-
-# TODO: it's outside from spec, if it's only for data fetching,
-# TODO: better to use dataEndpoint and it should be handled in `parameter_to_env` function
-EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
 
 
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -52,7 +48,7 @@ async def constraint_check_operation(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
     )
     env = await parameter_to_env(client, request.resource, request.is_fhir)
 
@@ -79,7 +75,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
     )
     env = await parameter_to_env(client, request.resource, request.is_fhir)
 
@@ -100,7 +96,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(resource, request.is_fhir),
     )
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -159,7 +155,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     extract_client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(resource, request.is_fhir),
     )
     fhir_questionnaire = (
         await request.fhir_client.resources("Questionnaire")
@@ -233,7 +229,7 @@ async def populate_questionnaire(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
     )
     env = await parameter_to_env(client, request.resource, request.is_fhir)
 
@@ -250,7 +246,7 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
         request.client,
-        _get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
+        get_external_fhir_base_url_from_resource(request.resource, request.is_fhir),
     )
     fhir_questionnaire = (
         await request.fhir_client.resources("Questionnaire")
@@ -269,16 +265,3 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
 @aidbox_operation(["POST"], ["Questionnaire", "$resolve-expression"], public=True)
 def resolve_expression_operation(_operation, request):
     return web.json_response(resolve_expression(request["resource"]), dumps=json.dumps)
-
-
-def _get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: bool):
-    if not resource or resource.get("resourceType") != "Parameters":
-        return None
-    for param in resource.get("parameter", []):
-        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
-            continue
-        if "resource" in param:
-            continue
-        value = parse_parameter_value(param, is_fhir)
-        return value or None
-    return None

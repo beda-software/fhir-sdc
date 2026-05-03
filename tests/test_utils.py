@@ -313,6 +313,26 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
     assert resolved["code"]["text"] == "parameter-to-env-integration"
 
 
+@pytest.mark.asyncio
+async def test_parameter_to_env_subject_resolves(fhir_client, safe_db):
+    patient = fhir_client.resource("Patient")
+    await patient.save()
+    patient_ref = {"reference": f"Patient/{patient.id}"}
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "subject", "valueReference": patient_ref},
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+
+    assert env["useSDCAPI"] is True
+    assert env["subject"]["resourceType"] == "Patient"
+    assert env["subject"]["id"] == patient.id
+
+
 async def test_sdc_api_params():
     resolved_patient = {
         "resourceType": "Patient",
