@@ -314,7 +314,7 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
 
 
 @pytest.mark.asyncio
-async def test_parameter_to_env_subject_resolves(fhir_client, safe_db):
+async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db):
     patient = fhir_client.resource("Patient")
     await patient.save()
     patient_ref = {"reference": f"Patient/{patient.id}"}
@@ -331,6 +331,27 @@ async def test_parameter_to_env_subject_resolves(fhir_client, safe_db):
     assert env["useSDCAPI"] is True
     assert env["subject"]["resourceType"] == "Patient"
     assert env["subject"]["id"] == patient.id
+
+
+@pytest.mark.asyncio
+async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_client, safe_db):
+    # This test for backward compatibility with non sdc api behavior
+    patient = fhir_client.resource("Patient")
+    await patient.save()
+    patient_ref = {"reference": f"Patient/{patient.id}", "display": "Integration Patient"}
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "PatientRef", "valueReference": patient_ref},
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+
+    assert "useSDCAPI" not in env
+    assert env["PatientRef"]["display"] == "Integration Patient"
+    assert env["PatientRef"]["reference"] == f"Patient/{patient.id}"
 
 
 @pytest.mark.asyncio
