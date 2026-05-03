@@ -19,8 +19,7 @@ from .exception import ConstraintCheckOperationOutcome
 
 r4 = models["r4"]
 
-# TODO: it's outside from spec, if it's only for data fetching,
-# TODO: better to use dataEndpoint and it should be handled in `parameter_to_env` function
+# NOTE: it's outside from spec
 EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
 
 
