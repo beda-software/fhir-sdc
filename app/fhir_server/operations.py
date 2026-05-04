@@ -15,7 +15,7 @@ from ..sdc import (
     populate,
     resolve_expression,
 )
-from ..sdc.utils import parameter_to_env, validate_context
+from ..sdc.utils import is_sdc_api, parameter_to_env, validate_context
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
@@ -43,20 +43,19 @@ async def assemble_handler(request: web.BaseRequest):
 
 @routes.post("/QuestionnaireResponse/$constraint-check")
 async def constraint_check_handler(request: web.BaseRequest):
-    env = parameter_to_env(await request.json())
+    client = request.app["client"]
+    env = await parameter_to_env(client, await request.json())
     # TODO: I believe there's a bug, it should be in FHIR format
     env["Questionnaire"] = to_first_class_extension(env["Questionnaire"])
     env["QuestionnaireResponse"] = to_first_class_extension(env["QuestionnaireResponse"])
-    client = request.app["client"]
 
     return web.json_response(await constraint_check(client, env["Questionnaire"], env))
 
 
 @routes.post("/Questionnaire/$context")
 async def get_questionnaire_context_handler(request: web.BaseRequest):
-    client = request["app"]["client"]
-    env = parameter_to_env(await request.json())
     client = request.app["client"]
+    env = await parameter_to_env(client, await request.json())
 
     return web.json_response(
         await get_questionnaire_context(client, to_first_class_extension(env["Questionnaire"]), env)
@@ -75,7 +74,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
             await client.resources("Questionnaire").search(_id=resource["questionnaire"]).get()
         )
     elif resource["resourceType"] == "Parameters":
-        env = parameter_to_env(resource)
+        env = await parameter_to_env(client, resource)
         # TODO: Use FHIR spec questionnaire
         questionnaire = env.get("Questionnaire")
         questionnaire_response = env.get("QuestionnaireResponse")
@@ -163,7 +162,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         )
 
     if resource["resourceType"] == "Parameters":
-        env = parameter_to_env(resource)
+        env = await parameter_to_env(client, resource)
 
         questionnaire_response_data = env.get("QuestionnaireResponse")
         if not questionnaire_response_data:
@@ -207,7 +206,8 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 @routes.post("/Questionnaire/$populate")
 async def populate_questionnaire_handler(request: web.BaseRequest):
     client = request.app["client"]
-    env = parameter_to_env(await request.json())
+    body = await request.json()
+    env = await parameter_to_env(client, body)
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
         # TODO: return OperationOutcome
@@ -219,7 +219,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
             status=422,
         )
 
-    populated_resource = await populate(client, questionnaire_data, env)
+    populated_resource = await populate(client, questionnaire_data, env, sdc_api=is_sdc_api(body))
     return web.json_response(populated_resource)
 
 
@@ -229,9 +229,10 @@ async def populate_questionnaire_instance(request: web.BaseRequest):
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    env = parameter_to_env(request["resource"])
+    body = await request.json()
+    env = await parameter_to_env(client, body)
     env["Questionnaire"] = questionnaire
-    populated_resource = await populate(client, questionnaire, env)
+    populated_resource = await populate(client, questionnaire, env, sdc_api=is_sdc_api(body))
 
     return web.json_response(populated_resource)
 
