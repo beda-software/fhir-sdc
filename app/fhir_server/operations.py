@@ -1,5 +1,6 @@
 import json
 
+import aiohttp
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
@@ -24,14 +25,30 @@ routes = web.RouteTableDef()
 @routes.get("/Questionnaire/{id}/$assemble")
 async def assemble_handler(request: web.BaseRequest):
     client: AsyncFHIRClient = request.app["client"]
-    aidbox_client = request.aidbox_client
+    fce_converter_url = getattr(request.app["settings"], "FCE_CONVERTER_URL", None)
 
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
 
+    if fce_converter_url:
+        async with aiohttp.ClientSession() as session:
+
+            async def to_fce(fhir_resource):
+                async with session.post(
+                    f"{fce_converter_url}/to-fce", json=dict(fhir_resource)
+                ) as resp:
+                    return await resp.json()
+
+            fce_questionnaire = await to_fce(dict(questionnaire))
+            assembled_lazy = await assemble(client, fce_questionnaire, to_fce)
+            assembled = json.loads(json.dumps(assembled_lazy, default=list))
+
+            async with session.post(f"{fce_converter_url}/to-fhir", json=assembled) as resp:
+                return web.json_response(await resp.json())
+
     async def get_to_first_class_extension(fhir_resource):
-        return to_first_class_extension(fhir_resource, aidbox_client)
+        return to_first_class_extension(fhir_resource)
 
     assembled_questionnaire_lazy = await assemble(
         client, to_first_class_extension(questionnaire), get_to_first_class_extension
