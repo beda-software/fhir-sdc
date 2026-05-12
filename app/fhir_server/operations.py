@@ -81,7 +81,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 
     structure_map_extensions = [
         ext
-        for ext in questionnaire["extension"]
+        for ext in questionnaire.get("extension", [])
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
@@ -126,7 +126,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     jute_templates = []
     structure_map_extensions = [
         ext
-        for ext in fhir_questionnaire["extension"]
+        for ext in fhir_questionnaire.get("extension", [])
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
