@@ -12,17 +12,11 @@ from .getters import (
     get_assemble_context,
     get_sub_questionnaire,
 )
-from .utils import (
-    prepare_assemble_variables,
-    prepare_link_ids,
-    validate_assemble_context,
-)
+from .utils import prepare_assemble_variables, prepare_link_ids, validate_assemble_context
 
 
 def _launch_context_key(ext):
-    name_ext = next(
-        (e for e in ext.get("extension", []) if e.get("url") == "name"), None
-    )
+    name_ext = next((e for e in ext.get("extension", []) if e.get("url") == "name"), None)
     if name_ext:
         coding = name_ext.get("valueCoding", {})
         return coding.get("code")
@@ -31,8 +25,12 @@ def _launch_context_key(ext):
 
 WHITELISTED_EXTENSION_URLS = {
     LAUNCH_CONTEXT_URL: _launch_context_key,
-    QUESTIONNAIRE_MAPPER_URL: lambda ext: ext.get("valueReference", {}).get("reference", "").split("/")[-1],
-    SOURCE_QUERIES_URL: lambda ext: ext.get("valueReference", {}).get("reference", "").removeprefix("#"),
+    QUESTIONNAIRE_MAPPER_URL: lambda ext: ext.get("valueReference", {})
+    .get("reference", "")
+    .split("/")[-1],
+    SOURCE_QUERIES_URL: lambda ext: ext.get("valueReference", {})
+    .get("reference", "")
+    .removeprefix("#"),
     TARGET_STRUCTURE_MAP_URL: lambda ext: ext.get("valueCanonical"),
     CQF_LIBRARY_URL: lambda ext: ext.get("valueCanonical"),
 }
@@ -65,9 +63,7 @@ def _merge_root_ext(accumulated: list, ext: dict):
     key = key_fn(ext)
     if any(e.get("url") == url and key_fn(e) == key for e in accumulated):
         return
-    first_same_url_idx = next(
-        (i for i, e in enumerate(accumulated) if e.get("url") == url), -1
-    )
+    first_same_url_idx = next((i for i, e in enumerate(accumulated) if e.get("url") == url), -1)
     if first_same_url_idx >= 0:
         accumulated.insert(first_same_url_idx, ext)
     else:
@@ -79,9 +75,7 @@ async def assemble(client, questionnaire):
     non_whitelisted_root_exts = [
         e for e in original_exts if e.get("url") not in WHITELISTED_EXTENSION_URLS
     ]
-    root_whitelisted_exts = [
-        e for e in original_exts if e.get("url") in WHITELISTED_EXTENSION_URLS
-    ]
+    root_whitelisted_exts = [e for e in original_exts if e.get("url") in WHITELISTED_EXTENSION_URLS]
     root_contained = list(questionnaire.get("contained", []))
     sub_exts = []  # whitelisted extensions collected from sub-questionnaires
 
@@ -194,10 +188,14 @@ def _assemble_questionnaire(
 ):
     with_sub_items = questionnaire_items
     while any(get_sub_questionnaire(i.get("extension", [])) for i in with_sub_items):
-        with_sub_items = list(flatten(
-            _load_sub_questionnaire(sub_exts, root_contained, parent, i, sub_questionnaire_ids_map)
-            for i in with_sub_items
-        ))
+        with_sub_items = list(
+            flatten(
+                _load_sub_questionnaire(
+                    sub_exts, root_contained, parent, i, sub_questionnaire_ids_map
+                )
+                for i in with_sub_items
+            )
+        )
 
     resp = []
     for i in with_sub_items:

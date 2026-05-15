@@ -48,9 +48,7 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
     client = request.app["client"]
     env = await parameter_to_env(client, await request.json())
 
-    return web.json_response(
-        await get_questionnaire_context(client, env["Questionnaire"], env)
-    )
+    return web.json_response(await get_questionnaire_context(client, env["Questionnaire"], env))
 
 
 @routes.post("/Questionnaire/$extract")

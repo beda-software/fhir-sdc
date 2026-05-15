@@ -1,13 +1,12 @@
 from .typings import Expression, LaunchContext, Reference
 
-
 INITIAL_EXPRESSION_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression"
 )
-ITEM_CONTEXT_URL = (
-    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext"
+ITEM_CONTEXT_URL = "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext"
+ITEM_POPULATION_CONTEXT_URL = (
+    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
 )
-ITEM_POPULATION_CONTEXT_URL = "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
 LAUNCH_CONTEXT_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext"
 )
@@ -21,9 +20,7 @@ SUB_QUESTIONNAIRE_URL = (
 ASSEMBLE_CONTEXT_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembleContext"
 )
-QUESTIONNAIRE_MAPPER_URL = (
-    "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper"
-)
+QUESTIONNAIRE_MAPPER_URL = "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper"
 TARGET_STRUCTURE_MAP_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
 )
@@ -126,10 +123,12 @@ def get_item_constraints(extensions: list) -> list[dict]:
         sub = {e["url"]: e for e in ext.get("extension", [])}
         expression = sub.get("expression", {}).get("valueString")
         if expression:
-            result.append({
-                "key": sub.get("key", {}).get("valueId"),
-                "severity": sub.get("severity", {}).get("valueCode"),
-                "human": sub.get("human", {}).get("valueString"),
-                "expression": expression,
-            })
+            result.append(
+                {
+                    "key": sub.get("key", {}).get("valueId"),
+                    "severity": sub.get("severity", {}).get("valueCode"),
+                    "human": sub.get("human", {}).get("valueString"),
+                    "expression": expression,
+                }
+            )
     return result

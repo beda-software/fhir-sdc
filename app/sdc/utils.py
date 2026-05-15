@@ -150,6 +150,7 @@ def resolve_string_template(
 
 def prepare_assemble_variables(item):
     from app.sdc.getters import get_variable
+
     variables = {}
     for var in get_variable(item.get("extension", [])):
         if var and var.get("language") == "text/fhirpath":

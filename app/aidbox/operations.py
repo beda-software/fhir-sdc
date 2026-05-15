@@ -102,7 +102,9 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
 
     mapper_refs = get_questionnaire_mapper(questionnaire.get("extension", []))
     mappings = [
-        await request.aidbox_client.resources("Mapping").search(_id=ref["reference"].split("/")[-1]).get()
+        await request.aidbox_client.resources("Mapping")
+        .search(_id=ref["reference"].split("/")[-1])
+        .get()
         for ref in mapper_refs
     ]
 
