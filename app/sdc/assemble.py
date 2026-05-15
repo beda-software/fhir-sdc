@@ -1,4 +1,4 @@
-from fhirpy_types_r4b import Questionnaire
+from fhirpy_types_r4b import Extension, Questionnaire
 from funcy.seqs import flatten
 
 from .getters import (
@@ -39,7 +39,7 @@ WHITELISTED_EXTENSION_URLS = {
 PROPAGATE_EXTENSION_URLS = {ITEM_CONTEXT_URL, ITEM_POPULATION_CONTEXT_URL}
 
 
-def _merge_sub_ext(accumulated: list, ext: dict):
+def _merge_sub_ext(accumulated: list, ext: Extension):
     """Append a unique whitelisted sub-questionnaire extension to accumulated list."""
     url = ext.get("url")
     if url not in WHITELISTED_EXTENSION_URLS:
@@ -50,7 +50,7 @@ def _merge_sub_ext(accumulated: list, ext: dict):
         accumulated.append(ext)
 
 
-def _merge_root_ext(accumulated: list, ext: dict):
+def _merge_root_ext(accumulated: list, ext: Extension):
     """Merge a root questionnaire whitelisted extension into accumulated list.
 
     Root extensions are inserted *before* the first same-URL extension already
@@ -103,7 +103,9 @@ async def assemble(client, questionnaire: Questionnaire):
     return questionnaire
 
 
-def _collect_sub_questionnaire_ids_map(questionnaire_items, sub_questionnaire_ids_map: dict):
+def _collect_sub_questionnaire_ids_map(
+    questionnaire_items, sub_questionnaire_ids_map: dict[str, Questionnaire | None]
+):
     result_map = sub_questionnaire_ids_map.copy()
     for item in questionnaire_items:
         sub_q = get_sub_questionnaire(item.get("extension", []))
@@ -117,7 +119,7 @@ def _collect_sub_questionnaire_ids_map(questionnaire_items, sub_questionnaire_id
 async def _load_sub_questionnaires(
     client,
     questionnaire_items,
-    prev_sub_questionnaire_ids_map: dict = {},
+    prev_sub_questionnaire_ids_map: dict[str, Questionnaire | None] = {},
 ):
     sub_questionnaire_ids_map = _collect_sub_questionnaire_ids_map(
         questionnaire_items, prev_sub_questionnaire_ids_map
