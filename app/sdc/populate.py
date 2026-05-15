@@ -1,5 +1,6 @@
 import logging
 
+from fhirpy_types_r4b import Questionnaire
 from funcy import is_list
 
 from .getters import (
@@ -21,7 +22,7 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
+async def populate(client, fhir_questionnaire: Questionnaire, env, *, sdc_api: bool = False):
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:

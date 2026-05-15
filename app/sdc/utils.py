@@ -6,6 +6,7 @@ from fhirpathpy.models import models
 from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
+from fhirpy_types_r4b import Parameters, Questionnaire
 from fpml import resolve_template
 from funcy.seqs import first
 from funcy.strings import re_all
@@ -111,7 +112,7 @@ def update_link_id_or_question(variables):
     return _update_link_id_or_question
 
 
-def prepare_link_ids(questionnaire, variables):
+def prepare_link_ids(questionnaire: Questionnaire, variables):
     return walk_dict(questionnaire, update_link_id_or_question(variables))
 
 
@@ -158,7 +159,7 @@ def prepare_assemble_variables(item):
     return variables
 
 
-def is_sdc_api(parameters: dict | None) -> bool:
+def is_sdc_api(parameters: Parameters | None) -> bool:
     """True when Parameters use SDC `$populate` input shape (`context` and/or `subject`)."""
     if not parameters or parameters.get("resourceType") != "Parameters":
         return False
@@ -166,7 +167,7 @@ def is_sdc_api(parameters: dict | None) -> bool:
 
 
 async def parameter_to_env(
-    client: AsyncFHIRClient, resource, is_fhir: bool = True
+    client: AsyncFHIRClient, resource: Parameters, is_fhir: bool = True
 ) -> dict[str, Any]:
     # TODO: add support for repeating values (with same name)
     env: dict[str, Any] = {}
@@ -212,7 +213,7 @@ def parse_parameter_value(parameter, is_fhir: bool) -> tuple[Any, str]:
     return value[polimorphic_key] if polimorphic_key else None, polimorphic_key
 
 
-def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: bool):
+def get_external_fhir_base_url_from_resource(resource: Parameters | None, is_fhir: bool):
     if not resource or resource.get("resourceType") != "Parameters":
         return None
     for param in resource.get("parameter", []):
@@ -225,7 +226,7 @@ def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: boo
     return None
 
 
-async def load_source_queries(client, questionnaire, env):
+async def load_source_queries(client, questionnaire: Questionnaire, env):
     contained = {item["id"]: item for item in questionnaire.get("contained", [])}
     source_queries = get_source_queries(questionnaire.get("extension", []))
 
