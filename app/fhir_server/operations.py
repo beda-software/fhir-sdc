@@ -4,9 +4,8 @@ import aiohttp
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
-from app.converter.fce_to_fhir import from_first_class_extension
-from app.converter.fhir_to_fce import to_first_class_extension
 from app.sdc.exception import ConstraintCheckOperationOutcome
+from app.sdc.getters import get_launch_context
 
 from ..sdc import (
     assemble,
@@ -25,46 +24,21 @@ routes = web.RouteTableDef()
 @routes.get("/Questionnaire/{id}/$assemble")
 async def assemble_handler(request: web.BaseRequest):
     client: AsyncFHIRClient = request.app["client"]
-    fce_converter_url = getattr(request.app["settings"], "FCE_CONVERTER_URL", None)
 
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
 
-    if fce_converter_url:
-        async with aiohttp.ClientSession() as session:
-
-            async def to_fce(fhir_resource):
-                async with session.post(
-                    f"{fce_converter_url}/to-fce", json=dict(fhir_resource)
-                ) as resp:
-                    return await resp.json()
-
-            fce_questionnaire = await to_fce(dict(questionnaire))
-            assembled_lazy = await assemble(client, fce_questionnaire, to_fce)
-            assembled = json.loads(json.dumps(assembled_lazy, default=list))
-
-            async with session.post(f"{fce_converter_url}/to-fhir", json=assembled) as resp:
-                return web.json_response(await resp.json())
-
-    async def get_to_first_class_extension(fhir_resource):
-        return to_first_class_extension(fhir_resource)
-
-    assembled_questionnaire_lazy = await assemble(
-        client, to_first_class_extension(questionnaire), get_to_first_class_extension
-    )
+    assembled_questionnaire_lazy = await assemble(client, dict(questionnaire))
     assembled_questionnaire = json.loads(json.dumps(assembled_questionnaire_lazy, default=list))
 
-    return web.json_response(from_first_class_extension(assembled_questionnaire))
+    return web.json_response(assembled_questionnaire)
 
 
 @routes.post("/QuestionnaireResponse/$constraint-check")
 async def constraint_check_handler(request: web.BaseRequest):
     client = request.app["client"]
     env = await parameter_to_env(client, await request.json())
-    # TODO: I believe there's a bug, it should be in FHIR format
-    env["Questionnaire"] = to_first_class_extension(env["Questionnaire"])
-    env["QuestionnaireResponse"] = to_first_class_extension(env["QuestionnaireResponse"])
 
     return web.json_response(await constraint_check(client, env["Questionnaire"], env))
 
@@ -75,7 +49,7 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
     env = await parameter_to_env(client, await request.json())
 
     return web.json_response(
-        await get_questionnaire_context(client, to_first_class_extension(env["Questionnaire"]), env)
+        await get_questionnaire_context(client, env["Questionnaire"], env)
     )
 
 
@@ -92,7 +66,6 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         )
     elif resource["resourceType"] == "Parameters":
         env = await parameter_to_env(client, resource)
-        # TODO: Use FHIR spec questionnaire
         questionnaire = env.get("Questionnaire")
         questionnaire_response = env.get("QuestionnaireResponse")
 
@@ -119,14 +92,14 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
             ]
         )
         jute_templates.append(json.loads(template_string))
-    # TODO: I believe there's a bug, it should be in FHIR
+
     context = {
-        "Questionnaire": to_first_class_extension(questionnaire),
-        "QuestionnaireResponse": to_first_class_extension(questionnaire_response),
+        "Questionnaire": questionnaire,
+        "QuestionnaireResponse": questionnaire_response,
         **env,
     }
 
-    await constraint_check(client, to_first_class_extension(questionnaire), context)
+    await constraint_check(client, questionnaire, context)
     extraction_result = await extract(
         client, jute_templates, context, get_extract_services(request.app)
     )
@@ -137,18 +110,16 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
-    fhir_questionnaire = (
+    questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
     jute_templates = []
     structure_map_extensions = [
         ext
-        for ext in fhir_questionnaire.get("extension", [])
+        for ext in questionnaire.get("extension", [])
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
-
-    questionnaire = to_first_class_extension(fhir_questionnaire)
 
     for structure_map_extension in structure_map_extensions:
         structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
@@ -168,9 +139,8 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
-        # TODO: I believe there's a bug, it should be in FHIR
         context = {
-            "Questionnaire": to_first_class_extension(questionnaire),
+            "Questionnaire": questionnaire,
             "QuestionnaireResponse": questionnaire_response,
         }
         await constraint_check(client, questionnaire, context)
@@ -196,8 +166,9 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         questionnaire_response = client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
-        if "launchContext" in questionnaire:
-            validate_context(questionnaire["launchContext"], env)
+        launch_context = get_launch_context(questionnaire.get("extension", []))
+        if launch_context:
+            validate_context(launch_context, env)
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,
@@ -227,7 +198,6 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
     env = await parameter_to_env(client, body)
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
-        # TODO: return OperationOutcome
         return web.json_response(
             {
                 "error": "bad_request",

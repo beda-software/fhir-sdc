@@ -149,10 +149,10 @@ def resolve_string_template(
 
 
 def prepare_assemble_variables(item):
-    # Assemble supports only fhirpath expressions
+    from app.sdc.getters import get_variable
     variables = {}
-    for var in item.get("variable", []):
-        if var["language"] == "text/fhirpath":
+    for var in get_variable(item.get("extension", [])):
+        if var and var.get("language") == "text/fhirpath":
             variables[var["name"]] = fhirpath({}, var["expression"])
     return variables
 
@@ -224,37 +224,14 @@ def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: boo
     return None
 
 
-async def load_source_queries(client, fce_questionnaire, env):
-    # Previously we used invalid format for localRef Bundle#id
-    # But according to the specification, local ref to contained resource should be #id
-    # And since in Aidbox format we have localRef without leading #,
-    # contained resources are accessible via id
-    # But for backward compatibility they are also accessible by Bundle#id
-    contained_compat = {
-        f"{item['resourceType']}#{item['id']}": item
-        for item in fce_questionnaire.get("contained", [])
-    }
-    contained_new = {item["id"]: item for item in fce_questionnaire.get("contained", [])}
-    contained = {**contained_compat, **contained_new}
-
-    # TODO: get rid of FCE format completely
-    source_queries_fce = fce_questionnaire.get("sourceQueries", {})
-    source_queries_fhir = get_source_queries(fce_questionnaire.get("extension", []))
-    source_queries = [*source_queries_fce, *source_queries_fhir]
-
-    if isinstance(source_queries, dict):
-        source_queries = [source_queries]
+async def load_source_queries(client, questionnaire, env):
+    contained = {item["id"]: item for item in questionnaire.get("contained", [])}
+    source_queries = get_source_queries(questionnaire.get("extension", []))
 
     for source_query in source_queries:
-        # FHIR reference contains #, while FCE localRef does not
-        ref = (
-            source_query["reference"].removeprefix("#")
-            if "reference" in source_query
-            else source_query.get("localRef")
-        )
+        ref = source_query.get("reference", "").removeprefix("#")
         if ref:
-            # TODO: raise a clear error
-            raw_bundle = contained[ref]
+            raw_bundle = contained.get(ref)
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await client.execute("/", data=bundle)
@@ -279,10 +256,7 @@ def validate_context(context_definition: list[LaunchContext], env):
     all_vars = env.keys()
     errors = []
     for item in context_definition:
-        if isinstance(item["name"], str):
-            name = item["name"]
-        else:
-            name = item["name"]["code"]
+        name = (item.get("name") or {}).get("code", "")
         if name not in all_vars:
             errors.append(
                 {
@@ -346,17 +320,6 @@ def resolve_fpml_template(template, context):
         fp_options,
         True,
     )
-
-
-async def apply_converter_for_resources(converter_fn, resources: list) -> list:
-    bundle = {
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [{"resource": dict(s)} for s in resources],
-    }
-    fce_bundle = await converter_fn(bundle)
-    result = [s["resource"] for s in fce_bundle["entry"]]
-    return result
 
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
