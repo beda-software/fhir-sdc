@@ -1,13 +1,12 @@
 from .typings import Expression, LaunchContext, Reference
 
-
 INITIAL_EXPRESSION_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression"
 )
-ITEM_CONTEXT_URL = (
-    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext"
+ITEM_CONTEXT_URL = "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemContext"
+ITEM_POPULATION_CONTEXT_URL = (
+    "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
 )
-ITEM_POPULATION_CONTEXT_URL = "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-itemPopulationContext"
 LAUNCH_CONTEXT_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-launchContext"
 )

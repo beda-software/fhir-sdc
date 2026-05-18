@@ -7,51 +7,53 @@ from tests.factories import (
     make_questionnaire,
     make_source_queries_ext,
     make_initial_expression_ext,
-    make_item_population_context_ext
+    make_item_population_context_ext,
 )
 
-questionnaire = make_questionnaire({
-    "id": "example-questionnaire",
-    "status": "active",
-    "extension": [
-        make_launch_context_ext("patient", "Patient"),
-        make_source_queries_ext("#PrePopQuery"),
-    ],
-    "contained": [
-        {
-            "resourceType": "Bundle",
-            "id": "PrePopQuery",
-            "type": "batch",
-            "entry": [
-                {
-                    "request": {
-                        "method": "GET",
-                        "url": "Patient?_id={{%patient.id}}",
+questionnaire = make_questionnaire(
+    {
+        "id": "example-questionnaire",
+        "status": "active",
+        "extension": [
+            make_launch_context_ext("patient", "Patient"),
+            make_source_queries_ext("#PrePopQuery"),
+        ],
+        "contained": [
+            {
+                "resourceType": "Bundle",
+                "id": "PrePopQuery",
+                "type": "batch",
+                "entry": [
+                    {
+                        "request": {
+                            "method": "GET",
+                            "url": "Patient?_id={{%patient.id}}",
+                        },
                     },
-                },
-            ],
-        }
-    ],
-    "item": [
-        {
-            "type": "group",
-            "linkId": "names",
-            "extension": [
-                make_item_population_context_ext("%PrePopQuery.entry.resource.entry.resource.name")
-            ],
-            "item": [
-                {
-                    "repeats": True,
-                    "type": "string",
-                    "linkId": "firstName",
-                    "extension": [
-                        make_initial_expression_ext("given")
-                    ],
-                },
-            ],
-        },
-    ],
-})
+                ],
+            }
+        ],
+        "item": [
+            {
+                "type": "group",
+                "linkId": "names",
+                "extension": [
+                    make_item_population_context_ext(
+                        "%PrePopQuery.entry.resource.entry.resource.name"
+                    )
+                ],
+                "item": [
+                    {
+                        "repeats": True,
+                        "type": "string",
+                        "linkId": "firstName",
+                        "extension": [make_initial_expression_ext("given")],
+                    },
+                ],
+            },
+        ],
+    }
+)
 
 env = {
     "patient": {
@@ -73,11 +75,10 @@ async def test_populate_v3(fhir_client, safe_db):
     await patient_example.save()
 
     assert patient_example.id is not None
-    q = await create_questionnaire(
-        fhir_client,
-        questionnaire
+    q = await create_questionnaire(fhir_client, questionnaire)
+    questionnaire_response = await q.execute(
+        "$populate", data=make_parameters(patient=patient_example)
     )
-    questionnaire_response = await q.execute("$populate", data=make_parameters(patient=patient_example))
 
     assert questionnaire_response == {
         "item": [

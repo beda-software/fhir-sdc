@@ -67,17 +67,13 @@ async def test_assemble_sub_questionnaire(fhir_client, safe_db):
                             "type": "display",
                             "linkId": "givenNameGroup",
                             "text": "Sub questionnaire is not supported",
-                            "extension": [
-                                make_sub_questionnaire_ext(get_given_name.id)
-                            ],
+                            "extension": [make_sub_questionnaire_ext(get_given_name.id)],
                         },
                         {
                             "type": "display",
                             "linkId": "familyNameGroup",
                             "text": "Sub questionnaire is not supported",
-                            "extension": [
-                                make_sub_questionnaire_ext(get_family_name.id)
-                            ],
+                            "extension": [make_sub_questionnaire_ext(get_family_name.id)],
                         },
                     ],
                 }
@@ -206,9 +202,7 @@ async def test_fhir_assemble_sub_questionnaire(fhir_client, safe_db):
         {
             "status": "active",
             "resourceType": "Questionnaire",
-            "extension": [
-                make_target_structure_map_ext("StructureMap/create-another-patient")
-            ],
+            "extension": [make_target_structure_map_ext("StructureMap/create-another-patient")],
             "item": [
                 {
                     "linkId": "demographics",
@@ -218,17 +212,13 @@ async def test_fhir_assemble_sub_questionnaire(fhir_client, safe_db):
                             "type": "display",
                             "linkId": "givenNameGroup",
                             "text": "Sub questionnaire is not supported",
-                            "extension": [
-                                make_sub_questionnaire_ext(get_given_name.id)
-                            ],
+                            "extension": [make_sub_questionnaire_ext(get_given_name.id)],
                         },
                         {
                             "type": "display",
                             "linkId": "familyNameGroup",
                             "text": "Sub questionnaire is not supported",
-                            "extension": [
-                                make_sub_questionnaire_ext(get_family_name.id)
-                            ],
+                            "extension": [make_sub_questionnaire_ext(get_family_name.id)],
                         },
                         {
                             "type": "display",
@@ -337,9 +327,7 @@ async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
                             "type": "display",
                             "linkId": "givenNameGroup",
                             "text": "Sub questionnaire is not supported",
-                            "extension": [
-                                make_sub_questionnaire_ext(get_given_name.id)
-                            ],
+                            "extension": [make_sub_questionnaire_ext(get_given_name.id)],
                         },
                     ],
                 }
@@ -421,9 +409,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "extension": [
-                        make_item_population_context_ext("%LaunchPatient.address")
-                    ],
+                    "extension": [make_item_population_context_ext("%LaunchPatient.address")],
                     "item": [
                         {
                             "linkId": "patient-address-display",
@@ -440,9 +426,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
                     "type": "group",
                     "linkId": "patient-contact",
                     "repeats": True,
-                    "extension": [
-                        make_item_population_context_ext("%LaunchPatient.contact")
-                    ],
+                    "extension": [make_item_population_context_ext("%LaunchPatient.contact")],
                     "item": [
                         {
                             "type": "group",
@@ -454,9 +438,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
                                     "type": "display",
                                     "text": "Sub questionanire is not supported",
                                     "extension": [
-                                        make_variable_ext(
-                                            "prefix", "'patient-contact-address-'"
-                                        ),
+                                        make_variable_ext("prefix", "'patient-contact-address-'"),
                                         make_sub_questionnaire_ext(address.id),
                                     ],
                                 }
@@ -483,9 +465,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
             {
                 "type": "group",
                 "linkId": "patient-address",
-                "extension": [
-                    make_item_population_context_ext("%LaunchPatient.address")
-                ],
+                "extension": [make_item_population_context_ext("%LaunchPatient.address")],
                 "item": [
                     {
                         "linkId": "patient-address-line-1",
@@ -510,9 +490,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
                 "type": "group",
                 "linkId": "patient-contact",
                 "repeats": True,
-                "extension": [
-                    make_item_population_context_ext("%LaunchPatient.contact")
-                ],
+                "extension": [make_item_population_context_ext("%LaunchPatient.contact")],
                 "item": [
                     {
                         "type": "group",
@@ -557,9 +535,7 @@ async def test_validate_assemble_context(fhir_client):
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "extension": [
-                        make_item_population_context_ext("%LaunchPatient.address")
-                    ],
+                    "extension": [make_item_population_context_ext("%LaunchPatient.address")],
                     "item": [
                         {
                             "linkId": "patient-address-display",

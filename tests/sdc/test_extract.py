@@ -68,9 +68,7 @@ async def test_extract_with_fhirpathmapping(fhir_client, safe_db):
         },
     )
 
-    extraction = await fhir_client.execute(
-        f"fhir/Questionnaire/{q.id}/$extract", data=qr
-    )
+    extraction = await fhir_client.execute(f"fhir/Questionnaire/{q.id}/$extract", data=qr)
 
     assert len(extraction) == 1
 
@@ -273,9 +271,7 @@ async def test_extract_using_list_endpoint_with_context(fhir_client, safe_db):
 
     extraction = await fhir_client.execute(
         "Questionnaire/$extract",
-        data=make_parameters(
-            Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context
-        ),
+        data=make_parameters(Questionnaire=q, QuestionnaireResponse=qr, ContextResource=context),
     )
 
     assert len(extraction) == 1
@@ -550,11 +546,7 @@ async def test_extract_multiple_mappers(fhir_client, safe_db):
     assert len(extraction[0]["entry"]) == 2
 
     p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
-    o = (
-        await fhir_client.resources("Observation")
-        .search(code=OBSERVATION_CODE)
-        .fetch_all()
-    )
+    o = await fhir_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert len(p) == 1
     assert len(o) == 1
@@ -614,20 +606,14 @@ async def test_extract_multiple_mappers_is_atomic(fhir_client, safe_db):
     assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "invalid"
 
     p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
-    o = (
-        await fhir_client.resources("Observation")
-        .search(code=OBSERVATION_CODE)
-        .fetch_all()
-    )
+    o = await fhir_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert p == []
     assert o == []
 
 
 @pytest.mark.asyncio
-async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
-    fhir_client, safe_db
-):
+async def test_fce_extract_multiple_mappers_checks_unique_full_urls(fhir_client, safe_db):
     m1 = fhir_client.resource(
         "Mapping",
         **PATIENT_BUNDLE_DATA,
@@ -682,18 +668,11 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(
     with pytest.raises(OperationOutcome) as excinfo:
         await q.execute("$extract", data=qr)
 
-    assert (
-        get_by_path(excinfo.value.resource, ["issue", 0, "code"])
-        == "duplicate-full-url"
-    )
+    assert get_by_path(excinfo.value.resource, ["issue", 0, "code"]) == "duplicate-full-url"
 
     p1 = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
     p2 = await fhir_client.resources("Patient").search(id=PATIENT_2_ID).fetch_all()
-    o = (
-        await fhir_client.resources("Observation")
-        .search(code=OBSERVATION_CODE)
-        .fetch_all()
-    )
+    o = await fhir_client.resources("Observation").search(code=OBSERVATION_CODE).fetch_all()
 
     assert p1 == []
     assert p2 == []

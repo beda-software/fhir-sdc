@@ -16,53 +16,55 @@ fake = Faker()
 
 
 async def get_questionnaire():
-    return make_questionnaire({
-        "resourceType": "Questionnaire",
-        "status": "active",
-        "extension": [
-            make_launch_context_ext("patient", "Patient"),
-            make_source_queries_ext("#PrePopQuery"),
-        ],
-        "contained": [
-            {
-                "resourceType": "Bundle",
-                "id": "PrePopQuery",
-                "type": "batch",
-                "entry": [
-                    {
-                        "request": {
-                            "method": "GET",
-                            "url": "Patient?_id={{%patient.id}}",
+    return make_questionnaire(
+        {
+            "resourceType": "Questionnaire",
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("patient", "Patient"),
+                make_source_queries_ext("#PrePopQuery"),
+            ],
+            "contained": [
+                {
+                    "resourceType": "Bundle",
+                    "id": "PrePopQuery",
+                    "type": "batch",
+                    "entry": [
+                        {
+                            "request": {
+                                "method": "GET",
+                                "url": "Patient?_id={{%patient.id}}",
+                            },
                         },
-                    },
-                ],
-            }
-        ],
-        "item": [
-            {
-                "type": "string",
-                "linkId": "patientId",
-                "extension": [make_initial_expression_ext("%patient.id")],
-            },
-            {
-                "type": "group",
-                "linkId": "names",
-                "extension": [
-                    make_item_population_context_ext(
-                        "%PrePopQuery.entry.resource.entry.resource.name"
-                    )
-                ],
-                "item": [
-                    {
-                        "repeats": True,
-                        "type": "string",
-                        "linkId": "firstName",
-                        "extension": [make_initial_expression_ext("given")],
-                    },
-                ],
-            },
-        ],
-    })
+                    ],
+                }
+            ],
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "patientId",
+                    "extension": [make_initial_expression_ext("%patient.id")],
+                },
+                {
+                    "type": "group",
+                    "linkId": "names",
+                    "extension": [
+                        make_item_population_context_ext(
+                            "%PrePopQuery.entry.resource.entry.resource.name"
+                        )
+                    ],
+                    "item": [
+                        {
+                            "repeats": True,
+                            "type": "string",
+                            "linkId": "firstName",
+                            "extension": [make_initial_expression_ext("given")],
+                        },
+                    ],
+                },
+            ],
+        }
+    )
 
 
 @pytest.mark.asyncio
@@ -78,10 +80,7 @@ async def test_organization_client(aidbox_client, safe_db):
     patient1 = org_1_client.resource("Patient")
     await patient1.save()
 
-    assert (
-        len(await org_2_client.resources("Patient").search(_id=patient1.id).fetch_all())
-        == 0
-    )
+    assert len(await org_2_client.resources("Patient").search(_id=patient1.id).fetch_all()) == 0
 
 
 @pytest.mark.asyncio

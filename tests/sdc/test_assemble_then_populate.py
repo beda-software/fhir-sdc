@@ -72,9 +72,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 {
                     "type": "group",
                     "linkId": "patient-address",
-                    "extension": [
-                        make_item_population_context_ext("%LaunchPatient.address")
-                    ],
+                    "extension": [make_item_population_context_ext("%LaunchPatient.address")],
                     "item": [
                         {
                             "linkId": "patient-address-display",
@@ -91,9 +89,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                     "type": "group",
                     "linkId": "patient-contact",
                     "repeats": True,
-                    "extension": [
-                        make_item_population_context_ext("%LaunchPatient.contact")
-                    ],
+                    "extension": [make_item_population_context_ext("%LaunchPatient.contact")],
                     "item": [
                         {
                             "type": "group",
@@ -105,9 +101,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                                     "type": "display",
                                     "text": "Sub questionanire is not supported",
                                     "extension": [
-                                        make_variable_ext(
-                                            "prefix", "'patient-contact-address-'"
-                                        ),
+                                        make_variable_ext("prefix", "'patient-contact-address-'"),
                                         make_sub_questionnaire_ext(address.id),
                                     ],
                                 }
@@ -154,17 +148,13 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 "type": "string",
                 "linkId": "last-appointment",
                 "extension": [
-                    make_initial_expression_ext(
-                        "%PrePopQuery.entry.resource.entry.resource.start"
-                    )
+                    make_initial_expression_ext("%PrePopQuery.entry.resource.entry.resource.start")
                 ],
             },
             {
                 "type": "group",
                 "linkId": "patient-address",
-                "extension": [
-                    make_item_population_context_ext("%LaunchPatient.address")
-                ],
+                "extension": [make_item_population_context_ext("%LaunchPatient.address")],
                 "item": [
                     {
                         "linkId": "patient-address-line-1",
@@ -189,9 +179,7 @@ async def test_assemble_then_populate(fhir_client, safe_db):
                 "type": "group",
                 "linkId": "patient-contact",
                 "repeats": True,
-                "extension": [
-                    make_item_population_context_ext("%LaunchPatient.contact")
-                ],
+                "extension": [make_item_population_context_ext("%LaunchPatient.contact")],
                 "item": [
                     {
                         "type": "group",

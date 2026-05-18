@@ -6,7 +6,7 @@ from tests.factories import (
     create_questionnaire,
     make_parameters,
     make_launch_context_ext,
-    make_source_queries_ext
+    make_source_queries_ext,
 )
 
 
@@ -43,7 +43,7 @@ async def test_get_questionnaire_context(fhir_client, safe_db):
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
                 make_source_queries_ext("#Data1"),
-                make_source_queries_ext("#Data2")
+                make_source_queries_ext("#Data2"),
             ],
             "contained": [
                 {
