@@ -3,16 +3,16 @@ import pytest
 from tests.factories import (
     QUESTIONNAIRE_PROFILE_URL,
     create_address_questionnaire,
-    make_parameters,
     create_questionnaire,
-    make_launch_context_ext,
-    make_questionnaire,
-    make_source_queries_ext,
+    make_assembled_from_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
-    make_variable_ext,
+    make_launch_context_ext,
+    make_parameters,
+    make_questionnaire,
+    make_source_queries_ext,
     make_sub_questionnaire_ext,
-    make_assembled_from_ext,
+    make_variable_ext,
 )
 
 

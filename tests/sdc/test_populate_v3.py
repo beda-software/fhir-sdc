@@ -2,12 +2,12 @@ import pytest
 
 from tests.factories import (
     create_questionnaire,
-    make_parameters,
-    make_launch_context_ext,
-    make_questionnaire,
-    make_source_queries_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
+    make_launch_context_ext,
+    make_parameters,
+    make_questionnaire,
+    make_source_queries_ext,
 )
 
 questionnaire = make_questionnaire(

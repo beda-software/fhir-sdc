@@ -3,9 +3,9 @@ from fhirpy.base.exceptions import OperationOutcome
 
 from tests.factories import (
     create_questionnaire,
+    make_item_constraint_ext,
     make_parameters,
     make_source_queries_ext,
-    make_item_constraint_ext,
 )
 
 

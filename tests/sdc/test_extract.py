@@ -1,11 +1,12 @@
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
+
 from tests.factories import (
     create_questionnaire,
+    make_item_constraint_ext,
     make_parameters,
     make_questionnaire_mapper_ext,
-    make_item_constraint_ext,
 )
 
 
