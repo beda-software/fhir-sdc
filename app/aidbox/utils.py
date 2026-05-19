@@ -4,7 +4,6 @@ from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
 from fhirpy import AsyncFHIRClient
 from fhirpy.base import AsyncClient
 from fhirpy.base.exceptions import OperationOutcome
-from fhirpy_types_r4b import AnyResource
 
 from .sdk import sdk
 
@@ -66,7 +65,7 @@ class AidboxSdcRequest:
     fhir_client: AsyncFHIRClient
     client: AsyncClient
     route_params: dict
-    resource: AnyResource | None
+    resource: dict
     request: dict
 
 

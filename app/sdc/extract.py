@@ -1,6 +1,5 @@
 import simplejson as json
 from aiohttp import ClientSession, web
-from fhirpy_types_r4b import Bundle
 from funcy.seqs import flatten
 
 from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
@@ -20,7 +19,7 @@ async def get_external_service_bundle(session, service, template, context):
             raise web.HTTPBadRequest(body=await result.text())
 
 
-async def execute_mappers_bundles(client, mappers_bundles: list[Bundle]):
+async def execute_mappers_bundles(client, mappers_bundles):
     try:
         # NOTE: `bundle.get("entry", None) or []` is used to catch cases, when
         # bundle is like `{'type': 'transaction', 'entry': None, 'resourceType': 'Bundle'}`
