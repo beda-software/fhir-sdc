@@ -1,4 +1,4 @@
-from .typings import Expression, LaunchContext, Reference
+from .typings import Expression, ItemConstraint, LaunchContext, Reference
 
 INITIAL_EXPRESSION_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-initialExpression"
@@ -116,19 +116,18 @@ def get_cqf_library(extensions: list) -> list[str]:
     return [ext["valueCanonical"] for ext in exts if ext.get("valueCanonical")]
 
 
-def get_item_constraints(extensions: list) -> list[dict]:
-    """Return list of dicts with 'expression' and other constraint fields."""
+def get_item_constraints(extensions: list) -> list[ItemConstraint]:
     result = []
     for ext in _find_extensions(extensions, ITEM_CONSTRAINT_URL):
         sub = {e["url"]: e for e in ext.get("extension", [])}
         expression = sub.get("expression", {}).get("valueString")
         if expression:
             result.append(
-                {
-                    "key": sub.get("key", {}).get("valueId"),
-                    "severity": sub.get("severity", {}).get("valueCode"),
-                    "human": sub.get("human", {}).get("valueString"),
-                    "expression": expression,
-                }
+                ItemConstraint(
+                    key=sub.get("key", {}).get("valueId"),
+                    severity=sub.get("severity", {}).get("valueCode"),
+                    human=sub.get("human", {}).get("valueString"),
+                    expression=expression,
+                )
             )
     return result
