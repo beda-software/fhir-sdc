@@ -225,6 +225,7 @@ async def load_source_queries(client, questionnaire, env):
     for source_query in source_queries:
         ref = source_query.get("reference", "").removeprefix("#")
         if ref:
+            # TODO: raise a clear error
             raw_bundle = contained.get(ref)
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)

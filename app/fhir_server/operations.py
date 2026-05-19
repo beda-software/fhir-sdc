@@ -196,6 +196,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
     env = await parameter_to_env(client, body)
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
+        # TODO: return OperationOutcome
         return web.json_response(
             {
                 "error": "bad_request",
