@@ -23,6 +23,7 @@ def _constraint_check_for_item(errors, questionnaire_item, env, *, legacy_behavi
         result = fhirpath({}, expression, env)
 
         if result == [True if legacy_behavior else False]:
+            # TODO: calculate error location path
             errors.append(constraint)
 
     for item in questionnaire_item.get("item", []):
