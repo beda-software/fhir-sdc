@@ -1,5 +1,3 @@
-from fhirpy_types_r4b import Questionnaire, QuestionnaireItem
-
 from app.cached_fhirpath import fhirpath
 
 from .exception import ConstraintCheckOperationOutcome
@@ -7,7 +5,7 @@ from .getters import get_item_constraints, get_launch_context
 from .utils import load_source_queries, validate_context
 
 
-async def constraint_check(client, questionnaire: Questionnaire, env, *, legacy_behavior=False):
+async def constraint_check(client, questionnaire, env, *, legacy_behavior=False):
     launch_context = get_launch_context(questionnaire.get("extension", []))
     if launch_context:
         validate_context(launch_context, env)
@@ -19,9 +17,7 @@ async def constraint_check(client, questionnaire: Questionnaire, env, *, legacy_
     return env["QuestionnaireResponse"]
 
 
-def _constraint_check_for_item(
-    errors, questionnaire_item: Questionnaire | QuestionnaireItem, env, *, legacy_behavior=False
-):
+def _constraint_check_for_item(errors, questionnaire_item, env, *, legacy_behavior=False):
     for constraint in get_item_constraints(questionnaire_item.get("extension", [])):
         expression = constraint["expression"]
         result = fhirpath({}, expression, env)

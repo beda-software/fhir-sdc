@@ -31,7 +31,6 @@ aidbox-python-sdk = ">=0.1.16"
 fhirpathpy = ">=2.0.3"
 sqlalchemy = ">=1.4.44"
 fhirpy = "~=2.2.0"
-fhirpy-types-r4b = {git = "https://github.com/beda-software/fhir-py-types-r4b.git"}
 aiohttp-cors = "~=0.7.0"
 simplejson = "*"
 fpml = ">=0.2.0"

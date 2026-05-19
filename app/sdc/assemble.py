@@ -1,4 +1,3 @@
-from fhirpy_types_r4b import Questionnaire
 from funcy.seqs import flatten
 
 from .getters import (
@@ -71,7 +70,7 @@ def _merge_root_ext(accumulated: list, ext: dict):
         accumulated.append(ext)
 
 
-async def assemble(client, questionnaire: Questionnaire):
+async def assemble(client, questionnaire):
     original_exts = list(questionnaire.get("extension", []))
     non_whitelisted_root_exts = [
         e for e in original_exts if e.get("url") not in WHITELISTED_EXTENSION_URLS
@@ -170,7 +169,7 @@ def _load_sub_questionnaire(sub_exts, root_contained, parent_item, item, sub_que
     return item
 
 
-def _propagate_extensions(parent_item, sub_questionnaire: Questionnaire):
+def _propagate_extensions(parent_item, sub_questionnaire):
     parent_exts = list(parent_item.get("extension", []))
     for ext in sub_questionnaire.get("extension", []):
         if ext.get("url") in PROPAGATE_EXTENSION_URLS:
@@ -212,7 +211,7 @@ def _assemble_questionnaire(
     return resp
 
 
-def _validate_assemble_context(questionnaire: Questionnaire, variables: dict):
+def _validate_assemble_context(questionnaire, variables: dict):
     assemble_ctx = get_assemble_context(questionnaire.get("extension", []))
     if not assemble_ctx:
         return False
