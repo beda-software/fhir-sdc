@@ -165,9 +165,7 @@ def is_sdc_api(parameters: dict | None) -> bool:
     return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
 
 
-async def parameter_to_env(
-    client: AsyncFHIRClient, resource, is_fhir: bool = True
-) -> dict[str, Any]:
+async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     # TODO: add support for repeating values (with same name)
     env: dict[str, Any] = {}
     for param in resource["parameter"]:
@@ -184,7 +182,7 @@ async def parameter_to_env(
         elif "resource" in param:
             env[param["name"]] = param["resource"]
         else:
-            value, kind = parse_parameter_value(param, is_fhir)
+            value, kind = parse_parameter_value(param)
             if value:
                 if param["name"] == "subject" and kind == "Reference":
                     env[param["name"]] = await client.reference(
@@ -202,17 +200,12 @@ async def parameter_to_env(
     return env
 
 
-def parse_parameter_value(parameter, is_fhir: bool) -> tuple[Any, str]:
-    if is_fhir:
-        _name_key, value_key = parameter.keys()
-        return parameter[value_key], value_key.removeprefix("value")
-
-    value = parameter["value"]
-    polimorphic_key = first(value.keys())
-    return value[polimorphic_key] if polimorphic_key else None, polimorphic_key
+def parse_parameter_value(parameter) -> tuple[Any, str]:
+    _name_key, value_key = parameter.keys()
+    return parameter[value_key], value_key.removeprefix("value")
 
 
-def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: bool):
+def get_external_fhir_base_url_from_resource(resource: dict | None):
     if not resource or resource.get("resourceType") != "Parameters":
         return None
     for param in resource.get("parameter", []):
@@ -220,7 +213,7 @@ def get_external_fhir_base_url_from_resource(resource: dict | None, is_fhir: boo
             continue
         if "resource" in param:
             continue
-        value, _key = parse_parameter_value(param, is_fhir)
+        value, _key = parse_parameter_value(param)
         return value or None
     return None
 

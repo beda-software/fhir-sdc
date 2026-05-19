@@ -268,16 +268,12 @@ def test_is_sdc_api(payload, expected):
 
 
 @pytest.mark.parametrize(
-    "is_fhir,launch_param",
+    "launch_param",
     [
-        (True, {"name": "launch-patientId", "valueString": "patient-123"}),
-        (
-            False,
-            {"name": "launch-patientId", "value": {"string": "patient-123"}},
-        ),
+        {"name": "launch-patientId", "valueString": "patient-123"},
     ],
 )
-async def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
+async def test_parameter_to_env_handles_parameters_correctly(launch_param):
     client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
@@ -298,7 +294,7 @@ async def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_par
         ],
     }
 
-    env = await parameter_to_env(client, parameters, is_fhir)
+    env = await parameter_to_env(client, parameters)
 
     assert env["questionnaire"] == questionnaire
     assert env["questionnaire_response"] == questionnaire_response
@@ -328,7 +324,7 @@ async def test_parameter_to_env_skips_empty_launch_param():
         ],
     }
 
-    env = await parameter_to_env(client, parameters, is_fhir=False)
+    env = await parameter_to_env(client, parameters)
 
     assert "launch-patientId" not in env
     assert env["Questionnaire"] == questionnaire
@@ -360,7 +356,7 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+    env = await parameter_to_env(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
     resolved = env["Observation"]
@@ -383,7 +379,7 @@ async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db)
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+    env = await parameter_to_env(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
     assert env["subject"]["resourceType"] == "Patient"
@@ -404,7 +400,7 @@ async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_clie
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters, is_fhir=True)
+    env = await parameter_to_env(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is False
     assert env["PatientRef"]["display"] == "Integration Patient"
@@ -444,7 +440,7 @@ async def test_sdc_api_params(fhir_client, safe_db):
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
+    env = await parameter_to_env(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
     resolved = env["Patient"]
@@ -481,7 +477,7 @@ async def test_sdc_api_params_with_resource(fhir_client, safe_db):
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters, is_fhir=False)
+    env = await parameter_to_env(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
     resolved = env["Patient"]
