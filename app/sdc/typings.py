@@ -20,3 +20,10 @@ class LaunchContext(TypedDict, total=False):
 
 class Reference(TypedDict, total=False):
     reference: str
+
+
+class ItemConstraint(TypedDict, total=False):
+    key: str
+    severity: str
+    human: str
+    expression: str

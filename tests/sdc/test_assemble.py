@@ -1,6 +1,9 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
+from app.sdc.assemble import assemble
 from tests.factories import (
     create_address_questionnaire,
     create_questionnaire,
@@ -9,6 +12,8 @@ from tests.factories import (
     make_initial_expression_ext,
     make_item_population_context_ext,
     make_launch_context_ext,
+    make_questionnaire_mapper_ext,
+    make_source_queries_ext,
     make_sub_questionnaire_ext,
     make_target_structure_map_ext,
     make_variable_ext,
@@ -556,3 +561,209 @@ async def test_validate_assemble_context(fhir_client):
     )
     with pytest.raises(OperationOutcome):
         await q.execute("$assemble", method="get")
+
+
+@pytest.mark.asyncio
+async def test_assemble_propagates_mapping(fhir_client, safe_db):
+    m1 = fhir_client.resource("Mapping", body={"resourceType": "Bundle", "type": "transaction"})
+    await m1.save()
+    m2 = fhir_client.resource("Mapping", body={"resourceType": "Bundle", "type": "transaction"})
+    await m2.save()
+
+    sub1 = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(m1.id)],
+            "item": [{"type": "string", "linkId": "q1"}],
+        },
+    )
+    sub2 = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_questionnaire_mapper_ext(m1.id),
+                make_questionnaire_mapper_ext(m2.id),
+            ],
+            "item": [{"type": "string", "linkId": "q2"}],
+        },
+    )
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "display",
+                    "linkId": "sub1-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub1.id)],
+                },
+                {
+                    "type": "display",
+                    "linkId": "sub2-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub2.id)],
+                },
+            ],
+        },
+    )
+
+    assembled = await q.execute("$assemble", method="get")
+    del assembled["meta"]
+
+    assert assembled == {
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "extension": [
+            make_questionnaire_mapper_ext(m1.id),
+            make_questionnaire_mapper_ext(m2.id),
+            make_assembled_from_ext(q.id),
+        ],
+        "item": [
+            {"type": "string", "linkId": "q1"},
+            {"type": "string", "linkId": "q2"},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_assemble_propagates_source_queries(fhir_client, safe_db):
+    sub1 = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_source_queries_ext("#bundle-1")],
+            "item": [{"type": "string", "linkId": "q1"}],
+        },
+    )
+    sub2 = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_source_queries_ext("#bundle-1"),
+                make_source_queries_ext("#bundle-2"),
+            ],
+            "item": [{"type": "string", "linkId": "q2"}],
+        },
+    )
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "display",
+                    "linkId": "sub1-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub1.id)],
+                },
+                {
+                    "type": "display",
+                    "linkId": "sub2-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub2.id)],
+                },
+            ],
+        },
+    )
+
+    assembled = await q.execute("$assemble", method="get")
+    del assembled["meta"]
+
+    assert assembled == {
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "extension": [
+            make_source_queries_ext("#bundle-1"),
+            make_source_queries_ext("#bundle-2"),
+            make_assembled_from_ext(q.id),
+        ],
+        "item": [
+            {"type": "string", "linkId": "q1"},
+            {"type": "string", "linkId": "q2"},
+        ],
+    }
+
+
+@pytest.mark.asyncio
+async def test_assemble_propagates_contained(fhir_client, safe_db):
+    contained_resource = {
+        "id": "PrePopQuery",
+        "resourceType": "Bundle",
+        "type": "batch",
+        "entry": [{"request": {"method": "GET", "url": "Patient?_id=1"}}],
+    }
+    sub = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "contained": [contained_resource],
+            "extension": [make_source_queries_ext("#PrePopQuery")],
+            "item": [{"type": "string", "linkId": "q1"}],
+        },
+    )
+
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "display",
+                    "linkId": "sub-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub.id)],
+                }
+            ],
+        },
+    )
+
+    assembled = await q.execute("$assemble", method="get")
+
+    contained = assembled.get("contained", [])
+    assert len(contained) == 1
+    assert contained[0]["id"] == "PrePopQuery"
+    assert contained[0]["resourceType"] == "Bundle"
+    assert {"type": "string", "linkId": "q1"} in assembled["item"]
+
+
+@pytest.mark.asyncio
+async def test_assemble_propagates_cqf_library():
+    from app.sdc.getters import CQF_LIBRARY_URL
+
+    cqf_ext = {"url": CQF_LIBRARY_URL, "valueCanonical": "http://example.org/Library/MyLib"}
+    sub_fhir = {
+        "id": "sub-1",
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "extension": [cqf_ext],
+        "item": [{"type": "string", "linkId": "q1"}],
+    }
+
+    mock_client = MagicMock()
+    mock_client.resources.return_value.search.return_value.fetch_all = AsyncMock(
+        return_value=[sub_fhir]
+    )
+
+    fhir_questionnaire = {
+        "id": "parent-q",
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "item": [
+            {
+                "type": "display",
+                "linkId": "sub-placeholder",
+                "extension": [make_sub_questionnaire_ext("sub-1")],
+            }
+        ],
+    }
+
+    result = await assemble(mock_client, fhir_questionnaire)
+
+    assert cqf_ext in result.get("extension", [])
+    assert "id" not in result

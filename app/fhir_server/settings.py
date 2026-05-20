@@ -15,5 +15,4 @@ settings = FHIRAppSettings(
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
     AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
     FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
-    FCE_CONVERTER_URL=os.getenv("FCE_CONVERTER_URL"),
 )
