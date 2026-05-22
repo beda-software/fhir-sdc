@@ -1,14 +1,12 @@
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-from app.sdc.assemble import assemble
 from tests.factories import (
     create_address_questionnaire,
     create_questionnaire,
     make_assemble_context_ext,
     make_assembled_from_ext,
+    make_cqf_library_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
     make_launch_context_ext,
@@ -543,7 +541,7 @@ async def test_assemble_reuse_questionnaire(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_validate_assemble_context(fhir_client):
+async def test_validate_assemble_context(fhir_client, safe_db):
     address = await create_address_questionnaire(fhir_client)
 
     q = await create_questionnaire(
@@ -748,37 +746,40 @@ async def test_assemble_propagates_contained(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
-async def test_assemble_propagates_cqf_library():
-    from app.sdc.getters import CQF_LIBRARY_URL
-
-    cqf_ext = {"url": CQF_LIBRARY_URL, "valueCanonical": "http://example.org/Library/MyLib"}
-    sub_fhir = {
-        "id": "sub-1",
-        "resourceType": "Questionnaire",
-        "status": "active",
-        "extension": [cqf_ext],
-        "item": [{"type": "string", "linkId": "q1"}],
-    }
-
-    mock_client = MagicMock()
-    mock_client.resources.return_value.search.return_value.fetch_all = AsyncMock(
-        return_value=[sub_fhir]
+async def test_assemble_propagates_cqf_library(fhir_client, safe_db):
+    sub = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_cqf_library_ext("http://example.org/Library/MyLib")],
+            "item": [{"type": "string", "linkId": "q1"}],
+        },
     )
 
-    fhir_questionnaire = {
-        "id": "parent-q",
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "display",
+                    "linkId": "sub-placeholder",
+                    "text": "Sub questionnaire is not supported",
+                    "extension": [make_sub_questionnaire_ext(sub.id)],
+                }
+            ],
+        },
+    )
+
+    assembled = await q.execute("$assemble", method="get")
+    del assembled["meta"]
+
+    assert assembled == {
         "resourceType": "Questionnaire",
         "status": "active",
-        "item": [
-            {
-                "type": "display",
-                "linkId": "sub-placeholder",
-                "extension": [make_sub_questionnaire_ext("sub-1")],
-            }
+        "extension": [
+            make_cqf_library_ext("http://example.org/Library/MyLib"),
+            make_assembled_from_ext(q.id),
         ],
+        "item": [{"type": "string", "linkId": "q1"}],
     }
-
-    result = await assemble(mock_client, fhir_questionnaire)
-
-    assert cqf_ext in result.get("extension", [])
-    assert "id" not in result
