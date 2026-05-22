@@ -276,6 +276,13 @@ async def test_fhir_assemble_sub_questionnaire(fhir_client, safe_db):
 
 @pytest.mark.asyncio
 async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
+    m1 = fhir_client.resource("Mapping", body={"resourceType": "Bundle", "type": "transaction"})
+    await m1.save()
+    m2 = fhir_client.resource("Mapping", body={"resourceType": "Bundle", "type": "transaction"})
+    await m2.save()
+    m3 = fhir_client.resource("Mapping", body={"resourceType": "Bundle", "type": "transaction"})
+    await m3.save()
+
     get_family_name = await create_questionnaire(
         fhir_client,
         {
@@ -283,6 +290,7 @@ async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
                 make_item_population_context_ext("%LaunchPatient.name"),
+                make_questionnaire_mapper_ext(m3.id),
             ],
             "item": [
                 {
@@ -301,6 +309,7 @@ async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
                 make_item_population_context_ext("%LaunchPatient.name"),
+                make_questionnaire_mapper_ext(m2.id),
             ],
             "item": [
                 {
@@ -323,6 +332,9 @@ async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
         {
             "status": "active",
             "resourceType": "Questionnaire",
+            "extension": [
+                make_questionnaire_mapper_ext(m1.id),
+            ],
             "item": [
                 {
                     "linkId": "demographics",
@@ -349,6 +361,9 @@ async def test_assemble_double_nested_sub_questionnaire(fhir_client, safe_db):
         "status": "active",
         "extension": [
             make_launch_context_ext("LaunchPatient", "Patient"),
+            make_questionnaire_mapper_ext(m1.id),
+            make_questionnaire_mapper_ext(m2.id),
+            make_questionnaire_mapper_ext(m3.id),
             make_assembled_from_ext(q.id),
         ],
         "item": [
