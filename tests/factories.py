@@ -1,4 +1,5 @@
 from app.sdc.getters import (
+    CQF_LIBRARY_URL,
     INITIAL_EXPRESSION_URL,
     ITEM_POPULATION_CONTEXT_URL,
     LAUNCH_CONTEXT_URL,
@@ -164,4 +165,11 @@ def make_target_structure_map_ext(structure_map_id):
     return {
         "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
         "valueCanonical": structure_map_id,
+    }
+
+
+def make_cqf_library_ext(canonical):
+    return {
+        "url": CQF_LIBRARY_URL,
+        "valueCanonical": canonical,
     }
