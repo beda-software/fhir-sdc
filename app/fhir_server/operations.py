@@ -5,7 +5,7 @@ from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
 from app.sdc.exception import ConstraintCheckOperationOutcome
-from app.sdc.getters import get_launch_context
+from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL, get_launch_context
 
 from ..sdc import (
     assemble,
@@ -17,6 +17,7 @@ from ..sdc import (
 )
 from ..sdc.utils import is_sdc_api, parameter_to_env, validate_context
 from ..utils import get_extract_services
+
 
 routes = web.RouteTableDef()
 
@@ -73,7 +74,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         if ext["url"]
         == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
     ]
-    jute_templates = []
+    mapper_templates = []
 
     for structure_map_extension in structure_map_extensions:
         structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
@@ -89,7 +90,16 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
                 "valueString",
             ]
         )
-        jute_templates.append(json.loads(template_string))
+        mapper_templates.append(json.loads(template_string))
+
+    mapper_extensions = [
+        ext for ext in questionnaire.get("extension", []) if ext["url"] == QUESTIONNAIRE_MAPPER_URL
+    ]
+
+    for mapper_extension in mapper_extensions:
+        if not mapper_extension.get("valueString"):
+            continue
+        mapper_templates.append(json.loads(mapper_extension.get("valueString")))
 
     context = {
         "Questionnaire": questionnaire,
@@ -99,7 +109,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 
     await constraint_check(client, questionnaire, context)
     extraction_result = await extract(
-        client, jute_templates, context, get_extract_services(request.app)
+        client, mapper_templates, context, get_extract_services(request.app)
     )
     return web.json_response(extraction_result)
 
@@ -113,10 +123,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     )
     jute_templates = []
     structure_map_extensions = [
-        ext
-        for ext in questionnaire.get("extension", [])
-        if ext["url"]
-        == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
+        ext for ext in questionnaire.get("extension", []) if ext["url"] == TARGET_STRUCTURE_MAP_URL
     ]
 
     for structure_map_extension in structure_map_extensions:
