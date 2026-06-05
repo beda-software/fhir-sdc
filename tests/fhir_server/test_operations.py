@@ -1,7 +1,11 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from tests.factories import make_launch_context_ext, make_target_structure_map_ext
+from tests.factories import (
+    make_launch_context_ext,
+    make_questionnaire_embedded_mapper_ext,
+    make_target_structure_map_ext,
+)
 
 
 def _make_fake_structure_map(template_str):
@@ -38,9 +42,7 @@ async def test_assemble_handler(fhir_server_client, fhir_client, safe_db):
     assert resp.status == 200
     result = await resp.json()
     assert "id" not in result
-    assert any(
-        "assembledFrom" in e.get("url", "") for e in result.get("extension", [])
-    )
+    assert any("assembledFrom" in e.get("url", "") for e in result.get("extension", []))
 
 
 async def test_constraint_check_no_errors(fhir_server_client):
@@ -247,16 +249,18 @@ async def test_populate_instance(fhir_server_client, fhir_client, safe_db):
 
 async def test_extract_collection_with_jute_template(fhir_server_client, fhir_client, safe_db):
     # entry must be non-empty; Aidbox rejects Bundle.entry: []
-    template_str = json.dumps({
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [
-            {
-                "request": {"method": "PUT", "url": "Patient/jute-extract-col"},
-                "resource": {"resourceType": "Patient", "id": "jute-extract-col"},
-            }
-        ],
-    })
+    template_str = json.dumps(
+        {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": "Patient/jute-extract-col"},
+                    "resource": {"resourceType": "Patient", "id": "jute-extract-col"},
+                }
+            ],
+        }
+    )
     mock_sm_set = _make_fake_structure_map(template_str)
 
     parameters = {
@@ -296,16 +300,18 @@ async def test_extract_instance_with_jute_template(fhir_server_client, fhir_clie
     )
     await q.save()
 
-    template_str = json.dumps({
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [
-            {
-                "request": {"method": "PUT", "url": "Patient/jute-extract-inst"},
-                "resource": {"resourceType": "Patient", "id": "jute-extract-inst"},
-            }
-        ],
-    })
+    template_str = json.dumps(
+        {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": "Patient/jute-extract-inst"},
+                    "resource": {"resourceType": "Patient", "id": "jute-extract-inst"},
+                }
+            ],
+        }
+    )
     mock_sm_set = _make_fake_structure_map(template_str)
     original_resources = fhir_client.resources
 
@@ -351,3 +357,64 @@ async def test_extract_instance_parameters_with_launch_context(
     resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=parameters)
     assert resp.status == 200
     assert await resp.json() == []
+
+
+_EMBEDDED_JUTE_MAPPING = {
+    "resourceType": "Mapping",
+    "id": "embedded-jute-test",
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"method": "PUT", "url": "Patient/embedded-jute-patient"},
+                "resource": {"resourceType": "Patient", "id": "embedded-jute-patient"},
+            }
+        ],
+    },
+}
+
+
+async def test_extract_collection_embedded_mapper(fhir_server_client, fhir_client, safe_db):
+    """Embedded mapper via valueExpression (collection $extract) — no Mapping stored in DB."""
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "questionnaire",
+                "resource": {
+                    "resourceType": "Questionnaire",
+                    "status": "active",
+                    "item": [],
+                    "extension": [make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+                },
+            },
+            {
+                "name": "questionnaire_response",
+                "resource": {"resourceType": "QuestionnaireResponse", "status": "completed"},
+            },
+        ],
+    }
+    resp = await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
+    assert resp.status == 200
+    result = await resp.json()
+    assert isinstance(result, list)
+    assert len(result) == 1
+
+
+async def test_extract_instance_embedded_mapper(fhir_server_client, fhir_client, safe_db):
+    """Embedded mapper via valueExpression (instance $extract) — no Mapping stored in DB."""
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    result = await resp.json()
+    assert isinstance(result, list)
+    assert len(result) == 1

@@ -5,7 +5,7 @@ from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
 from app.sdc.exception import ConstraintCheckOperationOutcome
-from app.sdc.getters import get_launch_context
+from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL, get_launch_context
 
 from ..sdc import (
     assemble,
@@ -19,6 +19,33 @@ from ..sdc.utils import is_sdc_api, parameter_to_env, validate_context
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
+
+
+async def _build_mapper_templates(client, questionnaire: dict) -> list:
+    mapper_templates = []
+    for ext in questionnaire.get("extension", []):
+        if ext["url"] == TARGET_STRUCTURE_MAP_URL:
+            structure_map_id = ext["valueCanonical"].split("/")[-1]
+            structure_map = (
+                await client.resources("StructureMap").search(_id=structure_map_id).get()
+            )
+            template_string = structure_map.get_by_path(
+                [
+                    "group",
+                    {"name": "jute-group"},
+                    "rule",
+                    {"name": "apply-jute"},
+                    "extension",
+                    {"url": "http://beda.software/fhir-extensions/jute-body"},
+                    "valueString",
+                ]
+            )
+            mapper_templates.append(json.loads(template_string))
+        elif ext["url"] == QUESTIONNAIRE_MAPPER_URL:
+            value_expression = ext.get("valueExpression")
+            if value_expression and value_expression.get("expression"):
+                mapper_templates.append(json.loads(value_expression["expression"]))
+    return mapper_templates
 
 
 @routes.get("/Questionnaire/{id}/$assemble")
@@ -67,29 +94,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         questionnaire = env.get("Questionnaire")
         questionnaire_response = env.get("QuestionnaireResponse")
 
-    structure_map_extensions = [
-        ext
-        for ext in questionnaire.get("extension", [])
-        if ext["url"]
-        == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
-    ]
-    jute_templates = []
-
-    for structure_map_extension in structure_map_extensions:
-        structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
-        structure_map = await client.resources("StructureMap").search(_id=structure_map_id).get()
-        template_string = structure_map.get_by_path(
-            [
-                "group",
-                {"name": "jute-group"},
-                "rule",
-                {"name": "apply-jute"},
-                "extension",
-                {"url": "http://beda.software/fhir-extensions/jute-body"},
-                "valueString",
-            ]
-        )
-        jute_templates.append(json.loads(template_string))
+    mapper_templates = await _build_mapper_templates(client, questionnaire)
 
     context = {
         "Questionnaire": questionnaire,
@@ -99,7 +104,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 
     await constraint_check(client, questionnaire, context)
     extraction_result = await extract(
-        client, jute_templates, context, get_extract_services(request.app)
+        client, mapper_templates, context, get_extract_services(request.app)
     )
     return web.json_response(extraction_result)
 
@@ -111,29 +116,8 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
-    jute_templates = []
-    structure_map_extensions = [
-        ext
-        for ext in questionnaire.get("extension", [])
-        if ext["url"]
-        == "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap"
-    ]
 
-    for structure_map_extension in structure_map_extensions:
-        structure_map_id = structure_map_extension["valueCanonical"].split("/")[-1]
-        structure_map = await client.resources("StructureMap").search(_id=structure_map_id).get()
-        template_string = structure_map.get_by_path(
-            [
-                "group",
-                {"name": "jute-group"},
-                "rule",
-                {"name": "apply-jute"},
-                "extension",
-                {"url": "http://beda.software/fhir-extensions/jute-body"},
-                "valueString",
-            ]
-        )
-        jute_templates.append(json.loads(template_string))
+    mapper_templates = await _build_mapper_templates(client, questionnaire)
 
     if resource["resourceType"] == "QuestionnaireResponse":
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
@@ -143,7 +127,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         }
         await constraint_check(client, questionnaire, context)
         return web.json_response(
-            await extract(client, jute_templates, context, get_extract_services(request.app))
+            await extract(client, mapper_templates, context, get_extract_services(request.app))
         )
 
     if resource["resourceType"] == "Parameters":
@@ -174,7 +158,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         }
         await constraint_check(client, questionnaire, context)
         return web.json_response(
-            await extract(client, jute_templates, context, get_extract_services(request.app))
+            await extract(client, mapper_templates, context, get_extract_services(request.app))
         )
 
     raise ConstraintCheckOperationOutcome(
