@@ -14,8 +14,6 @@ services:
     depends_on:
       aidbox:
         condition: service_healthy
-      fhir-converter:
-        condition: service_started
       jute:
         condition: service_started
       fhirpath_mapping:
@@ -50,12 +48,3 @@ services:
     image: bedasoftware/jute-microservice:latest
   fhirpath_mapping:
     image: bedasoftware/fhirpath-extract:main
-  fhir-converter:
-    image: bedasoftware/aidbox-fhir-converter:main
-    links:
-      - aidbox
-    depends_on:
-      aidbox:
-        condition: service_healthy
-    env_file:
-      - env.fhir-converter.tests
