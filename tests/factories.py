@@ -148,6 +148,19 @@ def make_questionnaire_mapper_ext(mapping_id):
     }
 
 
+def make_questionnaire_embedded_mapper_ext(mapping_body: dict):
+    import json
+
+    language = "fpml" if mapping_body.get("type") == "FHIRPath" else "jute"
+    return {
+        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+        "valueExpression": {
+            "language": language,
+            "expression": json.dumps(mapping_body),
+        },
+    }
+
+
 def make_item_constraint_ext(*, key, requirements, severity, human, expression):
     return {
         "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
