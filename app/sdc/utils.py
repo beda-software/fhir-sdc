@@ -1,6 +1,7 @@
 import copy
 from typing import Any
 from urllib.parse import quote
+from yarl import URL
 
 from fhirpathpy.models import models
 from fhirpy import AsyncFHIRClient
@@ -144,7 +145,6 @@ def resolve_string_template(
     res = expr
     for k, v in vs.items():
         res = res.replace(k, v)
-
     return res
 
 
@@ -316,6 +316,15 @@ def resolve_fpml_template(template, context):
         True,
     )
 
+async def apply_converter_for_resources(converter_fn, resources: list) -> list:
+    bundle = {
+        "resourceType": "Bundle",
+        "type": "collection",
+        "entry": [{"resource": dict(s)} for s in resources],
+    }
+    fce_bundle = await converter_fn(bundle)
+    result = [s["resource"] for s in fce_bundle["entry"]]
+    return result
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
     try:
@@ -331,9 +340,11 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             )
             if url is None:
                 return None
+            url = URL(url)
             return await client.execute(
-                url,
+                url.path,
                 method="GET",
+                params=url.query
             )
     except Exception as e:
         raise OperationOutcome(
