@@ -9,6 +9,7 @@ from app.sdc.utils import (
     prepare_link_ids,
     resolve_fpml_template,
     resolve_string_template,
+    resolve_expression,
 )
 
 
@@ -488,3 +489,19 @@ async def test_sdc_api_params_with_resource(fhir_client, safe_db):
     assert resolved["resourceType"] == "Patient"
     assert resolved["name"][0]["family"] == "ApiParams"
     assert resolved["name"][0]["given"] == ["SdcIntegration"]
+
+@pytest.mark.asyncio
+async def test_x_fhir_query_variable(fhir_client, safe_db):
+    patient = fhir_client.resource(
+        "Patient",
+        name=[{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    )
+    await patient.save()
+    env = {"patient": patient}
+    expression = {
+        "name": "MedicationStatement",
+        "language": "application/x-fhir-query",
+        "expression": "MedicationStatement?patient={{%patient.id}}&status=active&_include=MedicationStatement:medication"
+      }
+    result = await resolve_expression(fhir_client, {}, expression, env, 'test')
+    assert result == {}
