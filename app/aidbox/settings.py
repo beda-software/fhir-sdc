@@ -11,9 +11,7 @@ class Settings(AidboxSettings):
 
 
 create_manifest_attrs = os.getenv("CREATE_MANIFEST_ATTRS", "True").lower() == "true"
-constraint_legacy_behavior = (
-    os.getenv("CONSTRAINT_LEGACY_BEHAVIOR", "True").lower() == "true"
-)
+constraint_legacy_behavior = os.getenv("CONSTRAINT_LEGACY_BEHAVIOR", "True").lower() == "true"
 
 if create_manifest_attrs:
     raise Exception(

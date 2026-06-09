@@ -3,10 +3,10 @@ from fhirpathpy import evaluate as fhirpath
 
 from tests.factories import (
     create_questionnaire,
-    make_parameters,
+    make_initial_expression_ext,
     make_launch_context_ext,
+    make_parameters,
     make_source_queries_ext,
-    make_initial_expression_ext
 )
 
 
@@ -23,7 +23,7 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
             "status": "active",
             "extension": [
                 make_launch_context_ext("LaunchPatient", "Patient"),
-                make_source_queries_ext("#DietAndNutrition")
+                make_source_queries_ext("#DietAndNutrition"),
             ],
             "contained": [
                 {
@@ -48,7 +48,9 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
                     "repeats": True,
                     "answerValueSet": "diet",
                     "extension": [
-                        make_initial_expression_ext("%DietAndNutrition.entry[0].resource.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')")
+                        make_initial_expression_ext(
+                            "%DietAndNutrition.entry[0].resource.entry.resource.oralDiet.type.coding.where(system = 'http://snomed.info/sct')"
+                        )
                     ],
                 }
             ],
@@ -85,9 +87,7 @@ async def test_populate_nutritio_order(fhir_client, safe_db):
 
     await n.save()
     assert n.id is not None
-    p = await q.execute(
-        "$populate", data=make_parameters(LaunchPatient=launch_patient)
-    )
+    p = await q.execute("$populate", data=make_parameters(LaunchPatient=launch_patient))
 
     populated_answer = fhirpath(
         p, "QuestionnaireResponse.item.where(linkId='diet').answer.valueCoding"
