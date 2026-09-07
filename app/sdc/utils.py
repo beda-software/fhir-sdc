@@ -12,7 +12,7 @@ from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
 from yarl import URL
 
-from app.cached_fhirpath import fhirpath
+from app.cached_fhirpath import fhirpath, fpml_expression_cache
 from app.sdc.getters import get_source_queries
 from app.sdc.typings import Expression, LaunchContext
 
@@ -290,8 +290,8 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
 def answers(inputs, link_id):
     return fhirpath(
         inputs,
-        f"repeat(item).where(linkId='{link_id}').answer.value",
-        None,
+        "repeat(item).where(linkId=%FPMLLinkId).answer.value",
+        {"FPMLLinkId": link_id},
         "r4",
     )
 
@@ -304,6 +304,7 @@ fp_options = {
         },
     },
     "model": r4,
+    "cache": fpml_expression_cache,
 }
 
 

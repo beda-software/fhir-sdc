@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "05fe8445e92008ebb6f4555cf981ed8beb2e9a5420f024ef53ad8803c1c70702"
+            "sha256": "e43ce9d72ec56c400cdc51f1d5577f0f95d3e107bc25b254c79fff0a44918304"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -503,12 +503,12 @@
         },
         "fpml": {
             "hashes": [
-                "sha256:04780695a22372f898c0e6b11b4861be640b77e2233e467c3bc28134e05b70ca",
-                "sha256:ac7e65ebfcfa118e0b11ab846ce9a2fe6ec8e2bb9e3be2eac0f061122dbc9939"
+                "sha256:62eb1f068097c7f895f23e0c22f862355974d5090fb57e9fe25056485b58c7d1",
+                "sha256:88d49a95ae2803dffa30c706c415409930d8abacc8d86831af801cca0bd35ed5"
             ],
             "index": "pypi",
             "markers": "python_version >= '3.9'",
-            "version": "==0.2.0"
+            "version": "==0.3.1"
         },
         "frozenlist": {
             "hashes": [
