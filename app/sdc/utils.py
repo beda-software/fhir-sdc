@@ -1,7 +1,6 @@
 import copy
 from typing import Any
 from urllib.parse import quote
-from yarl import URL
 
 from fhirpathpy.models import models
 from fhirpy import AsyncFHIRClient
@@ -11,6 +10,7 @@ from fpml import resolve_template
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
+from yarl import URL
 
 from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
@@ -316,6 +316,7 @@ def resolve_fpml_template(template, context):
         True,
     )
 
+
 async def apply_converter_for_resources(converter_fn, resources: list) -> list:
     bundle = {
         "resourceType": "Bundle",
@@ -325,6 +326,7 @@ async def apply_converter_for_resources(converter_fn, resources: list) -> list:
     fce_bundle = await converter_fn(bundle)
     result = [s["resource"] for s in fce_bundle["entry"]]
     return result
+
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
     try:
@@ -341,11 +343,7 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             if url is None:
                 return None
             url = URL(url)
-            return await client.execute(
-                url.path,
-                method="GET",
-                params=url.query
-            )
+            return await client.execute(url.path, method="GET", params=url.query)
     except Exception as e:
         raise OperationOutcome(
             f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
