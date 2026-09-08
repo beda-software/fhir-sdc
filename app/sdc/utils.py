@@ -1,9 +1,7 @@
 import copy
 from typing import Any
 from urllib.parse import quote
-from yarl import URL
 
-from fhirpathpy.models import models
 from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
@@ -11,14 +9,13 @@ from fpml import resolve_template
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
+from yarl import URL
 
 from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
 from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome
-
-r4 = models["r4"]
 
 # NOTE: it's outside from spec
 EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
@@ -287,34 +284,20 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
         full_urls_set.add(full_url)
 
 
-def answers(inputs, link_id):
-    return fhirpath(
-        inputs,
-        f"repeat(item).where(linkId='{link_id}').answer.value",
-        None,
-        "r4",
-    )
-
-
-fp_options = {
-    "userInvocationTable": {
-        "answers": {
-            "fn": answers,
-            "arity": {0: [], 1: ["String"]},
-        },
-    },
-    "model": r4,
-}
-
-
 def resolve_fpml_template(template, context):
     return resolve_template(
         context.get("QuestionniareResponse", context),
         template,
         context,
-        fp_options,
-        True,
+        strict=True,
+        evaluate=_evaluate,
     )
+
+
+def _evaluate(resource, expression, context):
+    """Evaluator for fpml, whose signature has no model."""
+    return fhirpath(resource, expression, context, "r4")
+
 
 async def apply_converter_for_resources(converter_fn, resources: list) -> list:
     bundle = {
@@ -325,6 +308,7 @@ async def apply_converter_for_resources(converter_fn, resources: list) -> list:
     fce_bundle = await converter_fn(bundle)
     result = [s["resource"] for s in fce_bundle["entry"]]
     return result
+
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
     try:
@@ -341,11 +325,7 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             if url is None:
                 return None
             url = URL(url)
-            return await client.execute(
-                url.path,
-                method="GET",
-                params=url.query
-            )
+            return await client.execute(url.path, method="GET", params=url.query)
     except Exception as e:
         raise OperationOutcome(
             f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
