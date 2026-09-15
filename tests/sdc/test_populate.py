@@ -7,6 +7,7 @@ from fhirpy.base.exceptions import OperationOutcome
 
 from tests.factories import (
     create_questionnaire,
+    make_choice_column_ext,
     make_initial_expression_ext,
     make_item_population_context_ext,
     make_launch_context_ext,
@@ -1376,6 +1377,73 @@ async def test_source_query_with_qr_vars_populate(fhir_client, safe_db):
         "questionnaire": q.id,
         "item": [{"linkId": "last-appointment"}],
     }
+
+
+@pytest.mark.asyncio
+async def test_initial_expression_resource_reference_display_populate(fhir_client, safe_db):
+    """
+    A resource returned for a reference item is labelled with the item's first choiceColumn
+    """
+    location_1 = {"resourceType": "Location", "id": "location-1", "name": "Location 1"}
+    location_2 = {"resourceType": "Location", "id": "location-2", "name": "Location 2"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("Location1", "Location"),
+                make_launch_context_ext("Location2", "Location"),
+            ],
+            "item": [
+                {
+                    "type": "reference",
+                    "linkId": "location",
+                    "extension": [
+                        make_initial_expression_ext("%Location1"),
+                        make_choice_column_ext("Location.name"),
+                    ],
+                },
+                {
+                    "type": "reference",
+                    "linkId": "locations",
+                    "repeats": True,
+                    "extension": [
+                        make_initial_expression_ext("%Location1 | %Location2"),
+                        make_choice_column_ext("name"),
+                    ],
+                },
+                {
+                    "type": "reference",
+                    "linkId": "location-without-choice-column",
+                    "extension": [make_initial_expression_ext("%Location1")],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute(
+        "$populate", data=make_parameters(Location1=location_1, Location2=location_2)
+    )
+
+    assert p["item"] == [
+        {
+            "linkId": "location",
+            "answer": [
+                {"valueReference": {"reference": "Location/location-1", "display": "Location 1"}}
+            ],
+        },
+        {
+            "linkId": "locations",
+            "answer": [
+                {"valueReference": {"reference": "Location/location-1", "display": "Location 1"}},
+                {"valueReference": {"reference": "Location/location-2", "display": "Location 2"}},
+            ],
+        },
+        {
+            "linkId": "location-without-choice-column",
+            "answer": [{"valueReference": {"reference": "Location/location-1"}}],
+        },
+    ]
 
 
 @pytest.mark.asyncio

@@ -4,6 +4,7 @@ import pytest
 
 from app.sdc.utils import (
     is_sdc_api,
+    normalize_answer_value,
     parameter_to_env,
     prepare_bundle,
     prepare_link_ids,
@@ -522,3 +523,35 @@ async def test_x_fhir_query_variable_escape(fhir_client, safe_db):
     result = await resolve_expression(fhir_client, {}, expression, env, "test")
     assert result["resourceType"] == "Bundle"
     assert result["total"] == 1
+
+
+LOCATION = {"resourceType": "Location", "id": "location-1", "name": "Location 1"}
+
+
+def test_normalize_answer_value_resource_to_reference_with_display():
+    assert normalize_answer_value("Reference", LOCATION, "Location.name") == {
+        "reference": "Location/location-1",
+        "display": "Location 1",
+    }
+
+
+def test_normalize_answer_value_resource_to_reference_without_display_path():
+    assert normalize_answer_value("Reference", LOCATION) == {"reference": "Location/location-1"}
+
+
+def test_normalize_answer_value_omits_display_when_path_finds_nothing():
+    assert normalize_answer_value("Reference", LOCATION, "alias") == {
+        "reference": "Location/location-1"
+    }
+
+
+def test_normalize_answer_value_omits_non_string_display():
+    assert normalize_answer_value("Reference", LOCATION, "name.exists()") == {
+        "reference": "Location/location-1"
+    }
+
+
+def test_normalize_answer_value_keeps_reference_as_is():
+    reference = {"reference": "Location/location-1"}
+
+    assert normalize_answer_value("Reference", reference, "Location.name") == reference

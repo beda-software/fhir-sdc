@@ -26,6 +26,7 @@ TARGET_STRUCTURE_MAP_URL = (
 )
 CQF_LIBRARY_URL = "http://hl7.org/fhir/StructureDefinition/cqf-library"
 ITEM_CONSTRAINT_URL = "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint"
+CHOICE_COLUMN_URL = "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-choiceColumn"
 ASSEMBLED_FROM_URL = (
     "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-assembledFrom"
 )
@@ -62,6 +63,15 @@ def get_item_population_context(extensions: list) -> Expression | None:
 def get_variable(extensions: list) -> list[Expression]:
     exts = _find_extensions(extensions, VARIABLE_URL)
     return [ext.get("valueExpression") for ext in exts]
+
+
+def get_choice_column_paths(extensions: list) -> list[str]:
+    paths = []
+    for ext in _find_extensions(extensions, CHOICE_COLUMN_URL):
+        path = _find_extension(ext.get("extension", []), "path")
+        if path and path.get("valueString"):
+            paths.append(path["valueString"])
+    return paths
 
 
 def get_launch_context(extensions: list) -> list[LaunchContext]:
