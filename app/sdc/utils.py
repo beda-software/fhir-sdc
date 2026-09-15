@@ -72,7 +72,7 @@ def make_value_key(type_: str) -> str:
     return f"value{type_[0].upper()}{type_[1:]}"
 
 
-def normalize_answer_value(type_: str, value):
+def normalize_answer_value(type_: str, value, display_path: str | None = None):
     # Resource (that contains resourceType and id) should be converted to Reference
     # It's according to the spec of $populate
     if (
@@ -81,7 +81,11 @@ def normalize_answer_value(type_: str, value):
         and "resourceType" in value
         and "id" in value
     ):
-        return {"reference": f"{value['resourceType']}/{value['id']}"}
+        reference = {"reference": f"{value['resourceType']}/{value['id']}"}
+        display = first(fhirpath(value, display_path)) if display_path else None
+        if isinstance(display, str):
+            reference["display"] = display
+        return reference
     return value
 
 

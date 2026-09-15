@@ -3,6 +3,7 @@ import logging
 from funcy import is_list
 
 from .getters import (
+    get_choice_column_paths,
     get_initial_expression,
     get_item_context,
     get_item_population_context,
@@ -130,10 +131,16 @@ async def _handle_item(client, item, env, context):
         )
         if data:
             type_ = get_type(item, data)
+            display_path = next(iter(get_choice_column_paths(item_exts)), None)
             if is_repeating:
-                answers = [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
+                    for d in data
+                ]
             else:
-                answers = [{make_value_key(type_): normalize_answer_value(type_, data[0])}]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, data[0], display_path)}
+                ]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:

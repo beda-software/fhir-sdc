@@ -1,4 +1,5 @@
 from app.sdc.getters import (
+    CHOICE_COLUMN_URL,
     CQF_LIBRARY_URL,
     INITIAL_EXPRESSION_URL,
     ITEM_POPULATION_CONTEXT_URL,
@@ -106,6 +107,16 @@ def make_initial_expression_ext(expression):
     return {
         "url": INITIAL_EXPRESSION_URL,
         "valueExpression": {"language": "text/fhirpath", "expression": expression},
+    }
+
+
+def make_choice_column_ext(path):
+    return {
+        "url": CHOICE_COLUMN_URL,
+        "extension": [
+            {"url": "forDisplay", "valueBoolean": True},
+            {"url": "path", "valueString": path},
+        ],
     }
 
 
