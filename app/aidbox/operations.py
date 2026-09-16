@@ -119,6 +119,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
         questionnaire,
         context,
         legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
     )
     extraction_result = await extract(
         client, mappings, context, get_extract_services(request.request["app"])
@@ -193,6 +194,7 @@ async def extract_questionnaire_instance(
         questionnaire,
         context,
         legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
     )
 
     return await extract(extract_client, mappings, context, extract_services)

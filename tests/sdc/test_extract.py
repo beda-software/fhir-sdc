@@ -2,11 +2,13 @@ import pytest
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
+from app.aidbox.settings import settings
 from tests.factories import (
     create_questionnaire,
     make_item_constraint_ext,
     make_parameters,
     make_questionnaire_mapper_ext,
+    make_source_queries_ext,
 )
 
 
@@ -678,3 +680,86 @@ async def test_fce_extract_multiple_mappers_checks_unique_full_urls(fhir_client,
     assert p1 == []
     assert p2 == []
     assert o == []
+
+
+async def create_source_query_questionnaire(fhir_client):
+    m = fhir_client.resource(
+        "Mapping",
+        type="FHIRPath",
+        body={
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"url": "/Patient/new-patient", "method": "PUT"},
+                    "resource": {
+                        "resourceType": "Patient",
+                        "name": [{"text": "{{ %SourceQuery.resourceType }}"}],
+                    },
+                }
+            ],
+        },
+    )
+    await m.save()
+
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_questionnaire_mapper_ext(m.id),
+                make_source_queries_ext("#SourceQuery"),
+            ],
+            "contained": [
+                {
+                    "resourceType": "Bundle",
+                    "id": "SourceQuery",
+                    "type": "batch",
+                    "entry": [{"request": {"method": "GET", "url": "/Patient?_count=0"}}],
+                }
+            ],
+        },
+    )
+
+
+async def extract_using_instance_endpoint(fhir_client, q):
+    await q.execute("$extract", data={"resourceType": "QuestionnaireResponse"})
+
+
+async def extract_using_list_endpoint(fhir_client, q):
+    await fhir_client.execute(
+        "Questionnaire/$extract",
+        data=make_parameters(
+            Questionnaire=q, QuestionnaireResponse={"resourceType": "QuestionnaireResponse"}
+        ),
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "extract_fn", [extract_using_instance_endpoint, extract_using_list_endpoint]
+)
+async def test_extract_passes_source_queries_to_mapper_in_legacy_behavior(
+    fhir_client, safe_db, monkeypatch, extract_fn
+):
+    monkeypatch.setattr(settings, "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", True)
+    q = await create_source_query_questionnaire(fhir_client)
+
+    await extract_fn(fhir_client, q)
+
+    p = await fhir_client.resources("Patient").search(_id="new-patient").get()
+    assert p.get_by_path(["name", 0, "text"]) == "Bundle"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "extract_fn", [extract_using_instance_endpoint, extract_using_list_endpoint]
+)
+async def test_extract_does_not_pass_source_queries_to_mapper(
+    fhir_client, safe_db, monkeypatch, extract_fn
+):
+    monkeypatch.setattr(settings, "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", False)
+    q = await create_source_query_questionnaire(fhir_client)
+
+    with pytest.raises(OperationOutcome, match="undefined environment variable: SourceQuery"):
+        await extract_fn(fhir_client, q)
