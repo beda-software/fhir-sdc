@@ -12,7 +12,11 @@ In order to use extraction on behalf of the user, the Aidbox should be configure
 For new installations, you must specify the following environment variables:
 ```
 CONSTRAINT_LEGACY_BEHAVIOR=False
+EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False
 ```
+
+`EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False` stops passing source queries to mappers during extraction: they are still
+loaded for the constraint check, but mappers receive only the `$extract` parameters.
 
 **NOTE:** In fhir-sdc@3.x.x will be enforced to be explicitly set to false. 
 

@@ -5,10 +5,19 @@ from .getters import get_item_constraints, get_launch_context
 from .utils import load_source_queries, validate_context
 
 
-async def constraint_check(client, questionnaire, env, *, legacy_behavior=False):
+async def constraint_check(
+    client,
+    questionnaire,
+    env,
+    *,
+    legacy_behavior=False,
+    extract_source_queries_legacy_behavior: bool = True,
+):
     launch_context = get_launch_context(questionnaire.get("extension", []))
     if launch_context:
         validate_context(launch_context, env)
+    if not extract_source_queries_legacy_behavior:
+        env = {**env}
     await load_source_queries(client, questionnaire, env)
     errors = []
     _constraint_check_for_item(errors, questionnaire, env, legacy_behavior=legacy_behavior)

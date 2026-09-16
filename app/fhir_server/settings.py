@@ -1,3 +1,4 @@
+import logging
 import os
 
 
@@ -10,9 +11,19 @@ class FHIRAppSettings:
             setattr(self, name, value)
 
 
+extract_source_queries_legacy_behavior = (
+    os.getenv("EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", "True").lower() == "true"
+)
+
+if extract_source_queries_legacy_behavior:
+    logging.warning(
+        "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR is deprecated and will be enforced to be set to false in fhir-sdc@3.x.x"
+    )
+
 settings = FHIRAppSettings(
     JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
     AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
     FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
+    EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=extract_source_queries_legacy_behavior,
 )

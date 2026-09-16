@@ -82,6 +82,7 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
 async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
+    settings = request.app["settings"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -102,7 +103,12 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         **env,
     }
 
-    await constraint_check(client, questionnaire, context)
+    await constraint_check(
+        client,
+        questionnaire,
+        context,
+        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
+    )
     extraction_result = await extract(
         client, mapper_templates, context, get_extract_services(request.app)
     )
@@ -113,6 +119,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
+    settings = request.app["settings"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
@@ -125,7 +132,12 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             "Questionnaire": questionnaire,
             "QuestionnaireResponse": questionnaire_response,
         }
-        await constraint_check(client, questionnaire, context)
+        await constraint_check(
+            client,
+            questionnaire,
+            context,
+            extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
+        )
         return web.json_response(
             await extract(client, mapper_templates, context, get_extract_services(request.app))
         )
@@ -156,7 +168,12 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             "Questionnaire": questionnaire,
             **env,
         }
-        await constraint_check(client, questionnaire, context)
+        await constraint_check(
+            client,
+            questionnaire,
+            context,
+            extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
+        )
         return web.json_response(
             await extract(client, mapper_templates, context, get_extract_services(request.app))
         )

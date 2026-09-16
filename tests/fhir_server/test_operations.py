@@ -1,9 +1,12 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from tests.factories import (
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
+    make_source_queries_ext,
     make_target_structure_map_ext,
 )
 
@@ -418,3 +421,92 @@ async def test_extract_instance_embedded_mapper(fhir_server_client, fhir_client,
     result = await resp.json()
     assert isinstance(result, list)
     assert len(result) == 1
+
+
+_SOURCE_QUERY_FPML_MAPPING = {
+    "resourceType": "Mapping",
+    "type": "FHIRPath",
+    "body": {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"method": "PUT", "url": "Patient/new-patient"},
+                "resource": {
+                    "resourceType": "Patient",
+                    "name": [{"text": "{{ %SourceQuery.resourceType }}"}],
+                },
+            }
+        ],
+    },
+}
+
+_SOURCE_QUERY_QUESTIONNAIRE = {
+    "resourceType": "Questionnaire",
+    "status": "active",
+    "extension": [
+        make_questionnaire_embedded_mapper_ext(_SOURCE_QUERY_FPML_MAPPING),
+        make_source_queries_ext("#SourceQuery"),
+    ],
+    "contained": [
+        {
+            "resourceType": "Bundle",
+            "id": "SourceQuery",
+            "type": "batch",
+            "entry": [{"request": {"method": "GET", "url": "/Patient?_count=0"}}],
+        }
+    ],
+}
+
+
+async def extract_using_collection_endpoint(fhir_server_client, fhir_client):
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": _SOURCE_QUERY_QUESTIONNAIRE},
+            {
+                "name": "questionnaire_response",
+                "resource": {"resourceType": "QuestionnaireResponse"},
+            },
+        ],
+    }
+    return await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
+
+
+async def extract_using_instance_endpoint(fhir_server_client, fhir_client):
+    q = fhir_client.resource("Questionnaire", **_SOURCE_QUERY_QUESTIONNAIRE)
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse"}
+    return await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+
+
+@pytest.mark.parametrize(
+    "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
+)
+async def test_extract_passes_source_queries_to_mapper_in_legacy_behavior(
+    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
+):
+    monkeypatch.setattr(
+        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", True
+    )
+
+    resp = await extract_fn(fhir_server_client, fhir_client)
+    assert resp.status == 200
+
+    p = await fhir_client.resources("Patient").search(_id="new-patient").get()
+    assert p.get_by_path(["name", 0, "text"]) == "Bundle"
+
+
+@pytest.mark.parametrize(
+    "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
+)
+async def test_extract_does_not_pass_source_queries_to_mapper(
+    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
+):
+    monkeypatch.setattr(
+        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", False
+    )
+
+    resp = await extract_fn(fhir_server_client, fhir_client)
+    assert resp.status == 400
+    assert "undefined environment variable: SourceQuery" in await resp.text()
