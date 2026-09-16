@@ -15,6 +15,7 @@ async def fhir_server_client(fhir_client, aiohttp_client):
     app["settings"] = FHIRAppSettings(
         JUTE_SERVICE="http://jute:8090/parse-template",
         FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
+        CONSTRAINT_LEGACY_BEHAVIOR=False,
         EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=True,
     )
     return await aiohttp_client(app)

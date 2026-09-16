@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tests.factories import (
+    make_item_constraint_ext,
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
     make_source_queries_ext,
@@ -510,3 +511,101 @@ async def test_extract_does_not_pass_source_queries_to_mapper(
     resp = await extract_fn(fhir_server_client, fhir_client)
     assert resp.status == 400
     assert "undefined environment variable: SourceQuery" in await resp.text()
+
+
+def make_constraint_questionnaire(expression: str) -> dict:
+    return {
+        "resourceType": "Questionnaire",
+        "status": "active",
+        "extension": [
+            make_item_constraint_ext(
+                key="constraint",
+                requirements="Constraint",
+                severity="error",
+                human="Constraint failed",
+                expression=expression,
+            )
+        ],
+    }
+
+
+def make_questionnaire_parameters(q: dict) -> dict:
+    return {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": q},
+            {
+                "name": "questionnaire_response",
+                "resource": {"resourceType": "QuestionnaireResponse"},
+            },
+        ],
+    }
+
+
+async def check_constraint_using_constraint_check_endpoint(fhir_server_client, fhir_client, q):
+    return await fhir_server_client.post(
+        "/QuestionnaireResponse/$constraint-check", json=make_questionnaire_parameters(q)
+    )
+
+
+async def check_constraint_using_collection_extract_endpoint(fhir_server_client, fhir_client, q):
+    return await fhir_server_client.post(
+        "/Questionnaire/$extract", json=make_questionnaire_parameters(q)
+    )
+
+
+async def check_constraint_using_instance_extract_endpoint_with_qr(
+    fhir_server_client, fhir_client, q
+):
+    saved_q = fhir_client.resource("Questionnaire", **q)
+    await saved_q.save()
+    qr = {"resourceType": "QuestionnaireResponse"}
+    return await fhir_server_client.post(f"/Questionnaire/{saved_q.id}/$extract", json=qr)
+
+
+async def check_constraint_using_instance_extract_endpoint_with_parameters(
+    fhir_server_client, fhir_client, q
+):
+    saved_q = fhir_client.resource("Questionnaire", **q)
+    await saved_q.save()
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "questionnaire_response",
+                "resource": {"resourceType": "QuestionnaireResponse"},
+            },
+        ],
+    }
+    return await fhir_server_client.post(f"/Questionnaire/{saved_q.id}/$extract", json=parameters)
+
+
+@pytest.mark.parametrize(
+    "check_constraint_fn",
+    [
+        check_constraint_using_constraint_check_endpoint,
+        check_constraint_using_collection_extract_endpoint,
+        check_constraint_using_instance_extract_endpoint_with_qr,
+        check_constraint_using_instance_extract_endpoint_with_parameters,
+    ],
+)
+@pytest.mark.parametrize(
+    ("legacy_behavior", "passing_expression"), [(True, "false"), (False, "true")]
+)
+async def test_constraint_check_respects_legacy_behavior(
+    fhir_server_client,
+    fhir_client,
+    safe_db,
+    monkeypatch,
+    check_constraint_fn,
+    legacy_behavior,
+    passing_expression,
+):
+    monkeypatch.setattr(
+        fhir_server_client.server.app["settings"], "CONSTRAINT_LEGACY_BEHAVIOR", legacy_behavior
+    )
+
+    resp = await check_constraint_fn(
+        fhir_server_client, fhir_client, make_constraint_questionnaire(passing_expression)
+    )
+    assert resp.status == 200
