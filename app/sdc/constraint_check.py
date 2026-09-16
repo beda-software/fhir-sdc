@@ -11,7 +11,7 @@ async def constraint_check(
     env,
     *,
     legacy_behavior=False,
-    extract_source_queries_legacy_behavior: bool = True,
+    extract_source_queries_legacy_behavior=False,
 ):
     launch_context = get_launch_context(questionnaire.get("extension", []))
     if launch_context:
