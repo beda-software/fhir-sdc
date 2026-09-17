@@ -16,6 +16,7 @@ from ..sdc.utils import (
     get_external_fhir_base_url_from_resource,
     is_sdc_api,
     parameter_to_env,
+    resolve_questionnaire,
     validate_context,
 )
 from ..utils import get_extract_services
@@ -85,10 +86,8 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         env_questionnaire_response = resource
-        questionnaire = (
-            await request.fhir_client.resources("Questionnaire")
-            .search(_id=resource["questionnaire"])
-            .get()
+        questionnaire = await resolve_questionnaire(
+            request.fhir_client, resource.get("questionnaire")
         )
     elif resource["resourceType"] == "Parameters":
         env = await parameter_to_env(client, resource)
