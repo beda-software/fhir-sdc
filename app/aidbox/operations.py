@@ -1,7 +1,7 @@
 import simplejson as json
 from aiohttp import web
 
-from app.sdc.getters import get_launch_context, get_questionnaire_mapper
+from app.sdc.getters import get_questionnaire_mapper
 
 from ..sdc import (
     assemble,
@@ -17,7 +17,6 @@ from ..sdc.utils import (
     is_sdc_api,
     parameter_to_env,
     resolve_questionnaire,
-    validate_context,
 )
 from ..utils import get_extract_services
 from .settings import settings
@@ -78,52 +77,28 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
 @prepare_args
 async def extract_questionnaire_operation(request: AidboxSdcRequest):
     resource = request.resource
-    client = get_user_sdk_client(
+    extract_client = get_user_sdk_client(
         request.request,
         request.client,
         get_external_fhir_base_url_from_resource(resource),
     )
+    # From Parameters, extract_questionnaire_instance takes the Questionnaire out of the env.
+    questionnaire = None
     if resource["resourceType"] == "QuestionnaireResponse":
-        env = {}
-        env_questionnaire_response = resource
-        questionnaire = await resolve_questionnaire(
-            request.fhir_client, resource.get("questionnaire")
+        questionnaire = dict(
+            await resolve_questionnaire(request.fhir_client, resource.get("questionnaire"))
         )
-    elif resource["resourceType"] == "Parameters":
-        env = await parameter_to_env(client, resource)
-        if "Questionnaire" not in env:
-            raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
-        if "QuestionnaireResponse" not in env:
-            raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
-        questionnaire = env["Questionnaire"]
-        env_questionnaire_response = env["QuestionnaireResponse"]
-
-    mapper_refs = get_questionnaire_mapper(questionnaire.get("extension", []))
-    mappings = [
-        await request.fhir_client.resources("Mapping")
-        .search(_id=ref["reference"].split("/")[-1])
-        .get()
-        for ref in mapper_refs
-    ]
-
-    context = {
-        "Questionnaire": questionnaire,
-        "QuestionnaireResponse": env_questionnaire_response,
-        **env,
-    }
-
-    await constraint_check(
-        client,
-        questionnaire,
-        context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
+    return web.json_response(
+        await extract_questionnaire_instance(
+            request.fhir_client,
+            extract_client,
+            questionnaire,
+            resource,
+            get_extract_services(request.request["app"]),
+        ),
+        dumps=json.dumps,
     )
-    extraction_result = await extract(
-        client, mappings, context, get_extract_services(request.request["app"])
-    )
-    return web.json_response(extraction_result, dumps=json.dumps)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$extract"])
@@ -169,14 +144,14 @@ async def extract_questionnaire_instance(
             raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
         env_questionnaire_response = env["QuestionnaireResponse"]
+        questionnaire = questionnaire or env.get("Questionnaire")
     else:
         raise MissingParamOperationOutcome(
             "Either `QuestionnaireResponse` resource or Parameters containing  QuestionnaireResponse are required",
         )
 
-    launch_context = get_launch_context(questionnaire.get("extension", []))
-    if launch_context:
-        validate_context(launch_context, env)
+    if questionnaire is None:
+        raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
     context = {
         "QuestionnaireResponse": env_questionnaire_response,

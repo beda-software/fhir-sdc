@@ -1,11 +1,10 @@
 import json
 
-import aiohttp
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
 from app.sdc.exception import ConstraintCheckOperationOutcome
-from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL, get_launch_context
+from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
 
 from ..sdc import (
     assemble,
@@ -15,7 +14,7 @@ from ..sdc import (
     populate,
     resolve_expression,
 )
-from ..sdc.utils import is_sdc_api, parameter_to_env, resolve_questionnaire, validate_context
+from ..sdc.utils import is_sdc_api, parameter_to_env, resolve_questionnaire
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
@@ -168,9 +167,6 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         questionnaire_response = client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
-        launch_context = get_launch_context(questionnaire.get("extension", []))
-        if launch_context:
-            validate_context(launch_context, env)
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,

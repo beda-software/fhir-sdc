@@ -6,6 +6,7 @@ from app.aidbox.settings import settings
 from tests.factories import (
     create_questionnaire,
     make_item_constraint_ext,
+    make_launch_context_ext,
     make_parameters,
     make_questionnaire_mapper_ext,
     make_source_queries_ext,
@@ -793,3 +794,114 @@ async def _create_patient_mapping(fhir_client):
     mapping = fhir_client.resource("Mapping", **PATIENT_BUNDLE_DATA)
     await mapping.save()
     return mapping
+
+
+async def create_patient_questionnaire(fhir_client):
+    mapping = fhir_client.resource(
+        "Mapping",
+        type="FHIRPath",
+        body={
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"url": "/Patient", "method": "POST"},
+                    "resource": {
+                        "resourceType": "Patient",
+                        "id": "{{ QuestionnaireResponse.item.where(linkId='patientId').answer.valueString }}",
+                    },
+                }
+            ],
+        },
+    )
+    await mapping.save()
+
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"type": "string", "linkId": "patientId"}],
+        },
+    )
+
+
+def make_patient_questionnaire_response(questionnaire_id):
+    return {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": questionnaire_id,
+        "item": [{"linkId": "patientId", "answer": [{"valueString": "newPatient"}]}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_questionnaire_response_body(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    extraction = await fhir_client.execute(
+        "Questionnaire/$extract", data=make_patient_questionnaire_response(q.id)
+    )
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(_id="newPatient").fetch_all()
+    assert len(p) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_lowercase_questionnaire_parameter(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    extraction = await fhir_client.execute(
+        "Questionnaire/$extract",
+        data=make_parameters(
+            questionnaire=q.serialize(),
+            questionnaire_response=make_patient_questionnaire_response(q.id),
+        ),
+    )
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(_id="newPatient").fetch_all()
+    assert len(p) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_without_questionnaire_raises(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    with pytest.raises(OperationOutcome, match="`Questionnaire` parameter is required"):
+        await fhir_client.execute(
+            "Questionnaire/$extract",
+            data=make_parameters(questionnaire_response=make_patient_questionnaire_response(q.id)),
+        )
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_without_questionnaire_response_raises(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    with pytest.raises(OperationOutcome, match="`QuestionnaireResponse` parameter is required"):
+        await fhir_client.execute(
+            "Questionnaire/$extract", data=make_parameters(questionnaire=q.serialize())
+        )
+
+
+@pytest.mark.asyncio
+async def test_extract_validates_launch_context(fhir_client, safe_db):
+    mapping = fhir_client.resource("Mapping", type="FHIRPath", body={"resourceType": "Bundle"})
+    await mapping.save()
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_questionnaire_mapper_ext(mapping.id),
+            ],
+            "item": [{"type": "string", "linkId": "patientId"}],
+        },
+    )
+
+    with pytest.raises(OperationOutcome, match="LaunchPatient"):
+        await fhir_client.execute(
+            "Questionnaire/$extract", data=make_patient_questionnaire_response(q.id)
+        )
