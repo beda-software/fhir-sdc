@@ -1,11 +1,10 @@
 import json
 
-import aiohttp
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
 from app.sdc.exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
-from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL, get_launch_context
+from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
 
 from ..sdc import (
     assemble,
@@ -22,7 +21,6 @@ from ..sdc.utils import (
     is_sdc_api,
     parameter_to_env,
     resolve_questionnaire,
-    validate_context,
 )
 from ..utils import get_extract_services
 
@@ -103,9 +101,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         questionnaire_response = resource
-        questionnaire = (
-            await client.resources("Questionnaire").search(_id=resource["questionnaire"]).get()
-        )
+        questionnaire = await resolve_questionnaire(client, resource.get("questionnaire"))
     elif resource["resourceType"] == "Parameters":
         env = await parameter_to_env(client, resource)
         questionnaire = env.get("Questionnaire")
@@ -178,9 +174,6 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
         questionnaire_response = client.resource(
             "QuestionnaireResponse", **questionnaire_response_data
         )
-        launch_context = get_launch_context(questionnaire.get("extension", []))
-        if launch_context:
-            validate_context(launch_context, env)
         context = {
             "QuestionnaireResponse": questionnaire_response,
             "Questionnaire": questionnaire,
@@ -246,9 +239,6 @@ async def extract_questionnaire_response(app, parameters: dict, questionnaire_re
     env = await parameter_to_env(
         client, build_legacy_extract_input(parameters, questionnaire_response)
     )
-    launch_context = get_launch_context(questionnaire.get("extension", []))
-    if launch_context:
-        validate_context(launch_context, env)
     context = {"Questionnaire": questionnaire, **env}
     await constraint_check(
         client,

@@ -220,9 +220,9 @@ def build_legacy_extract_input(parameters: dict, questionnaire_response: dict) -
 
 
 async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
-    """By canonical url as SDC defines it, then by id, which is what fhir-sdc's $populate writes."""
+    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     if not canonical:
-        raise MissingParamOperationOutcome("`questionnaire` parameter is required")
+        raise MissingParamOperationOutcome("`questionnaire` is required")
 
     url, _, version = canonical.partition("|")
     search = {"url": url, "version": version} if version else {"url": url}
