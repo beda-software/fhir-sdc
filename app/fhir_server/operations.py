@@ -15,7 +15,7 @@ from ..sdc import (
     populate,
     resolve_expression,
 )
-from ..sdc.utils import is_sdc_api, parameter_to_env, validate_context
+from ..sdc.utils import is_sdc_api, parameter_to_env, resolve_questionnaire, validate_context
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
@@ -95,9 +95,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         questionnaire_response = resource
-        questionnaire = (
-            await client.resources("Questionnaire").search(_id=resource["questionnaire"]).get()
-        )
+        questionnaire = await resolve_questionnaire(client, resource.get("questionnaire"))
     elif resource["resourceType"] == "Parameters":
         env = await parameter_to_env(client, resource)
         questionnaire = env.get("Questionnaire")

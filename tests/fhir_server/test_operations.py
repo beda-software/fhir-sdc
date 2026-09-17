@@ -609,3 +609,25 @@ async def test_constraint_check_respects_legacy_behavior(
         fhir_server_client, fhir_client, make_constraint_questionnaire(passing_expression)
     )
     assert resp.status == 200
+
+
+async def test_extract_collection_resolves_questionnaire_by_canonical_url(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        url="http://example.com/Questionnaire/by-url",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+
+    qr = {
+        "resourceType": "QuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": q["url"],
+    }
+    resp = await fhir_server_client.post("/Questionnaire/$extract", json=qr)
+    assert resp.status == 200
+    assert len(await resp.json()) == 1

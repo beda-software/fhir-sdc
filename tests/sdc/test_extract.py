@@ -763,3 +763,33 @@ async def test_extract_does_not_pass_source_queries_to_mapper(
 
     with pytest.raises(OperationOutcome, match="undefined environment variable: SourceQuery"):
         await extract_fn(fhir_client, q)
+
+
+@pytest.mark.asyncio
+async def test_extract_resolves_questionnaire_by_canonical_url(fhir_client, safe_db):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        url="http://example.com/Questionnaire/by-url",
+        version="1.0",
+        item=[{"type": "string", "linkId": "patientId"}],
+        extension=[make_questionnaire_mapper_ext((await _create_patient_mapping(fhir_client)).id)],
+    )
+    await q.save()
+
+    qr = {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": f"{q['url']}|1.0",
+        "item": [{"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]}],
+    }
+    extraction = await fhir_client.execute("Questionnaire/$extract", data=qr)
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    assert len(p) == 1
+
+
+async def _create_patient_mapping(fhir_client):
+    mapping = fhir_client.resource("Mapping", **PATIENT_BUNDLE_DATA)
+    await mapping.save()
+    return mapping

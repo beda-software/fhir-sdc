@@ -15,7 +15,7 @@ from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
 from app.sdc.typings import Expression, LaunchContext
 
-from .exception import ConstraintCheckOperationOutcome
+from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
 # NOTE: it's outside from spec
 EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
@@ -199,6 +199,26 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     if questionnaire_response:
         env["QuestionnaireResponse"] = questionnaire_response
     return env
+
+
+async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
+    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
+    if not canonical:
+        raise MissingParamOperationOutcome("`questionnaire` is required")
+
+    url, _, version = canonical.partition("|")
+    search = {"url": url, "version": version} if version else {"url": url}
+    matches = await client.resources("Questionnaire").search(**search).limit(2).fetch()
+    if len(matches) > 1:
+        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` matches several versions")
+
+    questionnaire = matches[0] if matches else None
+    if questionnaire is None:
+        questionnaire = await client.resources("Questionnaire").search(_id=url).first()
+    if questionnaire is None:
+        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` is not found")
+
+    return questionnaire
 
 
 def parse_parameter_value(parameter) -> tuple[Any, str]:
