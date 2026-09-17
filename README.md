@@ -20,6 +20,12 @@ loaded for the constraint check, but mappers receive only the `$extract` paramet
 
 **NOTE:** In fhir-sdc@3.x.x will be enforced to be explicitly set to false. 
 
+## Testing questionnaires
+
+`fhir-sdc-testkit/` is a published package that drives a Questionnaire through `$populate`, answers and `$extract`
+against a running server, so a form and its Mapping can be covered from Python tests. See
+[fhir-sdc-testkit/README.md](fhir-sdc-testkit/README.md).
+
 ## Further plans:
 - JUTE-based population
 - Observation-based population

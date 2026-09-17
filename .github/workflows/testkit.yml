@@ -1,0 +1,31 @@
+name: testkit
+on:
+  push:
+    paths:
+      - "fhir-sdc-testkit/**"
+      - ".github/workflows/testkit.yml"
+  pull_request:
+    paths:
+      - "fhir-sdc-testkit/**"
+      - ".github/workflows/testkit.yml"
+defaults:
+  run:
+    working-directory: fhir-sdc-testkit
+jobs:
+  Test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - run: uv run pytest
