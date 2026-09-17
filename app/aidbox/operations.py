@@ -144,7 +144,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
 
     return web.json_response(
         await extract_questionnaire_instance(
-            request.aidbox_client,
+            request.fhir_client,
             extract_client,
             dict(questionnaire),
             resource,
@@ -155,7 +155,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
 
 
 async def extract_questionnaire_instance(
-    aidbox_client,
+    fhir_client,
     extract_client,
     questionnaire,
     resource,
@@ -186,7 +186,7 @@ async def extract_questionnaire_instance(
     }
     mapper_refs = get_questionnaire_mapper(questionnaire.get("extension", []))
     mappings = [
-        await aidbox_client.resources("Mapping").search(_id=ref["reference"].split("/")[-1]).get()
+        await fhir_client.resources("Mapping").search(_id=ref["reference"].split("/")[-1]).get()
         for ref in mapper_refs
     ]
     await constraint_check(
