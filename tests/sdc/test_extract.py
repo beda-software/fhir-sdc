@@ -1104,3 +1104,18 @@ async def test_questionnaire_response_extract_still_raises_on_constraint_check(
 
     with pytest.raises(OperationOutcome):
         await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_reports_an_empty_mapper_result(fhir_client, safe_db):
+    empty_mapping = {
+        "type": "FHIRPath",
+        "body": {"resourceType": "Bundle", "type": "transaction", "entry": []},
+    }
+    q = await create_extract_questionnaire(fhir_client, empty_mapping)
+
+    extraction = await extract_questionnaire_response(
+        fhir_client, make_sdc_extract_parameters(make_extract_questionnaire_response(q.id))
+    )
+    assert get_parameter_resource(extraction, "return") is None
+    assert get_parameter_resource(extraction, "issues")["issue"][0]["severity"] == "information"

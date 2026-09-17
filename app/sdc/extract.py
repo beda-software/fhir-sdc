@@ -104,7 +104,7 @@ async def extract(client, mappings, context, extract_services, *, execute=True):
 
 def build_extract_output(bundles):
     """SDC `$extract` output: the bundle to submit in `return`, or why there is none in `issues`."""
-    if bundles:
+    if bundles and bundles[0].get("entry"):
         return {
             "resourceType": "Parameters",
             "parameter": [{"name": "return", "resource": bundles[0]}],
