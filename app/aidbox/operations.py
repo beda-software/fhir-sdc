@@ -196,8 +196,14 @@ async def extract_questionnaire_response_operation(request: AidboxSdcRequest):
 @aidbox_operation(["POST"], ["QuestionnaireResponse", {"name": "id"}, "$extract"])
 @prepare_args
 async def extract_questionnaire_response_instance_operation(request: AidboxSdcRequest):
+    # The response is patient data, so it is read as the caller, unlike the Questionnaire.
+    user_client = get_user_sdk_client(
+        request.request,
+        request.client,
+        get_external_fhir_base_url_from_resource(request.resource),
+    )
     questionnaire_response = (
-        await request.fhir_client.resources("QuestionnaireResponse")
+        await user_client.resources("QuestionnaireResponse")
         .search(_id=request.route_params["id"])
         .get()
     )
