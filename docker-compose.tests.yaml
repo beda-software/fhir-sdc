@@ -7,6 +7,7 @@ services:
     - env.sdc.tests
     environment:
       FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
+      PYTHONPATH: /app:/app/fhir-sdc-testkit
       COVERAGE_FILE: /tmp/.coverage
     links:
       - aidbox
