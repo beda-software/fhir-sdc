@@ -20,6 +20,18 @@ def make_parameters(**payload):
     }
 
 
+def make_sdc_extract_parameters(questionnaire_response, questionnaire=None):
+    parameter = [{"name": "questionnaire-response", "resource": questionnaire_response}]
+    if questionnaire is not None:
+        parameter.append({"name": "questionnaire", "resource": questionnaire})
+
+    return {"resourceType": "Parameters", "parameter": parameter}
+
+
+def get_parameter_resource(parameters, name):
+    return next((p["resource"] for p in parameters["parameter"] if p["name"] == name), None)
+
+
 def make_questionnaire(questionnaire):
     return {
         **questionnaire,

@@ -20,6 +20,10 @@ async def get_external_service_bundle(session, service, template, context):
 
 
 async def execute_mappers_bundles(client, mappers_bundles):
+    return await client.execute("/", data=build_result_bundle(mappers_bundles))
+
+
+def build_result_bundle(mappers_bundles):
     try:
         # NOTE: `bundle.get("entry", None) or []` is used to catch cases, when
         # bundle is like `{'type': 'transaction', 'entry': None, 'resourceType': 'Bundle'}`
@@ -36,16 +40,14 @@ async def execute_mappers_bundles(client, mappers_bundles):
 
     not_transaction = any(bundle.get("type") != "transaction" for bundle in mappers_bundles)
 
-    result_bundle = {
+    return {
         "resourceType": "Bundle",
         "type": "batch" if not_transaction else "transaction",
         "entry": flattened_mappers_bundles,
     }
 
-    return await client.execute("/", data=result_bundle)
 
-
-async def extract(client, mappings, context, extract_services):
+async def extract(client, mappings, context, extract_services, *, execute=True):
     """
     mappings could be a list of Aidbox Mapping resources
     or plain jute templates
@@ -91,6 +93,34 @@ async def extract(client, mappings, context, extract_services):
                 )
 
         if len(mappers_bundles) > 0:
-            resp.append(await execute_mappers_bundles(client, mappers_bundles))
+            resp.append(
+                await execute_mappers_bundles(client, mappers_bundles)
+                if execute
+                else build_result_bundle(mappers_bundles)
+            )
 
         return resp
+
+
+def build_extract_output(bundles):
+    """SDC `$extract` output: the bundle to submit in `return`, or why there is none in `issues`."""
+    if bundles:
+        return {
+            "resourceType": "Parameters",
+            "parameter": [{"name": "return", "resource": bundles[0]}],
+        }
+
+    nothing_extracted = {
+        "resourceType": "OperationOutcome",
+        "issue": [
+            {
+                "severity": "information",
+                "code": "informational",
+                "diagnostics": "Nothing to extract",
+            }
+        ],
+    }
+    return {
+        "resourceType": "Parameters",
+        "parameter": [{"name": "issues", "resource": nothing_extracted}],
+    }

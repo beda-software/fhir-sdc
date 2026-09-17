@@ -4,9 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from tests.factories import (
+    get_parameter_resource,
     make_item_constraint_ext,
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
+    make_sdc_extract_parameters,
     make_source_queries_ext,
     make_target_structure_map_ext,
 )
@@ -609,3 +611,67 @@ async def test_constraint_check_respects_legacy_behavior(
         fhir_server_client, fhir_client, make_constraint_questionnaire(passing_expression)
     )
     assert resp.status == 200
+
+
+async def test_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
+
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
+    )
+    assert resp.status == 200
+
+    return_bundle = get_parameter_resource(await resp.json(), "return")
+    assert [entry["request"]["url"] for entry in return_bundle["entry"]] == [
+        "Patient/embedded-jute-patient"
+    ]
+    assert await fhir_client.resources("Patient").search(_id="embedded-jute-patient").fetch() == []
+
+
+async def test_stored_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = fhir_client.resource("QuestionnaireResponse", status="completed", questionnaire=q.id)
+    await qr.save()
+
+    resp = await fhir_server_client.post(f"/QuestionnaireResponse/{qr.id}/$extract")
+    assert resp.status == 200
+    assert len(get_parameter_resource(await resp.json(), "return")["entry"]) == 1
+
+
+async def test_questionnaire_response_extract_reports_nothing_to_extract(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource("Questionnaire", status="active", item=[])
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
+
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
+    )
+    result = await resp.json()
+    assert get_parameter_resource(result, "return") is None
+    assert get_parameter_resource(result, "issues")["issue"][0]["severity"] == "information"
+
+
+async def test_questionnaire_response_extract_requires_the_response(fhir_server_client):
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json={"resourceType": "Parameters", "parameter": []}
+    )
+    assert resp.status == 500
