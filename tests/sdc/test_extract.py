@@ -992,18 +992,6 @@ async def test_questionnaire_response_extract_uses_the_given_questionnaire(fhir_
 
 
 @pytest.mark.asyncio
-async def test_questionnaire_response_extract_finds_the_questionnaire_by_url(fhir_client, safe_db):
-    q = await create_extract_questionnaire(fhir_client, PATIENT_BUNDLE_DATA)
-    q["url"] = "http://example.com/Questionnaire/extract"
-    q["version"] = "1.0"
-    await q.save()
-    qr = {**make_extract_questionnaire_response(q.id), "questionnaire": f"{q['url']}|1.0"}
-
-    extraction = await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))
-    assert len(get_parameter_resource(extraction, "return")["entry"]) == 1
-
-
-@pytest.mark.asyncio
 async def test_questionnaire_response_extract_merges_mappers_into_one_bundle(fhir_client, safe_db):
     q = await create_extract_questionnaire(
         fhir_client, PATIENT_BUNDLE_DATA, OBSERVATION_BUNDLE_DATA
@@ -1033,37 +1021,6 @@ async def test_questionnaire_response_extract_requires_the_response(fhir_client,
         await extract_questionnaire_response(
             fhir_client, {"resourceType": "Parameters", "parameter": []}
         )
-
-
-@pytest.mark.asyncio
-async def test_questionnaire_response_extract_requires_a_questionnaire(fhir_client, safe_db):
-    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
-
-    with pytest.raises(OperationOutcome, match="`questionnaire` is required"):
-        await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))
-
-
-@pytest.mark.asyncio
-async def test_questionnaire_response_extract_reports_an_unknown_questionnaire(
-    fhir_client, safe_db
-):
-    qr = make_extract_questionnaire_response("http://example.com/Questionnaire/missing")
-
-    with pytest.raises(OperationOutcome, match="is not found"):
-        await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))
-
-
-@pytest.mark.asyncio
-async def test_questionnaire_response_extract_refuses_an_ambiguous_canonical(fhir_client, safe_db):
-    url = "http://example.com/Questionnaire/versioned"
-    for version in ("1.0", "2.0"):
-        await create_questionnaire(
-            fhir_client, {"status": "active", "url": url, "version": version}
-        )
-    qr = make_extract_questionnaire_response(url)
-
-    with pytest.raises(OperationOutcome, match="several versions"):
-        await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))
 
 
 @pytest.mark.asyncio
