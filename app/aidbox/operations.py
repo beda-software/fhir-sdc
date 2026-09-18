@@ -5,6 +5,7 @@ from app.sdc.getters import get_questionnaire_mapper
 
 from ..sdc import (
     assemble,
+    build_extract_output,
     constraint_check,
     extract,
     get_questionnaire_context,
@@ -13,6 +14,8 @@ from ..sdc import (
 )
 from ..sdc.exception import MissingParamOperationOutcome
 from ..sdc.utils import (
+    build_legacy_extract_input,
+    find_parameter_resource,
     get_external_fhir_base_url_from_resource,
     is_sdc_api,
     parameter_to_env,
@@ -134,6 +137,8 @@ async def extract_questionnaire_instance(
     questionnaire,
     resource,
     extract_services,
+    *,
+    execute=True,
 ):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -171,7 +176,71 @@ async def extract_questionnaire_instance(
         extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
     )
 
-    return await extract(extract_client, mappings, context, extract_services)
+    return await extract(extract_client, mappings, context, extract_services, execute=execute)
+
+
+@aidbox_operation(["POST"], ["QuestionnaireResponse", "$extract"])
+@prepare_args
+async def extract_questionnaire_response_operation(request: AidboxSdcRequest):
+    parameters = request.resource or {}
+    questionnaire_response = find_parameter_resource(parameters, "questionnaire-response")
+    if questionnaire_response is None:
+        raise MissingParamOperationOutcome("`questionnaire-response` parameter is required")
+
+    return web.json_response(
+        await extract_questionnaire_response(request, parameters, questionnaire_response),
+        dumps=json.dumps,
+    )
+
+
+@aidbox_operation(["POST"], ["QuestionnaireResponse", {"name": "id"}, "$extract"])
+@prepare_args
+async def extract_questionnaire_response_instance_operation(request: AidboxSdcRequest):
+    # The response is patient data, so it is read as the caller, unlike the Questionnaire.
+    user_client = get_user_sdk_client(
+        request.request,
+        request.client,
+        get_external_fhir_base_url_from_resource(request.resource),
+    )
+    questionnaire_response = (
+        await user_client.resources("QuestionnaireResponse")
+        .search(_id=request.route_params["id"])
+        .get()
+    )
+    return web.json_response(
+        await extract_questionnaire_response(
+            request, request.resource or {}, dict(questionnaire_response)
+        ),
+        dumps=json.dumps,
+    )
+
+
+async def extract_questionnaire_response(
+    request: AidboxSdcRequest, parameters: dict, questionnaire_response: dict
+):
+    """SDC `$extract`: the bundle is returned for the client to submit, where Questionnaire/$extract runs it.
+
+    Deviates where fhir-sdc does: `return` is a batch if a mapper builds one, and warnings refuse too.
+    """
+    questionnaire = find_parameter_resource(parameters, "questionnaire") or dict(
+        await resolve_questionnaire(
+            request.fhir_client, questionnaire_response.get("questionnaire")
+        )
+    )
+    extract_client = get_user_sdk_client(
+        request.request,
+        request.client,
+        get_external_fhir_base_url_from_resource(parameters),
+    )
+    bundles = await extract_questionnaire_instance(
+        request.fhir_client,
+        extract_client,
+        questionnaire,
+        build_legacy_extract_input(parameters, questionnaire_response),
+        get_extract_services(request.request["app"]),
+        execute=False,
+    )
+    return build_extract_output(bundles)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$populate"])

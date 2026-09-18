@@ -201,6 +201,24 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     return env
 
 
+def find_parameter_resource(parameters: dict, name: str):
+    return next(
+        (p.get("resource") for p in parameters.get("parameter", []) if p["name"] == name), None
+    )
+
+
+def build_legacy_extract_input(parameters: dict, questionnaire_response: dict) -> dict:
+    """Legacy extraction reads the response from its pre-SDC parameter name."""
+    others = [p for p in parameters.get("parameter", []) if p["name"] != "questionnaire-response"]
+    return {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire_response", "resource": questionnaire_response},
+            *others,
+        ],
+    }
+
+
 async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
     """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     if not canonical:

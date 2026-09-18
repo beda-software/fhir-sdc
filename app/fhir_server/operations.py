@@ -3,18 +3,25 @@ import json
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
-from app.sdc.exception import ConstraintCheckOperationOutcome
+from app.sdc.exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
 
 from ..sdc import (
     assemble,
+    build_extract_output,
     constraint_check,
     extract,
     get_questionnaire_context,
     populate,
     resolve_expression,
 )
-from ..sdc.utils import is_sdc_api, parameter_to_env, resolve_questionnaire
+from ..sdc.utils import (
+    build_legacy_extract_input,
+    find_parameter_resource,
+    is_sdc_api,
+    parameter_to_env,
+    resolve_questionnaire,
+)
 from ..utils import get_extract_services
 
 routes = web.RouteTableDef()
@@ -193,6 +200,58 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             }
         ]
     )
+
+
+@routes.post("/QuestionnaireResponse/$extract")
+async def extract_questionnaire_response_handler(request: web.BaseRequest):
+    parameters = await request.json() if request.can_read_body else {}
+    questionnaire_response = find_parameter_resource(parameters, "questionnaire-response")
+    if questionnaire_response is None:
+        raise MissingParamOperationOutcome("`questionnaire-response` parameter is required")
+
+    return web.json_response(
+        await extract_questionnaire_response(request.app, parameters, questionnaire_response)
+    )
+
+
+@routes.post("/QuestionnaireResponse/{id}/$extract")
+async def extract_questionnaire_response_instance_handler(request: web.BaseRequest):
+    client = request.app["client"]
+    questionnaire_response = (
+        await client.resources("QuestionnaireResponse").search(_id=request.match_info["id"]).get()
+    )
+    parameters = await request.json() if request.can_read_body else {}
+    return web.json_response(
+        await extract_questionnaire_response(request.app, parameters, dict(questionnaire_response))
+    )
+
+
+async def extract_questionnaire_response(app, parameters: dict, questionnaire_response: dict):
+    """SDC `$extract`: the bundle is returned for the client to submit, where Questionnaire/$extract runs it.
+
+    Deviates where fhir-sdc does: `return` is a batch if a mapper builds one, and warnings refuse too.
+    """
+    client = app["client"]
+    settings = app["settings"]
+    questionnaire = find_parameter_resource(
+        parameters, "questionnaire"
+    ) or await resolve_questionnaire(client, questionnaire_response.get("questionnaire"))
+    env = await parameter_to_env(
+        client, build_legacy_extract_input(parameters, questionnaire_response)
+    )
+    context = {"Questionnaire": questionnaire, **env}
+    await constraint_check(
+        client,
+        questionnaire,
+        context,
+        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
+        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
+    )
+    mapper_templates = await _build_mapper_templates(client, questionnaire)
+    bundles = await extract(
+        client, mapper_templates, context, get_extract_services(app), execute=False
+    )
+    return build_extract_output(bundles)
 
 
 @routes.post("/Questionnaire/$populate")
