@@ -72,7 +72,6 @@ async def constraint_check_handler(request: web.BaseRequest):
             client,
             env["Questionnaire"],
             env,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
         )
     )
 
@@ -112,8 +111,6 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
         client,
         questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
     )
     extraction_result = await extract(
         client, mapper_templates, context, get_extract_services(request.app)
@@ -142,8 +139,6 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             client,
             questionnaire,
             context,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-            extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
         )
         return web.json_response(
             await extract(client, mapper_templates, context, get_extract_services(request.app))
@@ -176,8 +171,6 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
             client,
             questionnaire,
             context,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-            extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
         )
         return web.json_response(
             await extract(client, mapper_templates, context, get_extract_services(request.app))

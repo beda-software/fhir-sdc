@@ -9,7 +9,6 @@ from tests.factories import (
     make_item_population_context_ext,
     make_launch_context_ext,
     make_parameters,
-    make_questionnaire,
     make_source_queries_ext,
     make_sub_questionnaire_ext,
     make_variable_ext,
