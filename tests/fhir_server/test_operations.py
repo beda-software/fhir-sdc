@@ -484,30 +484,9 @@ async def extract_using_instance_endpoint(fhir_server_client, fhir_client):
 @pytest.mark.parametrize(
     "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
 )
-async def test_extract_passes_source_queries_to_mapper_in_legacy_behavior(
-    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
-):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", True
-    )
-
-    resp = await extract_fn(fhir_server_client, fhir_client)
-    assert resp.status == 200
-
-    p = await fhir_client.resources("Patient").search(_id="new-patient").get()
-    assert p.get_by_path(["name", 0, "text"]) == "Bundle"
-
-
-@pytest.mark.parametrize(
-    "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
-)
 async def test_extract_does_not_pass_source_queries_to_mapper(
-    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
+    fhir_server_client, fhir_client, safe_db, extract_fn
 ):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", False
-    )
-
     resp = await extract_fn(fhir_server_client, fhir_client)
     assert resp.status == 400
     assert "undefined environment variable: SourceQuery" in await resp.text()
@@ -589,24 +568,14 @@ async def check_constraint_using_instance_extract_endpoint_with_parameters(
         check_constraint_using_instance_extract_endpoint_with_parameters,
     ],
 )
-@pytest.mark.parametrize(
-    ("legacy_behavior", "passing_expression"), [(True, "false"), (False, "true")]
-)
-async def test_constraint_check_respects_legacy_behavior(
+async def test_constraint_check_passes_a_holding_expression(
     fhir_server_client,
     fhir_client,
     safe_db,
-    monkeypatch,
     check_constraint_fn,
-    legacy_behavior,
-    passing_expression,
 ):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "CONSTRAINT_LEGACY_BEHAVIOR", legacy_behavior
-    )
-
     resp = await check_constraint_fn(
-        fhir_server_client, fhir_client, make_constraint_questionnaire(passing_expression)
+        fhir_server_client, fhir_client, make_constraint_questionnaire("true")
     )
     assert resp.status == 200
 

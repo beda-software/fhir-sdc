@@ -7,18 +7,15 @@ The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
 In order to use extraction on behalf of the user, the Aidbox should be configured with `box_features_mapping_enable__access__control=true` environment variable.
 
-## New projects setup
+## Upgrading to 3.x.x
 
-For new installations, you must specify the following environment variables:
-```
-CONSTRAINT_LEGACY_BEHAVIOR=False
-EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False
-```
+`CONSTRAINT_LEGACY_BEHAVIOR` and `EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR` are gone, and both now behave as `False` did:
 
-`EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False` stops passing source queries to mappers during extraction: they are still
-loaded for the constraint check, but mappers receive only the `$extract` parameters.
+- an `itemConstraint` expression states what must hold, and the submission is refused when it evaluates to false.
+  Expressions written for the legacy behaviour describe the error instead, and have to be negated;
+- source queries are loaded for the constraint check only, so mappers receive the `$extract` parameters alone.
 
-**NOTE:** In fhir-sdc@3.x.x will be enforced to be explicitly set to false. 
+Setting either variable no longer has any effect.
 
 ## Further plans:
 - JUTE-based population

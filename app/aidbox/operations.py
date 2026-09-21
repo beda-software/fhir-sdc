@@ -19,7 +19,6 @@ from ..sdc.utils import (
     resolve_questionnaire,
 )
 from ..utils import get_extract_services
-from .settings import settings
 from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
 
 
@@ -52,7 +51,6 @@ async def constraint_check_operation(request: AidboxSdcRequest):
             client,
             env["Questionnaire"],
             env,
-            legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
         ),
         dumps=json.dumps,
     )
@@ -167,8 +165,6 @@ async def extract_questionnaire_instance(
         extract_client,
         questionnaire,
         context,
-        legacy_behavior=settings.CONSTRAINT_LEGACY_BEHAVIOR,
-        extract_source_queries_legacy_behavior=settings.EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR,
     )
 
     return await extract(extract_client, mappings, context, extract_services)
