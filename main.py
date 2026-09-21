@@ -57,9 +57,10 @@ async def fhir_app_on_startup(app: web.Application):
 
 
 def create_fhir_app():
+    from app.fhir_server.middlewares import render_operation_outcome
     from app.fhir_server.operations import routes as fhir_routes
 
-    app = web.Application()
+    app = web.Application(middlewares=[render_operation_outcome])
     app.add_routes(fhir_routes)
     app.on_startup.append(fhir_app_on_startup)
 

@@ -3,7 +3,7 @@ import json
 from aiohttp import web
 from fhirpy.lib import AsyncFHIRClient
 
-from app.sdc.exception import ConstraintCheckOperationOutcome
+from app.sdc.exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
 
 from ..sdc import (
@@ -192,14 +192,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
     env = await parameter_to_env(client, body)
     questionnaire_data = env["Questionnaire"]
     if not questionnaire_data:
-        # TODO: return OperationOutcome
-        return web.json_response(
-            {
-                "error": "bad_request",
-                "error_description": "`Questionnaire` parameter is required",
-            },
-            status=422,
-        )
+        raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
     populated_resource = await populate(client, questionnaire_data, env, sdc_api=is_sdc_api(body))
     return web.json_response(populated_resource)
