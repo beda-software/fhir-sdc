@@ -5,18 +5,19 @@ from fhirpy import AsyncFHIRClient
 from .sdk import sdk
 
 
-def get_user_sdk_client(request, client=None, external_fhir_base_url=None):
+def build_user_client(request, fhir_client=None, external_fhir_base_url=None):
+    """Same base, authenticated by the caller's headers instead of the app's credentials."""
     headers = request["headers"].copy()
-    client = client or request["app"]["client"]
+    fhir_client = fhir_client or request["app"]["client"]
 
     # We removed content-length because populate extract are post operations
     # and post queries contains content-length that must not be set as default header
     if "content-length" in headers:
         headers.pop("content-length")
 
-    url = external_fhir_base_url or client.url
+    url = external_fhir_base_url or fhir_client.url
 
-    return type(client)(url, extra_headers=headers)
+    return type(fhir_client)(url, extra_headers=headers)
 
 
 def get_aidbox_fhir_client(aidbox_client):
