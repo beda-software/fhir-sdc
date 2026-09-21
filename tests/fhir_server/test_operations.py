@@ -179,7 +179,8 @@ async def test_extract_instance_missing_qr_error(fhir_server_client, fhir_client
 
     parameters = {"resourceType": "Parameters", "parameter": []}
     resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=parameters)
-    assert resp.status == 500
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_extract_instance_bad_resource_type_error(fhir_server_client, fhir_client, safe_db):
@@ -194,7 +195,8 @@ async def test_extract_instance_bad_resource_type_error(fhir_server_client, fhir
         f"/Questionnaire/{q.id}/$extract",
         json={"resourceType": "Patient"},
     )
-    assert resp.status == 500
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_populate_collection(fhir_server_client):
@@ -230,8 +232,7 @@ async def test_populate_collection_missing_questionnaire(fhir_server_client):
 
     resp = await fhir_server_client.post("/Questionnaire/$populate", json=parameters)
     assert resp.status == 422
-    result = await resp.json()
-    assert result["error"] == "bad_request"
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_populate_instance(fhir_server_client, fhir_client, safe_db):
