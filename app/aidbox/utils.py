@@ -41,7 +41,7 @@ def get_organization_client(aidbox_client, organization):
 
 
 def get_clients(operation, request):
-    """The same operations are served under /fhir and under /Organization/{id}/fhir."""
+    """True for the /fhir and /Organization/{id}/fhir routes; the caller rejects the bare one."""
     aidbox_client = request["app"]["client"]
     if operation["request"][1] == "Organization":
         return True, get_organization_client(aidbox_client, request["route-params"]["org_id"])
