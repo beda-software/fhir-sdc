@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from fhirpy import AsyncFHIRClient
-from fhirpy.base.exceptions import OperationOutcome
 
 from .sdk import sdk
 
@@ -40,13 +39,12 @@ def get_organization_client(aidbox_client, organization):
     )
 
 
-def get_clients(operation, request):
-    """True for the /fhir and /Organization/{id}/fhir routes; the caller rejects the bare one."""
+def resolve_fhir_client(operation, request):
     aidbox_client = request["app"]["client"]
     if operation["request"][1] == "Organization":
-        return True, get_organization_client(aidbox_client, request["route-params"]["org_id"])
+        return get_organization_client(aidbox_client, request["route-params"]["org_id"])
 
-    return operation["request"][1] == "fhir", get_aidbox_fhir_client(aidbox_client)
+    return get_aidbox_fhir_client(aidbox_client)
 
 
 @dataclass
@@ -64,11 +62,8 @@ class AidboxSdcRequest:
 
 def prepare_args(fn):
     def wrap(operation, request):
-        is_fhir, fhir_client = get_clients(operation, request)
-        if not is_fhir:
-            raise OperationOutcome(reason="fhir-sdc@2.x.x support only FHIR endpoints")
         request = AidboxSdcRequest(
-            fhir_client,
+            resolve_fhir_client(operation, request),
             request["route-params"],
             request.get("resource", None),
             request,
@@ -81,7 +76,6 @@ def prepare_args(fn):
 def aidbox_operation(method, path, **kwrgs):
     def register(fn):
         sdk.operation(method, ["Organization", {"name": "org_id"}, "fhir"] + path, **kwrgs)(fn)
-        sdk.operation(method, path, **kwrgs)(fn)
         sdk.operation(method, ["fhir"] + path, **kwrgs)(fn)
         return fn
 
