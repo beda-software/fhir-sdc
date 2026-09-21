@@ -64,7 +64,6 @@ async def assemble_handler(request: web.BaseRequest):
 @routes.post("/QuestionnaireResponse/$constraint-check")
 async def constraint_check_handler(request: web.BaseRequest):
     client = request.app["client"]
-    settings = request.app["settings"]
     env = await parameter_to_env(client, await request.json())
 
     return web.json_response(
@@ -88,7 +87,6 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
 async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
-    settings = request.app["settings"]
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -122,7 +120,6 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     resource = await request.json()
     client = request.app["client"]
-    settings = request.app["settings"]
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )

@@ -17,6 +17,12 @@ if create_manifest_attrs:
     )
 
 
+# Both behaviours are gone in 3.x.x; leaving the variable on would silently invert every constraint.
+for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR"):
+    if os.getenv(removed_setting, "").lower() == "true":
+        raise Exception(f"{removed_setting} is not supported in fhir-sdc@3.x.x, see the README")
+
+
 settings = Settings(
     JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox"),
     FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
