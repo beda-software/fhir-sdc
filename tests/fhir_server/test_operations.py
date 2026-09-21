@@ -221,6 +221,24 @@ async def test_populate_collection(fhir_server_client):
     assert result["resourceType"] == "QuestionnaireResponse"
 
 
+@pytest.mark.parametrize(
+    "parameters",
+    [{"resourceType": "Parameters"}, {"resourceType": "Parameters", "parameter": []}],
+)
+async def test_populate_collection_without_questionnaire_parameter(fhir_server_client, parameters):
+    resp = await fhir_server_client.post("/Questionnaire/$populate", json=parameters)
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
+
+
+async def test_populate_instance_unknown_questionnaire(fhir_server_client):
+    resp = await fhir_server_client.post(
+        "/Questionnaire/missing/$populate", json={"resourceType": "Parameters", "parameter": []}
+    )
+    assert resp.status == 502
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
+
+
 async def test_populate_collection_missing_questionnaire(fhir_server_client):
     # Capital-Q "Questionnaire" with empty resource → env["Questionnaire"] = {} → falsy → 422
     parameters = {

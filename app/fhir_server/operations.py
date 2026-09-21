@@ -190,7 +190,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
     client = request.app["client"]
     body = await request.json()
     env = await parameter_to_env(client, body)
-    questionnaire_data = env["Questionnaire"]
+    questionnaire_data = env.get("Questionnaire")
     if not questionnaire_data:
         raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
