@@ -19,7 +19,7 @@ from ..sdc.utils import (
     resolve_questionnaire,
 )
 from ..utils import get_extract_services
-from .utils import AidboxSdcRequest, aidbox_operation, get_user_sdk_client, prepare_args
+from .utils import AidboxSdcRequest, aidbox_operation, build_user_client, prepare_args
 
 
 @aidbox_operation(["GET"], ["Questionnaire", {"name": "id"}, "$assemble"])
@@ -39,16 +39,16 @@ async def assemble_op(request: AidboxSdcRequest):
 @aidbox_operation(["POST"], ["QuestionnaireResponse", "$constraint-check"])
 @prepare_args
 async def constraint_check_operation(request: AidboxSdcRequest):
-    client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
-    env = await parameter_to_env(client, request.resource)
+    env = await parameter_to_env(user_client, request.resource)
 
     return web.json_response(
         await constraint_check(
-            client,
+            user_client,
             env["Questionnaire"],
             env,
         ),
@@ -59,14 +59,14 @@ async def constraint_check_operation(request: AidboxSdcRequest):
 @aidbox_operation(["POST"], ["Questionnaire", "$context"])
 @prepare_args
 async def get_questionnaire_context_operation(request: AidboxSdcRequest):
-    client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
-    env = await parameter_to_env(client, request.resource)
+    env = await parameter_to_env(user_client, request.resource)
 
-    result = await get_questionnaire_context(client, env["Questionnaire"], env)
+    result = await get_questionnaire_context(user_client, env["Questionnaire"], env)
 
     return web.json_response(result, dumps=json.dumps)
 
@@ -75,7 +75,7 @@ async def get_questionnaire_context_operation(request: AidboxSdcRequest):
 @prepare_args
 async def extract_questionnaire_operation(request: AidboxSdcRequest):
     resource = request.resource
-    extract_client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(resource),
@@ -90,7 +90,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     return web.json_response(
         await extract_questionnaire_instance(
             request.fhir_client,
-            extract_client,
+            user_client,
             questionnaire,
             resource,
             get_extract_services(request.request["app"]),
@@ -103,7 +103,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
 @prepare_args
 async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     resource = request.resource
-    extract_client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(resource),
@@ -117,7 +117,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     return web.json_response(
         await extract_questionnaire_instance(
             request.fhir_client,
-            extract_client,
+            user_client,
             dict(questionnaire),
             resource,
             get_extract_services(request.request["app"]),
@@ -128,16 +128,16 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
 
 async def extract_questionnaire_instance(
     fhir_client,
-    extract_client,
+    user_client,
     questionnaire,
     resource,
     extract_services,
 ):
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
-        env_questionnaire_response = extract_client.resource("QuestionnaireResponse", **resource)
+        env_questionnaire_response = user_client.resource("QuestionnaireResponse", **resource)
     elif resource["resourceType"] == "Parameters":
-        env = await parameter_to_env(extract_client, resource)
+        env = await parameter_to_env(user_client, resource)
         if "QuestionnaireResponse" not in env:
             raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
@@ -162,29 +162,29 @@ async def extract_questionnaire_instance(
         for ref in mapper_refs
     ]
     await constraint_check(
-        extract_client,
+        user_client,
         questionnaire,
         context,
     )
 
-    return await extract(extract_client, mappings, context, extract_services)
+    return await extract(user_client, mappings, context, extract_services)
 
 
 @aidbox_operation(["POST"], ["Questionnaire", "$populate"])
 @prepare_args
 async def populate_questionnaire(request: AidboxSdcRequest):
-    client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
-    env = await parameter_to_env(client, request.resource)
+    env = await parameter_to_env(user_client, request.resource)
 
     if "Questionnaire" not in env:
         raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
 
     populated_qr = await populate(
-        client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
+        user_client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
     )
     return web.json_response(populated_qr, dumps=json.dumps)
 
@@ -192,7 +192,7 @@ async def populate_questionnaire(request: AidboxSdcRequest):
 @aidbox_operation(["POST"], ["Questionnaire", {"name": "id"}, "$populate"])
 @prepare_args
 async def populate_questionnaire_instance(request: AidboxSdcRequest):
-    client = get_user_sdk_client(
+    user_client = build_user_client(
         request.request,
         request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
@@ -203,11 +203,11 @@ async def populate_questionnaire_instance(request: AidboxSdcRequest):
         .get()
     )
 
-    env = await parameter_to_env(client, request.resource)
+    env = await parameter_to_env(user_client, request.resource)
     env["Questionnaire"] = fhir_questionnaire
 
     populated_qr = await populate(
-        client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
+        user_client, env["Questionnaire"], env, sdc_api=is_sdc_api(request.resource)
     )
 
     return web.json_response(populated_qr, dumps=json.dumps)
