@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 
-from aidbox_python_sdk.aidboxpy import AsyncAidboxClient
 from fhirpy import AsyncFHIRClient
-from fhirpy.base import AsyncClient
 from fhirpy.base.exceptions import OperationOutcome
 
 from .sdk import sdk
@@ -43,14 +41,12 @@ def get_organization_client(aidbox_client, organization):
 
 
 def get_clients(operation, request):
+    """The same operations are served under /fhir and under /Organization/{id}/fhir."""
     aidbox_client = request["app"]["client"]
     if operation["request"][1] == "Organization":
-        is_fhir = True
-        fhir_client = get_organization_client(aidbox_client, request["route-params"]["org_id"])
-    else:
-        is_fhir = operation["request"][1] == "fhir"
-        fhir_client = get_aidbox_fhir_client(aidbox_client)
-    return is_fhir, aidbox_client, fhir_client, fhir_client if is_fhir else aidbox_client
+        return True, get_organization_client(aidbox_client, request["route-params"]["org_id"])
+
+    return operation["request"][1] == "fhir", get_aidbox_fhir_client(aidbox_client)
 
 
 @dataclass
@@ -60,10 +56,7 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
-    is_fhir: bool
-    aidbox_client: AsyncAidboxClient
     fhir_client: AsyncFHIRClient
-    client: AsyncClient
     route_params: dict
     resource: dict
     request: dict
@@ -71,14 +64,11 @@ class AidboxSdcRequest:
 
 def prepare_args(fn):
     def wrap(operation, request):
-        is_fhir, aidbox_client, fhir_client, client = get_clients(operation, request)
+        is_fhir, fhir_client = get_clients(operation, request)
         if not is_fhir:
             raise OperationOutcome(reason="fhir-sdc@2.x.x support only FHIR endpoints")
         request = AidboxSdcRequest(
-            is_fhir,
-            aidbox_client,
             fhir_client,
-            client,
             request["route-params"],
             request.get("resource", None),
             request,
