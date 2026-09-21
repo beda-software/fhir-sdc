@@ -169,7 +169,7 @@ def is_sdc_api(parameters: dict | None) -> bool:
 async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     # TODO: add support for repeating values (with same name)
     env: dict[str, Any] = {}
-    for param in resource["parameter"]:
+    for param in resource.get("parameter", []):
         if param["name"] == "context":
             parts = param["part"]
             name = next(p for p in parts if p["name"] == "name")["valueString"]
