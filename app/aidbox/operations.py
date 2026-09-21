@@ -41,7 +41,7 @@ async def assemble_op(request: AidboxSdcRequest):
 async def constraint_check_operation(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
     env = await parameter_to_env(client, request.resource)
@@ -61,7 +61,7 @@ async def constraint_check_operation(request: AidboxSdcRequest):
 async def get_questionnaire_context_operation(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
     env = await parameter_to_env(client, request.resource)
@@ -77,7 +77,7 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
     resource = request.resource
     extract_client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(resource),
     )
     # From Parameters, extract_questionnaire_instance takes the Questionnaire out of the env.
@@ -105,7 +105,7 @@ async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     resource = request.resource
     extract_client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(resource),
     )
     questionnaire = (
@@ -175,7 +175,7 @@ async def extract_questionnaire_instance(
 async def populate_questionnaire(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
     env = await parameter_to_env(client, request.resource)
@@ -194,7 +194,7 @@ async def populate_questionnaire(request: AidboxSdcRequest):
 async def populate_questionnaire_instance(request: AidboxSdcRequest):
     client = get_user_sdk_client(
         request.request,
-        request.client,
+        request.fhir_client,
         get_external_fhir_base_url_from_resource(request.resource),
     )
     fhir_questionnaire = (
