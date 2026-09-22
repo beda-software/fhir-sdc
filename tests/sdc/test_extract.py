@@ -885,3 +885,21 @@ async def test_extract_validates_launch_context(fhir_client, safe_db):
         await fhir_client.execute(
             "Questionnaire/$extract", data=make_patient_questionnaire_response(q.id)
         )
+
+
+@pytest.mark.asyncio
+async def test_extract_without_a_mapper_extracts_nothing(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {"status": "active", "item": [{"type": "string", "linkId": "patientId"}]},
+    )
+    qr = fhir_client.resource(
+        "QuestionnaireResponse",
+        **{
+            "questionnaire": q.id,
+            "item": [{"linkId": "patientId", "answer": [{"valueString": "newPatient"}]}],
+        },
+    )
+
+    extraction = await q.execute("$extract", data=qr)
+    assert extraction == []
