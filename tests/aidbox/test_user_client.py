@@ -4,7 +4,7 @@ import pytest
 from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import BaseFHIRError
 
-from app.aidbox.utils import rebuild_at_external_fhir_base_url
+from app.sdc.utils import rebuild_at_external_fhir_base_url
 from tests.factories import (
     create_questionnaire,
     make_questionnaire_mapper_ext,
