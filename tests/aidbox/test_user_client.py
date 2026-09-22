@@ -4,7 +4,25 @@ import pytest
 from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import BaseFHIRError
 
+from app.aidbox.utils import rebuild_at_external_fhir_base_url
 from tests.factories import create_questionnaire, make_questionnaire_mapper_ext
+
+
+def test_user_client_moves_only_when_the_request_names_an_external_server():
+    user_client = AsyncFHIRClient(
+        "http://aidbox:8080/fhir", extra_headers={"Authorization": "Bearer caller-token"}
+    )
+
+    plain = {"resourceType": "Parameters", "parameter": []}
+    assert rebuild_at_external_fhir_base_url(user_client, plain) is user_client
+
+    external = {
+        "resourceType": "Parameters",
+        "parameter": [{"name": "externalFhirBaseUrl", "valueUri": "http://ehr.example/fhir"}],
+    }
+    rebuilt = rebuild_at_external_fhir_base_url(user_client, external)
+    assert rebuilt.url == "http://ehr.example/fhir"
+    assert rebuilt.extra_headers == {"Authorization": "Bearer caller-token"}
 
 
 async def test_client_that_may_not_read_forms_cannot_extract(fhir_client, safe_db):
