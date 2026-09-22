@@ -1,10 +1,11 @@
 import json
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from tests.factories import (
+    JUTE_BODY_EXTENSION_SD,
     make_item_constraint_ext,
+    make_jute_structure_map,
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
     make_source_queries_ext,
@@ -12,13 +13,41 @@ from tests.factories import (
 )
 
 
-def _make_fake_structure_map(template_str):
-    """Return a mock fhirpy resource whose get_by_path returns template_str."""
-    fake_sm = MagicMock()
-    fake_sm.get_by_path.return_value = template_str
-    mock_sm_set = MagicMock()
-    mock_sm_set.search.return_value.get = AsyncMock(return_value=fake_sm)
-    return mock_sm_set
+async def save_jute_structure_map(fhir_client, structure_map_id, patient_id):
+    """Aidbox refuses the jute-body extension until its StructureDefinition is registered."""
+    await fhir_client.resource("StructureDefinition", **JUTE_BODY_EXTENSION_SD).save()
+    sm = fhir_client.resource(
+        "StructureMap", **make_jute_structure_map(structure_map_id, make_patient_bundle(patient_id))
+    )
+    await sm.save()
+    return sm
+
+
+def make_embedded_jute_mapping(patient_id):
+    return {
+        "resourceType": "Mapping",
+        "id": f"mapping-{patient_id}",
+        "body": make_patient_bundle(patient_id),
+    }
+
+
+def make_patient_bundle(patient_id):
+    return {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"method": "PUT", "url": f"Patient/{patient_id}"},
+                "resource": {"resourceType": "Patient", "id": patient_id},
+            }
+        ],
+    }
+
+
+async def extracted_patient_ids(resp):
+    """The ids the mappers wrote, in mapper order."""
+    [bundle] = await resp.json()
+    return [entry["resource"]["id"] for entry in bundle["entry"]]
 
 
 async def test_healthcheck(fhir_server_client):
@@ -271,20 +300,7 @@ async def test_populate_instance(fhir_server_client, fhir_client, safe_db):
 
 
 async def test_extract_collection_with_jute_template(fhir_server_client, fhir_client, safe_db):
-    # entry must be non-empty; Aidbox rejects Bundle.entry: []
-    template_str = json.dumps(
-        {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"method": "PUT", "url": "Patient/jute-extract-col"},
-                    "resource": {"resourceType": "Patient", "id": "jute-extract-col"},
-                }
-            ],
-        }
-    )
-    mock_sm_set = _make_fake_structure_map(template_str)
+    await save_jute_structure_map(fhir_client, "collection-sm", "jute-extract-col")
 
     parameters = {
         "resourceType": "Parameters",
@@ -295,7 +311,7 @@ async def test_extract_collection_with_jute_template(fhir_server_client, fhir_cl
                     "resourceType": "Questionnaire",
                     "status": "active",
                     "item": [],
-                    "extension": [make_target_structure_map_ext("StructureMap/fake-sm")],
+                    "extension": [make_target_structure_map_ext("StructureMap/collection-sm")],
                 },
             },
             {
@@ -305,52 +321,26 @@ async def test_extract_collection_with_jute_template(fhir_server_client, fhir_cl
         ],
     }
 
-    with patch.object(fhir_client, "resources", return_value=mock_sm_set):
-        resp = await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
-
+    resp = await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
     assert resp.status == 200
-    result = await resp.json()
-    assert isinstance(result, list)
-    assert len(result) == 1
+    assert await extracted_patient_ids(resp) == ["jute-extract-col"]
 
 
 async def test_extract_instance_with_jute_template(fhir_server_client, fhir_client, safe_db):
+    await save_jute_structure_map(fhir_client, "instance-sm", "jute-extract-inst")
     q = fhir_client.resource(
         "Questionnaire",
         status="active",
         item=[{"linkId": "q1", "type": "display"}],
-        extension=[make_target_structure_map_ext("StructureMap/fake-sm")],
+        extension=[make_target_structure_map_ext("StructureMap/instance-sm")],
     )
     await q.save()
 
-    template_str = json.dumps(
-        {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"method": "PUT", "url": "Patient/jute-extract-inst"},
-                    "resource": {"resourceType": "Patient", "id": "jute-extract-inst"},
-                }
-            ],
-        }
-    )
-    mock_sm_set = _make_fake_structure_map(template_str)
-    original_resources = fhir_client.resources
-
-    def selective_resources(resource_type):
-        if resource_type == "StructureMap":
-            return mock_sm_set
-        return original_resources(resource_type)
-
     qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
-    with patch.object(fhir_client, "resources", side_effect=selective_resources):
-        resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
 
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
     assert resp.status == 200
-    result = await resp.json()
-    assert isinstance(result, list)
-    assert len(result) == 1
+    assert await extracted_patient_ids(resp) == ["jute-extract-inst"]
 
 
 async def test_extract_instance_parameters_with_launch_context(
@@ -382,20 +372,7 @@ async def test_extract_instance_parameters_with_launch_context(
     assert await resp.json() == []
 
 
-_EMBEDDED_JUTE_MAPPING = {
-    "resourceType": "Mapping",
-    "id": "embedded-jute-test",
-    "body": {
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [
-            {
-                "request": {"method": "PUT", "url": "Patient/embedded-jute-patient"},
-                "resource": {"resourceType": "Patient", "id": "embedded-jute-patient"},
-            }
-        ],
-    },
-}
+_EMBEDDED_JUTE_MAPPING = make_embedded_jute_mapping("embedded-jute-patient")
 
 
 async def test_extract_collection_embedded_mapper(fhir_server_client, fhir_client, safe_db):
@@ -619,3 +596,48 @@ async def test_extract_collection_resolves_questionnaire_by_canonical_url(
     resp = await fhir_server_client.post("/Questionnaire/$extract", json=qr)
     assert resp.status == 200
     assert len(await resp.json()) == 1
+
+
+async def test_extract_refuses_a_violated_constraint_before_running_the_mappers(
+    fhir_server_client, fhir_client, safe_db
+):
+    questionnaire = make_constraint_questionnaire("false")
+    questionnaire["extension"].append(
+        make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("refused-patient"))
+    )
+
+    resp = await fhir_server_client.post(
+        "/Questionnaire/$extract", json=make_questionnaire_parameters(questionnaire)
+    )
+    assert resp.status == 422
+    assert (await resp.json())["issue"][0]["code"] == "constraint"
+
+    written = await fhir_client.resources("Patient").search(_id="refused-patient").fetch_all()
+    assert written == []
+
+
+async def test_extract_runs_every_mapper_in_extension_order(
+    fhir_server_client, fhir_client, safe_db
+):
+    await save_jute_structure_map(fhir_client, "ordered-sm", "from-structure-map")
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[
+            make_target_structure_map_ext("StructureMap/ordered-sm"),
+            make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("from-embedded-1")),
+            make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("from-embedded-2")),
+        ],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    assert await extracted_patient_ids(resp) == [
+        "from-structure-map",
+        "from-embedded-1",
+        "from-embedded-2",
+    ]
