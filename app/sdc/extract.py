@@ -1,11 +1,15 @@
 import simplejson as json
 from aiohttp import ClientSession, web
+from fhirpy.base.exceptions import OperationOutcome
 from funcy.seqs import flatten
 
 from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
 
 
 async def get_external_service_bundle(session, service, template, context):
+    if not service:
+        raise OperationOutcome("No service is configured to render this mapper")
+
     async with session.post(
         service,
         json={
@@ -58,17 +62,7 @@ async def extract(client, mappings, context, extract_services):
             if "resourceType" in mapper and "body" in mapper:
                 # It is custome mapper resource
                 mapper_type = mapper.get("type", "JUTE")
-                if mapper_type == "JUTE" and extract_services["JUTE"] == "aidbox":
-                    mapper_bundle = await mapper.execute("$debug", data=context)
-                    if mapper_bundle is None:
-                        continue
-
-                    if "entry" not in mapper_bundle:
-                        continue
-
-                    mappers_bundles.append(mapper_bundle)
-
-                elif mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
+                if mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
                     result = resolve_fpml_template(
                         mapper["body"],
                         context,
@@ -90,6 +84,8 @@ async def extract(client, mappings, context, extract_services):
                     )
                 )
 
+        # A mapper that renders nothing answers with null, which is not a bundle to submit.
+        mappers_bundles = [bundle for bundle in mappers_bundles if bundle]
         if len(mappers_bundles) > 0:
             resp.append(await execute_mappers_bundles(client, mappers_bundles))
 

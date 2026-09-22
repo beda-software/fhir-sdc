@@ -3,10 +3,6 @@
 
 The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
-## Using with Aidbox
-
-In order to use extraction on behalf of the user, the Aidbox should be configured with `box_features_mapping_enable__access__control=true` environment variable.
-
 ## Upgrading to 3.x.x
 
 `CONSTRAINT_LEGACY_BEHAVIOR` and `EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR` are gone, and both now behave as `False` did:
@@ -16,6 +12,10 @@ In order to use extraction on behalf of the user, the Aidbox should be configure
 - source queries are loaded for the constraint check only, so mappers receive the `$extract` parameters alone.
 
 Setting either variable no longer has any effect.
+
+`JUTE_SERVICE=aidbox` is gone too: JUTE mappers always run through a JUTE service, and the app refuses to start while
+the variable still says `aidbox`. Leaving `JUTE_SERVICE` or `FHIRPATH_MAPPING_SERVICE` unset is fine — extraction then
+refuses only the mappers that would have needed the missing service.
 
 ## Further plans:
 - JUTE-based population

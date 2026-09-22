@@ -1,5 +1,7 @@
 import os
 
+from app.utils import resolve_fhirpath_service, resolve_jute_service
+
 
 class FHIRAppSettings:
     def __init__(self, **custom_settings):
@@ -15,10 +17,9 @@ for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LE
     if os.getenv(removed_setting, "").lower() == "true":
         raise Exception(f"{removed_setting} is not supported in fhir-sdc@3.x.x, see the README")
 
-
 settings = FHIRAppSettings(
-    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
+    JUTE_SERVICE=resolve_jute_service(),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
     AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
-    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
+    FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )

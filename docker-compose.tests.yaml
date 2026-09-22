@@ -6,6 +6,7 @@ services:
     env_file:
     - env.sdc.tests
     environment:
+      JUTE_SERVICE: http://jute:8090/parse-template
       FHIRPATH_MAPPING_SERVICE: http://fhirpath_mapping:8090/parse-template
       COVERAGE_FILE: /tmp/.coverage
     links:
