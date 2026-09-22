@@ -201,6 +201,10 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     return env
 
 
+async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str):
+    return await client.resources("Questionnaire").search(_id=questionnaire_id).get()
+
+
 async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
     """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     if not canonical:
@@ -224,6 +228,15 @@ async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
 def parse_parameter_value(parameter) -> tuple[Any, str]:
     _name_key, value_key = parameter.keys()
     return parameter[value_key], value_key.removeprefix("value")
+
+
+def rebuild_at_external_fhir_base_url(user_client, resource):
+    """The same caller's client at the request's externalFhirBaseUrl, when it names one."""
+    external_fhir_base_url = get_external_fhir_base_url_from_resource(resource)
+    if not external_fhir_base_url:
+        return user_client
+
+    return AsyncFHIRClient(external_fhir_base_url, extra_headers=user_client.extra_headers)
 
 
 def get_external_fhir_base_url_from_resource(resource: dict | None):

@@ -111,11 +111,6 @@ def get_assemble_context(extensions: list) -> list[str]:
     return [ext["valueString"] for ext in exts if ext.get("valueString")]
 
 
-def get_questionnaire_mapper(extensions: list) -> list[Reference]:
-    exts = _find_extensions(extensions, QUESTIONNAIRE_MAPPER_URL)
-    return [ext["valueReference"] for ext in exts if ext.get("valueReference")]
-
-
 def get_target_structure_map(extensions: list) -> list[str]:
     exts = _find_extensions(extensions, TARGET_STRUCTURE_MAP_URL)
     return [ext["valueCanonical"] for ext in exts if ext.get("valueCanonical")]

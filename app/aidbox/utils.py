@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 from fhirpy import AsyncFHIRClient
 
-from app.sdc.utils import get_external_fhir_base_url_from_resource
-from app.utils import build_user_client
+from app.sdc.operations import SdcContext
+from app.utils import build_user_client, get_extract_services
 
 from .sdk import sdk
 
@@ -43,8 +43,7 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
-    # The caller, at our Aidbox; rebuild_at_external_fhir_base_url moves it to the caller's data server.
-    user_client: AsyncFHIRClient
+    context: SdcContext
     route_params: dict
     resource: dict
     request: dict
@@ -54,7 +53,10 @@ def prepare_args(fn):
     def wrap(operation, request):
         route_client = resolve_fhir_client(operation, request)
         request = AidboxSdcRequest(
-            build_user_client(request["headers"], route_client.url),
+            SdcContext(
+                build_user_client(request["headers"], route_client.url),
+                get_extract_services(request["app"]),
+            ),
             request["route-params"],
             request.get("resource", None),
             request,
@@ -62,15 +64,6 @@ def prepare_args(fn):
         return fn(request)
 
     return wrap
-
-
-def rebuild_at_external_fhir_base_url(user_client, resource):
-    """The same caller's client at the request's externalFhirBaseUrl, when it names one."""
-    external_fhir_base_url = get_external_fhir_base_url_from_resource(resource)
-    if not external_fhir_base_url:
-        return user_client
-
-    return AsyncFHIRClient(external_fhir_base_url, extra_headers=user_client.extra_headers)
 
 
 def aidbox_operation(method, path, **kwrgs):

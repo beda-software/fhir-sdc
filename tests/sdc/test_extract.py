@@ -7,6 +7,7 @@ from tests.factories import (
     make_item_constraint_ext,
     make_launch_context_ext,
     make_parameters,
+    make_questionnaire_embedded_mapper_ext,
     make_questionnaire_mapper_ext,
     make_source_queries_ext,
 )
@@ -903,3 +904,35 @@ async def test_extract_without_a_mapper_extracts_nothing(fhir_client, safe_db):
 
     extraction = await q.execute("$extract", data=qr)
     assert extraction == []
+
+
+@pytest.mark.asyncio
+async def test_extract_runs_an_inline_mapper(fhir_client, safe_db):
+    mapping = {
+        "resourceType": "Mapping",
+        "body": {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": "Patient/inline-mapped"},
+                    "resource": {"resourceType": "Patient", "id": "inline-mapped"},
+                }
+            ],
+        },
+    }
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"type": "string", "linkId": "note"}],
+        extension=[make_questionnaire_embedded_mapper_ext(mapping)],
+    )
+    await q.save()
+
+    extraction = await q.execute(
+        "$extract", data={"resourceType": "QuestionnaireResponse", "questionnaire": q.id}
+    )
+    assert len(extraction) == 1
+
+    patient = await fhir_client.resources("Patient").search(_id="inline-mapped").get()
+    assert patient.id == "inline-mapped"
