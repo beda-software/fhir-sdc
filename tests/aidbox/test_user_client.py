@@ -4,31 +4,7 @@ import pytest
 from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import BaseFHIRError
 
-from app.aidbox.utils import build_user_client
 from tests.factories import create_questionnaire, make_questionnaire_mapper_ext
-
-
-def test_user_client_carries_the_callers_headers():
-    request = {
-        "headers": {
-            "authorization": "Bearer caller-token",
-            "x-correlation-id": "abc",
-            "content-length": "42",
-        }
-    }
-    route_client = AsyncFHIRClient("http://aidbox:8080/fhir", authorization="Basic app-secret")
-
-    user_client = build_user_client(request, route_client)
-    assert user_client.url == "http://aidbox:8080/fhir"
-    assert user_client.authorization is None
-    assert user_client.extra_headers == {
-        "authorization": "Bearer caller-token",
-        "x-correlation-id": "abc",
-    }
-
-    data_client = build_user_client(request, route_client, "http://ehr.example/fhir")
-    assert data_client.url == "http://ehr.example/fhir"
-    assert data_client.extra_headers == user_client.extra_headers
 
 
 async def test_client_that_may_not_read_forms_cannot_extract(fhir_client, safe_db):

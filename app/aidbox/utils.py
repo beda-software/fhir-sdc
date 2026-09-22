@@ -3,22 +3,9 @@ from dataclasses import dataclass
 from fhirpy import AsyncFHIRClient
 
 from app.sdc.utils import get_external_fhir_base_url_from_resource
+from app.utils import build_user_client
 
 from .sdk import sdk
-
-
-def build_user_client(request, fhir_client, external_fhir_base_url=None):
-    """Same base, authenticated by the caller's headers instead of the app's credentials."""
-    headers = request["headers"].copy()
-
-    # We removed content-length because populate extract are post operations
-    # and post queries contains content-length that must not be set as default header
-    if "content-length" in headers:
-        headers.pop("content-length")
-
-    url = external_fhir_base_url or fhir_client.url
-
-    return type(fhir_client)(url, extra_headers=headers)
 
 
 def get_aidbox_fhir_client(aidbox_client):
@@ -56,8 +43,10 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
+    # Forms and mappers: Questionnaires, sub-Questionnaires, Mappings.
     user_client: AsyncFHIRClient
-    # Points elsewhere only when the request names an external FHIR server for its data.
+    # The caller's data: context references, source queries, the extraction bundle.
+    # Points at an external FHIR server when the request names one, otherwise it is user_client.
     data_client: AsyncFHIRClient
     route_params: dict
     resource: dict
@@ -67,10 +56,10 @@ class AidboxSdcRequest:
 def prepare_args(fn):
     def wrap(operation, request):
         route_client = resolve_fhir_client(operation, request)
-        user_client = build_user_client(request, route_client)
+        user_client = build_user_client(request["headers"], route_client.url)
         external_fhir_base_url = get_external_fhir_base_url_from_resource(request.get("resource"))
         data_client = (
-            build_user_client(request, route_client, external_fhir_base_url)
+            build_user_client(request["headers"], external_fhir_base_url)
             if external_fhir_base_url
             else user_client
         )
