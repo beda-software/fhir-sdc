@@ -5,7 +5,6 @@ import aiohttp_cors
 import coloredlogs
 import sentry_sdk
 from aiohttp import web
-from fhirpy.lib import AsyncFHIRClient
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -53,7 +52,6 @@ async def fhir_app_on_startup(app: web.Application):
     from app.fhir_server.settings import settings
 
     app["settings"] = settings
-    app["client"] = AsyncFHIRClient(settings.BASE_URL, authorization=f"Basic {settings.AUTH_TOKEN}")
 
 
 def create_fhir_app():

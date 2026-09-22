@@ -2,22 +2,10 @@ from dataclasses import dataclass
 
 from fhirpy import AsyncFHIRClient
 
+from app.sdc.utils import get_external_fhir_base_url_from_resource
+from app.utils import build_user_client
+
 from .sdk import sdk
-
-
-def build_user_client(request, fhir_client=None, external_fhir_base_url=None):
-    """Same base, authenticated by the caller's headers instead of the app's credentials."""
-    headers = request["headers"].copy()
-    fhir_client = fhir_client or request["app"]["client"]
-
-    # We removed content-length because populate extract are post operations
-    # and post queries contains content-length that must not be set as default header
-    if "content-length" in headers:
-        headers.pop("content-length")
-
-    url = external_fhir_base_url or fhir_client.url
-
-    return type(fhir_client)(url, extra_headers=headers)
 
 
 def get_aidbox_fhir_client(aidbox_client):
@@ -55,7 +43,8 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
-    fhir_client: AsyncFHIRClient
+    # The caller, at our Aidbox; rebuild_at_external_fhir_base_url moves it to the caller's data server.
+    user_client: AsyncFHIRClient
     route_params: dict
     resource: dict
     request: dict
@@ -63,8 +52,9 @@ class AidboxSdcRequest:
 
 def prepare_args(fn):
     def wrap(operation, request):
+        route_client = resolve_fhir_client(operation, request)
         request = AidboxSdcRequest(
-            resolve_fhir_client(operation, request),
+            build_user_client(request["headers"], route_client.url),
             request["route-params"],
             request.get("resource", None),
             request,
@@ -72,6 +62,15 @@ def prepare_args(fn):
         return fn(request)
 
     return wrap
+
+
+def rebuild_at_external_fhir_base_url(user_client, resource):
+    """The same caller's client at the request's externalFhirBaseUrl, when it names one."""
+    external_fhir_base_url = get_external_fhir_base_url_from_resource(resource)
+    if not external_fhir_base_url:
+        return user_client
+
+    return AsyncFHIRClient(external_fhir_base_url, extra_headers=user_client.extra_headers)
 
 
 def aidbox_operation(method, path, **kwrgs):

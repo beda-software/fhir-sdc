@@ -12,6 +12,7 @@ from app.sdc.utils import (
     resolve_fpml_template,
     resolve_string_template,
 )
+from app.utils import build_user_client
 
 
 def test_prepare_bundle_undefined_context():
@@ -555,3 +556,21 @@ def test_normalize_answer_value_keeps_reference_as_is():
     reference = {"reference": "Location/location-1"}
 
     assert normalize_answer_value("Reference", reference, "Location.name") == reference
+
+
+def test_user_client_forwards_only_the_callers_own_headers():
+    headers = {
+        "Authorization": "Bearer caller-token",
+        "x-correlation-id": "abc",
+        "Host": "fhir-sdc.example",
+        "content-length": "42",
+        "Transfer-Encoding": "chunked",
+    }
+
+    client = build_user_client(headers, "http://ehr.example/fhir")
+    assert client.url == "http://ehr.example/fhir"
+    assert client.authorization is None
+    assert client.extra_headers == {
+        "Authorization": "Bearer caller-token",
+        "x-correlation-id": "abc",
+    }
