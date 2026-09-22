@@ -14,11 +14,12 @@
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/sdc-operations"
+        "url": "AccessPolicy/as-anyone-execute-sdc-operations"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "sdc-operations",
+        "id": "as-anyone-execute-sdc-operations",
+        "description": "Allows anyone to call the fhir-sdc operations.",
         "engine": "matcho",
         "matcho": {
           "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|QuestionnaireResponse)(/[^/]+)?/\\$(populate|extract|assemble|constraint-check|context|resolve-expression)$"
@@ -28,11 +29,12 @@
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/sdc-transaction"
+        "url": "AccessPolicy/as-anyone-execute-transaction"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "sdc-transaction",
+        "id": "as-anyone-execute-transaction",
+        "description": "Allows anyone to submit a transaction bundle; Aidbox still authorizes every entry.",
         "engine": "matcho",
         "matcho": {
           "request-method": "post",
@@ -57,40 +59,43 @@
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/sdc-read-forms"
+        "url": "AccessPolicy/as-sdc-read-forms"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "sdc-read-forms",
+        "id": "as-sdc-read-forms",
+        "description": "Allows the sdc client to read Questionnaires, Mappings and StructureMaps.",
         "engine": "matcho",
-        "matcho": {
-          "request-method": "get",
-          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|Mapping|StructureMap)(/.*)?$"
-        },
         "link": [
           {
             "reference": "Client/sdc"
           }
-        ]
+        ],
+        "matcho": {
+          "request-method": "get",
+          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|Mapping|StructureMap)(/.*)?$"
+        }
       }
     },
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/sdc-patients"
+        "url": "AccessPolicy/as-sdc-update-patients"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "sdc-patients",
+        "id": "as-sdc-update-patients",
+        "description": "Allows the sdc client to update Patients.",
         "engine": "matcho",
-        "matcho": {
-          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
-        },
         "link": [
           {
             "reference": "Client/sdc"
           }
-        ]
+        ],
+        "matcho": {
+          "request-method": "put",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        }
       }
     },
     {
@@ -110,20 +115,22 @@
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/sdc-no-forms-patients"
+        "url": "AccessPolicy/as-sdc-no-forms-update-patients"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "sdc-no-forms-patients",
+        "id": "as-sdc-no-forms-update-patients",
+        "description": "Allows the sdc-no-forms client to update Patients, and nothing else.",
         "engine": "matcho",
-        "matcho": {
-          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
-        },
         "link": [
           {
             "reference": "Client/sdc-no-forms"
           }
-        ]
+        ],
+        "matcho": {
+          "request-method": "put",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        }
       }
     }
   ]
