@@ -22,7 +22,7 @@
         "description": "Allows anyone to call the fhir-sdc operations.",
         "engine": "matcho",
         "matcho": {
-          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|QuestionnaireResponse)(/[^/]+)?/\\$(populate|extract|assemble|constraint-check|context|resolve-expression)$"
+          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|QuestionnaireResponse)(/[^/]+)?/\\$(assemble|populate|extract|constraint-check)$"
         }
       }
     },
@@ -59,12 +59,12 @@
     {
       "request": {
         "method": "PUT",
-        "url": "AccessPolicy/as-sdc-read-forms"
+        "url": "AccessPolicy/as-sdc-search-questionnaires"
       },
       "resource": {
         "resourceType": "AccessPolicy",
-        "id": "as-sdc-read-forms",
-        "description": "Allows the sdc client to read Questionnaires, Mappings and StructureMaps.",
+        "id": "as-sdc-search-questionnaires",
+        "description": "Allows the sdc client to search Questionnaires.",
         "engine": "matcho",
         "link": [
           {
@@ -73,7 +73,28 @@
         ],
         "matcho": {
           "request-method": "get",
-          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|Mapping|StructureMap)(/.*)?$"
+          "uri": "#^(/Organization/[^/]+)?/fhir/Questionnaire$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-sdc-search-mappings"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-sdc-search-mappings",
+        "description": "Allows the sdc client to search Mappings.",
+        "engine": "matcho",
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ],
+        "matcho": {
+          "request-method": "get",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Mapping$"
         }
       }
     },

@@ -23,6 +23,25 @@ reads `AUTH_TOKEN`. Callers need read access to `Questionnaire` and `StructureMa
 
 The Aidbox app does the same: callers need read access to `Questionnaire` and `Mapping`.
 
+## Access policies
+
+fhir-sdc makes every request with the caller's credentials, so the caller needs policies for:
+
+- `GET /fhir/Questionnaire/{id}/$assemble`
+- `POST /fhir/Questionnaire/$populate`, `POST /fhir/Questionnaire/{id}/$populate`
+- `POST /fhir/Questionnaire/$extract`, `POST /fhir/Questionnaire/{id}/$extract`
+- `POST /fhir/QuestionnaireResponse/$constraint-check`
+- `GET /fhir/Questionnaire?_id={id}` — the Questionnaire, and its sub-Questionnaires as `_id={id},{id}`
+- `GET /fhir/Questionnaire?url={url}` (`&version={version}`) — a QuestionnaireResponse's Questionnaire
+- `GET /fhir/Mapping?_id={id}` — the mappers
+- `GET /fhir/StructureMap?_id={id}` — the mappers, in the FHIR server app only
+- `POST /fhir` — `Questionnaire/$extract` submits the extraction
+
+Anything else depends on the forms: context references, source queries and the resources the mappers write need the
+policies the caller would need to reach them directly. Organization-scoped routes use the same paths under
+`/Organization/{org_id}`. The test seeds in `initBundle.json` grant this list, bar `StructureMap`: the operations and
+`POST /fhir` to anyone, the searches to the `sdc` Client.
+
 ## Further plans:
 - JUTE-based population
 - Observation-based population
