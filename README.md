@@ -17,6 +17,10 @@ Setting either variable no longer has any effect.
 the variable still says `aidbox`. Leaving `JUTE_SERVICE` or `FHIRPATH_MAPPING_SERVICE` unset is fine — extraction then
 refuses only the mappers that would have needed the missing service.
 
+The FHIR server app now runs every query as the caller: it forwards the request's own credentials and no longer
+reads `AUTH_TOKEN`. Callers need read access to `Questionnaire` and `StructureMap`, or `$populate`, `$assemble` and
+`$extract` start refusing callers that could use them before.
+
 ## Further plans:
 - JUTE-based population
 - Observation-based population
