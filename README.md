@@ -21,6 +21,8 @@ The FHIR server app now runs every query as the caller: it forwards the request'
 reads `AUTH_TOKEN`. Callers need read access to `Questionnaire` and `StructureMap`, or `$populate`, `$assemble` and
 `$extract` start refusing callers that could use them before.
 
+The Aidbox app does the same: callers need read access to `Questionnaire` and `Mapping`.
+
 ## Further plans:
 - JUTE-based population
 - Observation-based population

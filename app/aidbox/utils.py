@@ -2,13 +2,14 @@ from dataclasses import dataclass
 
 from fhirpy import AsyncFHIRClient
 
+from app.sdc.utils import get_external_fhir_base_url_from_resource
+
 from .sdk import sdk
 
 
-def build_user_client(request, fhir_client=None, external_fhir_base_url=None):
+def build_user_client(request, fhir_client, external_fhir_base_url=None):
     """Same base, authenticated by the caller's headers instead of the app's credentials."""
     headers = request["headers"].copy()
-    fhir_client = fhir_client or request["app"]["client"]
 
     # We removed content-length because populate extract are post operations
     # and post queries contains content-length that must not be set as default header
@@ -55,7 +56,9 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
-    fhir_client: AsyncFHIRClient
+    user_client: AsyncFHIRClient
+    # Points elsewhere only when the request names an external FHIR server for its data.
+    data_client: AsyncFHIRClient
     route_params: dict
     resource: dict
     request: dict
@@ -63,8 +66,17 @@ class AidboxSdcRequest:
 
 def prepare_args(fn):
     def wrap(operation, request):
+        route_client = resolve_fhir_client(operation, request)
+        user_client = build_user_client(request, route_client)
+        external_fhir_base_url = get_external_fhir_base_url_from_resource(request.get("resource"))
+        data_client = (
+            build_user_client(request, route_client, external_fhir_base_url)
+            if external_fhir_base_url
+            else user_client
+        )
         request = AidboxSdcRequest(
-            resolve_fhir_client(operation, request),
+            user_client,
+            data_client,
             request["route-params"],
             request.get("resource", None),
             request,

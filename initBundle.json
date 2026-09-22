@@ -10,6 +10,121 @@
         "method": "POST",
         "url": "/$upload-fhir-npm-packages"
       }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/sdc-operations"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "sdc-operations",
+        "engine": "matcho",
+        "matcho": {
+          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|QuestionnaireResponse)(/[^/]+)?/\\$(populate|extract|assemble|constraint-check|context|resolve-expression)$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/sdc-transaction"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "sdc-transaction",
+        "engine": "matcho",
+        "matcho": {
+          "request-method": "post",
+          "uri": "#^(/Organization/[^/]+)?/fhir/?$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Client/sdc"
+      },
+      "resource": {
+        "resourceType": "Client",
+        "id": "sdc",
+        "secret": "sdc-secret",
+        "grant_types": [
+          "basic"
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/sdc-read-forms"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "sdc-read-forms",
+        "engine": "matcho",
+        "matcho": {
+          "request-method": "get",
+          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|Mapping|StructureMap)(/.*)?$"
+        },
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/sdc-patients"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "sdc-patients",
+        "engine": "matcho",
+        "matcho": {
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        },
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Client/sdc-no-forms"
+      },
+      "resource": {
+        "resourceType": "Client",
+        "id": "sdc-no-forms",
+        "secret": "sdc-no-forms-secret",
+        "grant_types": [
+          "basic"
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/sdc-no-forms-patients"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "sdc-no-forms-patients",
+        "engine": "matcho",
+        "matcho": {
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        },
+        "link": [
+          {
+            "reference": "Client/sdc-no-forms"
+          }
+        ]
+      }
     }
   ]
 }
