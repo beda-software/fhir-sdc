@@ -2,11 +2,19 @@ import os
 
 
 def resolve_jute_service():
-    jute_service = os.getenv("JUTE_SERVICE", "").strip().strip('"')
-    if not jute_service or jute_service.lower() == "aidbox":
-        raise Exception("JUTE_SERVICE must point at a JUTE service, see the README")
+    jute_service = os.getenv("JUTE_SERVICE", "")
+    if jute_service.lower() == "aidbox":
+        raise Exception(
+            "Aidbox no longer renders JUTE mappers; JUTE_SERVICE must point at a service"
+        )
 
     return jute_service
+
+
+def resolve_fhirpath_service():
+    fhirpath_service = os.getenv("FHIRPATH_MAPPING_SERVICE", "")
+    # `fpml` names the in-process renderer, every other value is a service url.
+    return "fpml" if fhirpath_service.lower() == "fpml" else fhirpath_service
 
 
 def get_extract_services(app):

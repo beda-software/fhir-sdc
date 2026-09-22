@@ -1,6 +1,6 @@
 import os
 
-from app.utils import resolve_jute_service
+from app.utils import resolve_fhirpath_service, resolve_jute_service
 
 
 class FHIRAppSettings:
@@ -21,5 +21,5 @@ settings = FHIRAppSettings(
     JUTE_SERVICE=resolve_jute_service(),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
     AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
-    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
+    FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )

@@ -1,11 +1,15 @@
 import simplejson as json
 from aiohttp import ClientSession, web
+from fhirpy.base.exceptions import OperationOutcome
 from funcy.seqs import flatten
 
 from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
 
 
 async def get_external_service_bundle(session, service, template, context):
+    if not service:
+        raise OperationOutcome("No service is configured to render this mapper")
+
     async with session.post(
         service,
         json={

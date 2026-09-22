@@ -13,8 +13,9 @@ The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
 Setting either variable no longer has any effect.
 
-`JUTE_SERVICE=aidbox` is gone too: JUTE mappers always run through a JUTE service, so `JUTE_SERVICE` must point at
-one. The app refuses to start while the variable still says `aidbox`.
+`JUTE_SERVICE=aidbox` is gone too: JUTE mappers always run through a JUTE service, and the app refuses to start while
+the variable still says `aidbox`. Leaving `JUTE_SERVICE` or `FHIRPATH_MAPPING_SERVICE` unset is fine — extraction then
+refuses only the mappers that would have needed the missing service.
 
 ## Further plans:
 - JUTE-based population

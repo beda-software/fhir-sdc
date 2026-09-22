@@ -1,13 +1,12 @@
 import os
 
-from aidbox_python_sdk.settings import Required
 from aidbox_python_sdk.settings import Settings as AidboxSettings
 
-from app.utils import resolve_jute_service
+from app.utils import resolve_fhirpath_service, resolve_jute_service
 
 
 class Settings(AidboxSettings):
-    JUTE_SERVICE = Required(v_type=str)
+    JUTE_SERVICE = str
     FHIRPATH_MAPPING_SERVICE = str
 
 
@@ -18,5 +17,5 @@ for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LE
 
 settings = Settings(
     JUTE_SERVICE=resolve_jute_service(),
-    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
+    FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )
