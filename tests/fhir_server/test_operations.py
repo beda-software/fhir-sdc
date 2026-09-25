@@ -663,6 +663,18 @@ async def test_extract_runs_every_mapper_in_extension_order(
             },
         ),
         ("/Questionnaire/$extract", {"resourceType": "Patient"}),
+        (
+            "/QuestionnaireResponse/$constraint-check",
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "Questionnaire",
+                        "resource": {"resourceType": "Questionnaire", "status": "active"},
+                    }
+                ],
+            },
+        ),
     ],
 )
 async def test_incomplete_input_is_a_missing_parameter(fhir_server_client, path, body):
@@ -690,7 +702,7 @@ async def test_populate_resolves_references_on_the_external_fhir_base_url(
     assert resp.status == 200
 
     resp = await populate_instance(fhir_server_client, q, [subject, nowhere])
-    assert resp.status != 200
+    assert resp.status == 502
 
 
 async def populate_instance(fhir_server_client, questionnaire, parameters):

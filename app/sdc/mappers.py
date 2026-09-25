@@ -17,13 +17,14 @@ async def load_mappers(user_client, questionnaire) -> list:
     """Every mapper the Questionnaire names, in extension order."""
     mappers = []
     for extension in questionnaire.get("extension", []):
-        url = extension["url"]
-        expression = extension.get("valueExpression", {}).get("expression")
-        if url == TARGET_STRUCTURE_MAP_URL:
-            canonical = extension["valueCanonical"]
+        url = extension.get("url")
+        canonical = extension.get("valueCanonical")
+        reference = (extension.get("valueReference") or {}).get("reference")
+        expression = (extension.get("valueExpression") or {}).get("expression")
+        if url == TARGET_STRUCTURE_MAP_URL and canonical:
             mappers.append(await resolve_structure_map_template(user_client, canonical))
-        elif url == QUESTIONNAIRE_MAPPER_URL and "valueReference" in extension:
-            mappers.append(await resolve_mapping(user_client, extension["valueReference"]))
+        elif url == QUESTIONNAIRE_MAPPER_URL and reference:
+            mappers.append(await resolve_mapping(user_client, reference))
         elif url == QUESTIONNAIRE_MAPPER_URL and expression:
             mappers.append(json.loads(expression))
     return mappers
@@ -36,5 +37,5 @@ async def resolve_structure_map_template(user_client, canonical):
 
 
 async def resolve_mapping(user_client, reference):
-    mapping_id = reference["reference"].split("/")[-1]
+    mapping_id = reference.split("/")[-1]
     return await user_client.resources("Mapping").search(_id=mapping_id).get()

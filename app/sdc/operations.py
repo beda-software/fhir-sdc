@@ -34,38 +34,47 @@ async def run_assemble(ctx: SdcContext, questionnaire_id: str) -> dict:
 
 async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None):
     client = rebuild_at_external_fhir_base_url(ctx.user_client, parameters)
+    named = (
+        await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
+        if questionnaire_id
+        else None
+    )
     env = await parameter_to_env(client, parameters)
-    if questionnaire_id:
-        env["Questionnaire"] = await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
+    if named is not None:
+        env["Questionnaire"] = named
     questionnaire = require_questionnaire(env.get("Questionnaire"))
     return await populate(client, questionnaire, env, sdc_api=is_sdc_api(parameters))
 
 
 async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | None = None):
     client = rebuild_at_external_fhir_base_url(ctx.user_client, resource)
+    questionnaire = (
+        dict(await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id))
+        if questionnaire_id
+        else None
+    )
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
         questionnaire_response = client.resource("QuestionnaireResponse", **resource)
+        if questionnaire is None:
+            canonical = resource.get("questionnaire")
+            questionnaire = dict(await resolve_questionnaire(ctx.user_client, canonical))
     elif resource["resourceType"] == "Parameters":
         env = await parameter_to_env(client, resource)
         if "QuestionnaireResponse" not in env:
             raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
         questionnaire_response = env["QuestionnaireResponse"]
+        questionnaire = questionnaire or env.get("Questionnaire")
     else:
         raise MissingParamOperationOutcome(
             "Either `QuestionnaireResponse` resource or Parameters containing "
             "QuestionnaireResponse are required",
         )
 
-    if questionnaire_id:
-        questionnaire = dict(await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id))
-    elif resource["resourceType"] == "QuestionnaireResponse":
-        canonical = resource.get("questionnaire")
-        questionnaire = dict(await resolve_questionnaire(ctx.user_client, canonical))
-    else:
-        questionnaire = env.get("Questionnaire")
     questionnaire = require_questionnaire(questionnaire)
+    # The Questionnaire the route names wins: a caller cannot swap it through the Parameters.
+    env["Questionnaire"] = questionnaire
 
     context = {
         "QuestionnaireResponse": questionnaire_response,
@@ -80,7 +89,11 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
 async def run_constraint_check(ctx: SdcContext, parameters: dict):
     client = rebuild_at_external_fhir_base_url(ctx.user_client, parameters)
     env = await parameter_to_env(client, parameters)
-    return await constraint_check(client, require_questionnaire(env.get("Questionnaire")), env)
+    questionnaire = require_questionnaire(env.get("Questionnaire"))
+    if "QuestionnaireResponse" not in env:
+        raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
+
+    return await constraint_check(client, questionnaire, env)
 
 
 async def run_context(ctx: SdcContext, parameters: dict):
