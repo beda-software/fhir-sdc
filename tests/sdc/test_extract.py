@@ -936,3 +936,49 @@ async def test_extract_runs_an_inline_mapper(fhir_client, safe_db):
 
     patient = await fhir_client.resources("Patient").search(_id="inline-mapped").get()
     assert patient.id == "inline-mapped"
+
+
+@pytest.mark.asyncio
+async def test_extract_by_id_ignores_a_questionnaire_sent_in_parameters(fhir_client, safe_db):
+    named = await create_extracting_questionnaire(fhir_client, "from-the-route")
+    sent = await create_extracting_questionnaire(fhir_client, "from-the-body")
+
+    extraction = await named.execute(
+        "$extract",
+        data=make_parameters(
+            Questionnaire=sent.serialize(),
+            QuestionnaireResponse={"resourceType": "QuestionnaireResponse"},
+        ),
+    )
+    assert len(extraction) == 1
+
+    written = await fhir_client.resources("Patient").search(_id="from-the-body").fetch_all()
+    assert written == []
+
+    patient = await fhir_client.resources("Patient").search(_id="from-the-route").get()
+    assert patient.id == "from-the-route"
+
+
+async def create_extracting_questionnaire(fhir_client, patient_id):
+    mapping = fhir_client.resource(
+        "Mapping",
+        body={
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": f"Patient/{patient_id}"},
+                    "resource": {"resourceType": "Patient", "id": patient_id},
+                }
+            ],
+        },
+    )
+    await mapping.save()
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"type": "string", "linkId": "note"}],
+        },
+    )
