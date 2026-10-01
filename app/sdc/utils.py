@@ -17,9 +17,6 @@ from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
-# NOTE: it's outside from spec
-EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
-
 
 def get_type(item, data):
     type = item["type"]
@@ -235,28 +232,6 @@ async def resolve_by_canonical(client: AsyncFHIRClient, resource_type: str, cano
 def parse_parameter_value(parameter) -> tuple[Any, str]:
     _name_key, value_key = parameter.keys()
     return parameter[value_key], value_key.removeprefix("value")
-
-
-def rebuild_at_external_fhir_base_url(user_client, resource):
-    """The same caller's client at the request's externalFhirBaseUrl, when it names one."""
-    external_fhir_base_url = get_external_fhir_base_url_from_resource(resource)
-    if not external_fhir_base_url:
-        return user_client
-
-    return AsyncFHIRClient(external_fhir_base_url, extra_headers=user_client.extra_headers)
-
-
-def get_external_fhir_base_url_from_resource(resource: dict | None):
-    if not resource or resource.get("resourceType") != "Parameters":
-        return None
-    for param in resource.get("parameter", []):
-        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
-            continue
-        if "resource" in param:
-            continue
-        value, _key = parse_parameter_value(param)
-        return value or None
-    return None
 
 
 async def load_source_queries(client, questionnaire, env):

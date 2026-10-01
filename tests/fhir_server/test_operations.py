@@ -683,36 +683,6 @@ async def test_incomplete_input_is_a_missing_parameter(fhir_server_client, path,
     assert (await resp.json())["issue"][0]["code"] == "missing-parameter"
 
 
-async def test_populate_resolves_references_on_the_external_fhir_base_url(
-    fhir_server_client, fhir_client, safe_db
-):
-    q = fhir_client.resource(
-        "Questionnaire", status="active", item=[{"type": "string", "linkId": "a"}]
-    )
-    await q.save()
-    patient = fhir_client.resource("Patient")
-    await patient.save()
-    subject = {"name": "subject", "valueReference": {"reference": f"Patient/{patient.id}"}}
-    nowhere = {"name": "externalFhirBaseUrl", "valueUri": f"{fhir_client.url}-nowhere"}
-
-    resp = await populate_instance(fhir_server_client, q, [subject])
-    assert resp.status == 200
-
-    resp = await populate_instance(fhir_server_client, q, [nowhere])
-    assert resp.status == 200
-
-    resp = await populate_instance(fhir_server_client, q, [subject, nowhere])
-    assert resp.status == 502
-
-
-async def populate_instance(fhir_server_client, questionnaire, parameters):
-    """The Questionnaire is read from our server even when the Parameters name an external one."""
-    return await fhir_server_client.post(
-        f"/Questionnaire/{questionnaire.id}/$populate",
-        json={"resourceType": "Parameters", "parameter": parameters},
-    )
-
-
 async def test_extract_resolves_a_versioned_structure_map_canonical(
     fhir_server_client, fhir_client, safe_db
 ):
