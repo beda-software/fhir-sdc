@@ -1,6 +1,9 @@
 import json
 
+from fhirpy.base.exceptions import OperationOutcome
+
 from .getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
+from .utils import resolve_by_canonical
 
 JUTE_BODY_PATH = [
     "group",
@@ -31,9 +34,12 @@ async def load_mappers(user_client, questionnaire) -> list:
 
 
 async def resolve_structure_map_template(user_client, canonical):
-    structure_map_id = canonical.split("/")[-1]
-    structure_map = await user_client.resources("StructureMap").search(_id=structure_map_id).get()
-    return json.loads(structure_map.get_by_path(JUTE_BODY_PATH))
+    structure_map = await resolve_by_canonical(user_client, "StructureMap", canonical)
+    template = structure_map.get_by_path(JUTE_BODY_PATH)
+    if not template:
+        raise OperationOutcome(f"StructureMap `{canonical}` carries no jute body")
+
+    return json.loads(template)
 
 
 async def resolve_mapping(user_client, reference):

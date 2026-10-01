@@ -711,3 +711,58 @@ async def populate_instance(fhir_server_client, questionnaire, parameters):
         f"/Questionnaire/{questionnaire.id}/$populate",
         json={"resourceType": "Parameters", "parameter": parameters},
     )
+
+
+async def test_extract_resolves_a_versioned_structure_map_canonical(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = await save_jute_structure_map(fhir_client, "versioned-sm", "from-versioned-sm")
+    structure_map["version"] = "1.0.0"
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext(f"{structure_map['url']}|1.0.0")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    assert await extracted_patient_ids(resp) == ["from-versioned-sm"]
+
+
+async def test_extract_refuses_a_structure_map_without_a_jute_body(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = fhir_client.resource(
+        "StructureMap",
+        id="plain-sm",
+        url="http://example.com/StructureMap/plain-sm",
+        name="plain-sm",
+        status="active",
+        group=[
+            {
+                "name": "main",
+                "typeMode": "none",
+                "input": [{"name": "source", "mode": "source"}],
+                "rule": [{"name": "noop", "source": [{"context": "source"}]}],
+            }
+        ],
+    )
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext("StructureMap/plain-sm")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 422
+    assert "jute body" in (await resp.json())["issue"][0]["diagnostics"]
