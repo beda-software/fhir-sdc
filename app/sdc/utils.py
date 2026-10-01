@@ -17,9 +17,6 @@ from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
-# NOTE: it's outside from spec
-EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
-
 
 def get_type(item, data):
     type = item["type"]
@@ -224,19 +221,6 @@ async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
 def parse_parameter_value(parameter) -> tuple[Any, str]:
     _name_key, value_key = parameter.keys()
     return parameter[value_key], value_key.removeprefix("value")
-
-
-def get_external_fhir_base_url_from_resource(resource: dict | None):
-    if not resource or resource.get("resourceType") != "Parameters":
-        return None
-    for param in resource.get("parameter", []):
-        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
-            continue
-        if "resource" in param:
-            continue
-        value, _key = parse_parameter_value(param)
-        return value or None
-    return None
 
 
 async def load_source_queries(client, questionnaire, env):
