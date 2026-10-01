@@ -23,6 +23,9 @@ reads `AUTH_TOKEN`. Callers need read access to `Questionnaire` and `StructureMa
 
 The Aidbox app does the same: callers need read access to `Questionnaire` and `Mapping`.
 
+The `externalFhirBaseUrl` parameter is gone. It let a caller pick the server fhir-sdc sent its requests to, which made
+the engine a proxy into whatever its network could reach. Requests always go to the server fhir-sdc is configured with.
+
 ## Access policies
 
 fhir-sdc makes every request with the caller's credentials, so the caller needs policies for:
