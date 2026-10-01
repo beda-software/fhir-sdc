@@ -20,6 +20,5 @@ for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LE
 settings = FHIRAppSettings(
     JUTE_SERVICE=resolve_jute_service(),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
-    AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
     FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )

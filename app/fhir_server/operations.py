@@ -1,7 +1,6 @@
 import json
 
 from aiohttp import web
-from fhirpy.lib import AsyncFHIRClient
 
 from app.sdc.exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 from app.sdc.getters import QUESTIONNAIRE_MAPPER_URL, TARGET_STRUCTURE_MAP_URL
@@ -15,7 +14,7 @@ from ..sdc import (
     resolve_expression,
 )
 from ..sdc.utils import is_sdc_api, parameter_to_env, resolve_questionnaire
-from ..utils import get_extract_services
+from ..utils import build_user_client, get_extract_services
 
 routes = web.RouteTableDef()
 
@@ -49,7 +48,7 @@ async def _build_mapper_templates(client, questionnaire: dict) -> list:
 
 @routes.get("/Questionnaire/{id}/$assemble")
 async def assemble_handler(request: web.BaseRequest):
-    client: AsyncFHIRClient = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
 
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
@@ -63,7 +62,7 @@ async def assemble_handler(request: web.BaseRequest):
 
 @routes.post("/QuestionnaireResponse/$constraint-check")
 async def constraint_check_handler(request: web.BaseRequest):
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
     env = await parameter_to_env(client, await request.json())
 
     return web.json_response(
@@ -77,7 +76,7 @@ async def constraint_check_handler(request: web.BaseRequest):
 
 @routes.post("/Questionnaire/$context")
 async def get_questionnaire_context_handler(request: web.BaseRequest):
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
     env = await parameter_to_env(client, await request.json())
 
     return web.json_response(await get_questionnaire_context(client, env["Questionnaire"], env))
@@ -86,7 +85,7 @@ async def get_questionnaire_context_handler(request: web.BaseRequest):
 @routes.post("/Questionnaire/$extract")
 async def extract_questionnaire_handler(request: web.BaseRequest):
     resource = await request.json()
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
 
     if resource["resourceType"] == "QuestionnaireResponse":
         env = {}
@@ -119,7 +118,7 @@ async def extract_questionnaire_handler(request: web.BaseRequest):
 @routes.post("/Questionnaire/{id}/$extract")
 async def extract_questionnaire_instance_operation(request: web.BaseRequest):
     resource = await request.json()
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
@@ -187,7 +186,7 @@ async def extract_questionnaire_instance_operation(request: web.BaseRequest):
 
 @routes.post("/Questionnaire/$populate")
 async def populate_questionnaire_handler(request: web.BaseRequest):
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
     body = await request.json()
     env = await parameter_to_env(client, body)
     questionnaire_data = env.get("Questionnaire")
@@ -200,7 +199,7 @@ async def populate_questionnaire_handler(request: web.BaseRequest):
 
 @routes.post("/Questionnaire/{id}/$populate")
 async def populate_questionnaire_instance(request: web.BaseRequest):
-    client = request.app["client"]
+    client = build_user_client(request.headers, request.app["settings"].BASE_URL)
     questionnaire = (
         await client.resources("Questionnaire").search(_id=request.match_info["id"]).get()
     )
