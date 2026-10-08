@@ -1,70 +1,77 @@
 import pytest
 from faker import Faker
 
-from tests.factories import create_questionnaire, make_parameters, make_questionnaire, make_questionnaire_mapper_ext
+from tests.factories import (
+    create_questionnaire,
+    make_parameters,
+    make_questionnaire,
+    make_questionnaire_mapper_ext,
+)
 
 fake = Faker()
 
-questionnaire = make_questionnaire({
-    "name": "practitioner-create",
-    "item": [
-        {
-            "text": "Last name",
-            "type": "string",
-            "linkId": "last-name",
-            "required": True,
-        },
-        {"text": "First name", "type": "string", "linkId": "first-name"},
-        {"text": "Middle name", "type": "string", "linkId": "middle-name"},
-        {
-            "text": "Specialty",
-            "type": "choice",
-            "linkId": "specialty",
-            "answerOption": [
-                {
-                    "valueCoding": {
-                        "code": "394577000",
-                        "system": "http://snomed.info/sct",
-                        "display": "Anesthetics",
-                    }
-                },
-                {
-                    "valueCoding": {
-                        "code": "394579002",
-                        "system": "http://snomed.info/sct",
-                        "display": "Cardiology",
-                    }
-                },
-                {
-                    "valueCoding": {
-                        "code": "394582007",
-                        "system": "http://snomed.info/sct",
-                        "display": "Dermatology",
-                    }
-                },
-                {
-                    "valueCoding": {
-                        "code": "394583002",
-                        "system": "http://snomed.info/sct",
-                        "display": "Endocrinology",
-                    }
-                },
-                {
-                    "valueCoding": {
-                        "code": "419772000",
-                        "system": "http://snomed.info/sct",
-                        "display": "Family practice",
-                    }
-                },
-            ],
-        },
-    ],
-    "resourceType": "Questionnaire",
-    "title": "Practitioner create",
-    "extension": [make_questionnaire_mapper_ext("practitioner-create")],
-    "status": "active",
-    "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
-})
+questionnaire = make_questionnaire(
+    {
+        "name": "practitioner-create",
+        "item": [
+            {
+                "text": "Last name",
+                "type": "string",
+                "linkId": "last-name",
+                "required": True,
+            },
+            {"text": "First name", "type": "string", "linkId": "first-name"},
+            {"text": "Middle name", "type": "string", "linkId": "middle-name"},
+            {
+                "text": "Specialty",
+                "type": "choice",
+                "linkId": "specialty",
+                "answerOption": [
+                    {
+                        "valueCoding": {
+                            "code": "394577000",
+                            "system": "http://snomed.info/sct",
+                            "display": "Anesthetics",
+                        }
+                    },
+                    {
+                        "valueCoding": {
+                            "code": "394579002",
+                            "system": "http://snomed.info/sct",
+                            "display": "Cardiology",
+                        }
+                    },
+                    {
+                        "valueCoding": {
+                            "code": "394582007",
+                            "system": "http://snomed.info/sct",
+                            "display": "Dermatology",
+                        }
+                    },
+                    {
+                        "valueCoding": {
+                            "code": "394583002",
+                            "system": "http://snomed.info/sct",
+                            "display": "Endocrinology",
+                        }
+                    },
+                    {
+                        "valueCoding": {
+                            "code": "419772000",
+                            "system": "http://snomed.info/sct",
+                            "display": "Family practice",
+                        }
+                    },
+                ],
+            },
+        ],
+        "resourceType": "Questionnaire",
+        "title": "Practitioner create",
+        "extension": [make_questionnaire_mapper_ext("practitioner-create")],
+        "status": "active",
+        "url": "https://aidbox.emr.beda.software/ui/console#/entities/Questionnaire/practitioner-create",
+    }
+)
 
 
 mapping = {

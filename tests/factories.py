@@ -1,4 +1,6 @@
 from app.sdc.getters import (
+    CHOICE_COLUMN_URL,
+    CQF_LIBRARY_URL,
     INITIAL_EXPRESSION_URL,
     ITEM_POPULATION_CONTEXT_URL,
     LAUNCH_CONTEXT_URL,
@@ -108,6 +110,16 @@ def make_initial_expression_ext(expression):
     }
 
 
+def make_choice_column_ext(path):
+    return {
+        "url": CHOICE_COLUMN_URL,
+        "extension": [
+            {"url": "forDisplay", "valueBoolean": True},
+            {"url": "path", "valueString": path},
+        ],
+    }
+
+
 def make_variable_ext(name, expression, language="text/fhirpath"):
     return {
         "url": VARIABLE_URL,
@@ -147,6 +159,19 @@ def make_questionnaire_mapper_ext(mapping_id):
     }
 
 
+def make_questionnaire_embedded_mapper_ext(mapping_body: dict):
+    import json
+
+    language = "fpml" if mapping_body.get("type") == "FHIRPath" else "jute"
+    return {
+        "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
+        "valueExpression": {
+            "language": language,
+            "expression": json.dumps(mapping_body),
+        },
+    }
+
+
 def make_item_constraint_ext(*, key, requirements, severity, human, expression):
     return {
         "url": "http://hl7.org/fhir/StructureDefinition/questionnaire-constraint",
@@ -164,4 +189,11 @@ def make_target_structure_map_ext(structure_map_id):
     return {
         "url": "http://hl7.org/fhir/uv/sdc/StructureDefinition/sdc-questionnaire-targetStructureMap",
         "valueCanonical": structure_map_id,
+    }
+
+
+def make_cqf_library_ext(canonical):
+    return {
+        "url": CQF_LIBRARY_URL,
+        "valueCanonical": canonical,
     }

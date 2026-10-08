@@ -1,9 +1,14 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from app.sdc.utils import (
+    is_sdc_api,
+    normalize_answer_value,
     parameter_to_env,
     prepare_bundle,
     prepare_link_ids,
+    resolve_expression,
     resolve_fpml_template,
     resolve_string_template,
 )
@@ -209,16 +214,69 @@ def test_fpml():
 
 
 @pytest.mark.parametrize(
-    "is_fhir,launch_param",
+    ("payload", "expected"),
     [
-        (True, {"name": "launch-patientId", "valueString": "patient-123"}),
+        (None, False),
+        ({}, False),
+        ({"resourceType": "Patient", "id": "x"}, False),
+        ({"resourceType": "Parameters", "parameter": []}, False),
         (
+            {
+                "resourceType": "Parameters",
+                "parameter": [{"name": "questionnaire", "resource": {}}],
+            },
             False,
-            {"name": "launch-patientId", "value": {"string": "patient-123"}},
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "Questionnaire", "resource": {}},
+                    {"name": "LaunchPatient", "resource": {"resourceType": "Patient"}},
+                ],
+            },
+            False,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "subject", "valueReference": {"reference": "Patient/1"}},
+                ],
+            },
+            True,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [{"name": "context", "part": []}],
+            },
+            True,
+        ),
+        (
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {"name": "context", "part": []},
+                    {"name": "subject", "valueReference": {"reference": "Patient/1"}},
+                ],
+            },
+            True,
         ),
     ],
 )
-def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
+def test_is_sdc_api(payload, expected):
+    assert is_sdc_api(payload) is expected
+
+
+@pytest.mark.parametrize(
+    "launch_param",
+    [
+        {"name": "launch-patientId", "valueString": "patient-123"},
+    ],
+)
+async def test_parameter_to_env_handles_parameters_correctly(launch_param):
+    client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
         "id": "q-1",
@@ -238,7 +296,7 @@ def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
         ],
     }
 
-    env = parameter_to_env(parameters, is_fhir)
+    env = await parameter_to_env(client, parameters)
 
     assert env["questionnaire"] == questionnaire
     assert env["questionnaire_response"] == questionnaire_response
@@ -247,7 +305,8 @@ def test_parameter_to_env_handles_parameters_correctly(is_fhir, launch_param):
     assert env["QuestionnaireResponse"] == questionnaire_response
 
 
-def test_parameter_to_env_skips_empty_launch_param():
+async def test_parameter_to_env_skips_empty_launch_param():
+    client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
         "id": "q-1",
@@ -267,8 +326,232 @@ def test_parameter_to_env_skips_empty_launch_param():
         ],
     }
 
-    env = parameter_to_env(parameters, is_fhir=False)
+    env = await parameter_to_env(client, parameters)
 
     assert "launch-patientId" not in env
     assert env["Questionnaire"] == questionnaire
     assert env["QuestionnaireResponse"] == questionnaire_response
+
+
+@pytest.mark.asyncio
+async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db):
+    obs = fhir_client.resource(
+        "Observation",
+        status="final",
+        code={"text": "parameter-to-env-integration"},
+    )
+    await obs.save()
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {
+                "name": "context",
+                "part": [
+                    {"name": "name", "valueString": "Observation"},
+                    {
+                        "name": "content",
+                        "valueReference": {"reference": f"Observation/{obs.id}"},
+                    },
+                ],
+            },
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters)
+
+    assert is_sdc_api(parameters) is True
+    resolved = env["Observation"]
+    assert resolved["resourceType"] == "Observation"
+    assert resolved["id"] == obs.id
+    assert resolved["status"] == "final"
+    assert resolved["code"]["text"] == "parameter-to-env-integration"
+
+
+@pytest.mark.asyncio
+async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db):
+    patient = fhir_client.resource("Patient")
+    await patient.save()
+    patient_ref = {"reference": f"Patient/{patient.id}"}
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "subject", "valueReference": patient_ref},
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters)
+
+    assert is_sdc_api(parameters) is True
+    assert env["subject"]["resourceType"] == "Patient"
+    assert env["subject"]["id"] == patient.id
+
+
+@pytest.mark.asyncio
+async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_client, safe_db):
+    # This test for backward compatibility with non sdc api behavior
+    patient = fhir_client.resource("Patient")
+    await patient.save()
+    patient_ref = {"reference": f"Patient/{patient.id}", "display": "Integration Patient"}
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "PatientRef", "valueReference": patient_ref},
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters)
+
+    assert is_sdc_api(parameters) is False
+    assert env["PatientRef"]["display"] == "Integration Patient"
+    assert env["PatientRef"]["reference"] == f"Patient/{patient.id}"
+
+
+@pytest.mark.asyncio
+async def test_sdc_api_params(fhir_client, safe_db):
+    patient = fhir_client.resource(
+        "Patient",
+        name=[{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    )
+    await patient.save()
+
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-sdc-api-params",
+        "status": "active",
+    }
+
+    patient_ref = {
+        "reference": f"Patient/{patient.id}",
+        "display": "Integration Patient",
+    }
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": questionnaire},
+            {
+                "name": "context",
+                "part": [
+                    {"name": "name", "valueString": "Patient"},
+                    {"name": "content", "valueReference": patient_ref},
+                ],
+            },
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters)
+
+    assert is_sdc_api(parameters) is True
+    resolved = env["Patient"]
+    assert resolved["resourceType"] == "Patient"
+    assert resolved["id"] == patient.id
+    assert resolved["name"][0]["family"] == "ApiParams"
+    assert resolved["name"][0]["given"] == ["SdcIntegration"]
+
+
+@pytest.mark.asyncio
+async def test_sdc_api_params_with_resource(fhir_client, safe_db):
+    patient = {
+        "resourceType": "Patient",
+        "name": [{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    }
+
+    questionnaire = {
+        "resourceType": "Questionnaire",
+        "id": "q-sdc-api-params",
+        "status": "active",
+    }
+
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire", "resource": questionnaire},
+            {
+                "name": "context",
+                "part": [
+                    {"name": "name", "valueString": "Patient"},
+                    {"name": "content", "resource": patient},
+                ],
+            },
+        ],
+    }
+
+    env = await parameter_to_env(fhir_client, parameters)
+
+    assert is_sdc_api(parameters) is True
+    resolved = env["Patient"]
+    assert resolved["resourceType"] == "Patient"
+    assert resolved["name"][0]["family"] == "ApiParams"
+    assert resolved["name"][0]["given"] == ["SdcIntegration"]
+
+
+@pytest.mark.asyncio
+async def test_x_fhir_query_variable(fhir_client, safe_db):
+    patient = fhir_client.resource(
+        "Patient",
+        name=[{"family": "ApiParams", "given": ["SdcIntegration"]}],
+    )
+    await patient.save()
+    env = {"patient": patient}
+    expression = {
+        "name": "MedicationStatement",
+        "language": "application/x-fhir-query",
+        "expression": "MedicationStatement?patient={{%patient.id}}&status=active&_include=MedicationStatement:medication",
+    }
+    result = await resolve_expression(fhir_client, {}, expression, env, "test")
+    assert result["resourceType"] == "Bundle"
+
+
+@pytest.mark.asyncio
+async def test_x_fhir_query_variable_escape(fhir_client, safe_db):
+    name = "MrX&active=false"
+    patient = fhir_client.resource(
+        "Patient",
+        active=True,
+        name=[{"text": name}],
+    )
+    await patient.save()
+    env = {"patient": patient}
+    expression = {
+        "name": "MedicationStatement",
+        "language": "application/x-fhir-query",
+        "expression": "Patient?name={{%patient.name.text}}",
+    }
+    result = await resolve_expression(fhir_client, {}, expression, env, "test")
+    assert result["resourceType"] == "Bundle"
+    assert result["total"] == 1
+
+
+LOCATION = {"resourceType": "Location", "id": "location-1", "name": "Location 1"}
+
+
+def test_normalize_answer_value_resource_to_reference_with_display():
+    assert normalize_answer_value("Reference", LOCATION, "Location.name") == {
+        "reference": "Location/location-1",
+        "display": "Location 1",
+    }
+
+
+def test_normalize_answer_value_resource_to_reference_without_display_path():
+    assert normalize_answer_value("Reference", LOCATION) == {"reference": "Location/location-1"}
+
+
+def test_normalize_answer_value_omits_display_when_path_finds_nothing():
+    assert normalize_answer_value("Reference", LOCATION, "alias") == {
+        "reference": "Location/location-1"
+    }
+
+
+def test_normalize_answer_value_omits_non_string_display():
+    assert normalize_answer_value("Reference", LOCATION, "name.exists()") == {
+        "reference": "Location/location-1"
+    }
+
+
+def test_normalize_answer_value_keeps_reference_as_is():
+    reference = {"reference": "Location/location-1"}
+
+    assert normalize_answer_value("Reference", reference, "Location.name") == reference

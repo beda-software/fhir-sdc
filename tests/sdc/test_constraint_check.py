@@ -3,9 +3,9 @@ from fhirpy.base.exceptions import OperationOutcome
 
 from tests.factories import (
     create_questionnaire,
+    make_item_constraint_ext,
     make_parameters,
     make_source_queries_ext,
-    make_item_constraint_ext
 )
 
 
@@ -15,9 +15,7 @@ async def test_email_uniq(fhir_client, safe_db):
         fhir_client,
         {
             "status": "active",
-            "extension": [
-                make_source_queries_ext("#AllEmails")
-            ],
+            "extension": [make_source_queries_ext("#AllEmails")],
             "contained": [
                 {
                     "resourceType": "Bundle",
@@ -43,17 +41,15 @@ async def test_email_uniq(fhir_client, safe_db):
                             requirements="Any email should present only once in the system",
                             severity="error",
                             human="Email already exists",
-                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()"
+                            expression="(%AllEmails.entry.resource.entry.resource.telecom.where(system = 'email').value contains %QuestionnaireResponse.repeat(item).where(linkId='email-uniq').answer.valueString).not().not()",
                         )
-                    ]
+                    ],
                 },
             ],
         },
     )
 
-    p = fhir_client.resource(
-        "Patient", telecom=[{"system": "email", "value": "p1@beda.software"}]
-    )
+    p = fhir_client.resource("Patient", telecom=[{"system": "email", "value": "p1@beda.software"}])
     await p.save()
 
     valid = fhir_client.resource(

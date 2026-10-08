@@ -3,6 +3,7 @@ import logging
 from funcy import is_list
 
 from .getters import (
+    get_choice_column_paths,
     get_initial_expression,
     get_item_context,
     get_item_population_context,
@@ -21,7 +22,7 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env):
+async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
@@ -53,6 +54,8 @@ async def populate(client, fhir_questionnaire, env):
     for item in fhir_questionnaire["item"]:
         root["item"].extend(await _handle_item(client, item, env, {}))
 
+    if sdc_api:
+        return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
     return root
 
 
@@ -128,10 +131,16 @@ async def _handle_item(client, item, env, context):
         )
         if data:
             type_ = get_type(item, data)
+            display_path = next(iter(get_choice_column_paths(item_exts)), None)
             if is_repeating:
-                answers = [{make_value_key(type_): normalize_answer_value(type_, d)} for d in data]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
+                    for d in data
+                ]
             else:
-                answers = [{make_value_key(type_): normalize_answer_value(type_, data[0])}]
+                answers = [
+                    {make_value_key(type_): normalize_answer_value(type_, data[0], display_path)}
+                ]
         if answers:
             root_item["answer"] = answers
     elif "initial" in item:

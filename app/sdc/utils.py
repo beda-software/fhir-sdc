@@ -1,13 +1,15 @@
 import copy
+from typing import Any
 from urllib.parse import quote
 
-from fhirpathpy.models import models
+from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 from fpml import resolve_template
 from funcy.seqs import first
 from funcy.strings import re_all
 from funcy.types import is_list, is_mapping
+from yarl import URL
 
 from app.cached_fhirpath import fhirpath
 from app.sdc.getters import get_source_queries
@@ -15,7 +17,8 @@ from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome
 
-r4 = models["r4"]
+# NOTE: it's outside from spec
+EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
 
 
 def get_type(item, data):
@@ -69,7 +72,7 @@ def make_value_key(type_: str) -> str:
     return f"value{type_[0].upper()}{type_[1:]}"
 
 
-def normalize_answer_value(type_: str, value):
+def normalize_answer_value(type_: str, value, display_path: str | None = None):
     # Resource (that contains resourceType and id) should be converted to Reference
     # It's according to the spec of $populate
     if (
@@ -78,7 +81,11 @@ def normalize_answer_value(type_: str, value):
         and "resourceType" in value
         and "id" in value
     ):
-        return {"reference": f"{value['resourceType']}/{value['id']}"}
+        reference = {"reference": f"{value['resourceType']}/{value['id']}"}
+        display = first(fhirpath(value, display_path)) if display_path else None
+        if isinstance(display, str):
+            reference["display"] = display
+        return reference
     return value
 
 
@@ -139,28 +146,51 @@ def resolve_string_template(
     res = expr
     for k, v in vs.items():
         res = res.replace(k, v)
-
     return res
 
 
 def prepare_assemble_variables(item):
-    # Assemble supports only fhirpath expressions
+    from app.sdc.getters import get_variable
+
     variables = {}
-    for var in item.get("variable", []):
-        if var["language"] == "text/fhirpath":
+    for var in get_variable(item.get("extension", [])):
+        if var and var.get("language") == "text/fhirpath":
             variables[var["name"]] = fhirpath({}, var["expression"])
     return variables
 
 
-def parameter_to_env(resource, is_fhir: bool = True):
-    env = {}
+def is_sdc_api(parameters: dict | None) -> bool:
+    """True when Parameters use SDC `$populate` input shape (`context` and/or `subject`)."""
+    if not parameters or parameters.get("resourceType") != "Parameters":
+        return False
+    return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
+
+
+async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
+    # TODO: add support for repeating values (with same name)
+    env: dict[str, Any] = {}
     for param in resource["parameter"]:
-        if "resource" in param:
+        if param["name"] == "context":
+            parts = param["part"]
+            name = next(p for p in parts if p["name"] == "name")["valueString"]
+            value = next(p for p in parts if p["name"] == "content")
+            if "resource" in value:
+                env[name] = value["resource"]
+            else:
+                env[name] = await client.reference(
+                    reference=value["valueReference"]["reference"]
+                ).to_resource()
+        elif "resource" in param:
             env[param["name"]] = param["resource"]
         else:
-            value = parse_parameter_value(param, is_fhir)
+            value, kind = parse_parameter_value(param)
             if value:
-                env[param["name"]] = value
+                if param["name"] == "subject" and kind == "Reference":
+                    env[param["name"]] = await client.reference(
+                        reference=value["reference"]
+                    ).to_resource()
+                else:
+                    env[param["name"]] = value
     # Mapping parameters to fhir resource names
     questionnaire = env.get("questionnaire")
     if questionnaire:
@@ -171,47 +201,33 @@ def parameter_to_env(resource, is_fhir: bool = True):
     return env
 
 
-def parse_parameter_value(parameter, is_fhir: bool):
-    if is_fhir:
-        _name_key, value_key = parameter.keys()
-        return parameter[value_key]
-    else:
-        value = parameter["value"]
-        polimorphic_key = first(value.keys())
-        return value[polimorphic_key] if polimorphic_key else None
+def parse_parameter_value(parameter) -> tuple[Any, str]:
+    _name_key, value_key = parameter.keys()
+    return parameter[value_key], value_key.removeprefix("value")
 
 
-async def load_source_queries(client, fce_questionnaire, env):
-    # Previously we used invalid format for localRef Bundle#id
-    # But according to the specification, local ref to contained resource should be #id
-    # And since in Aidbox format we have localRef without leading #,
-    # contained resources are accessible via id
-    # But for backward compatibility they are also accessible by Bundle#id
-    contained_compat = {
-        f"{item['resourceType']}#{item['id']}": item
-        for item in fce_questionnaire.get("contained", [])
-    }
-    contained_new = {item["id"]: item for item in fce_questionnaire.get("contained", [])}
-    contained = {**contained_compat, **contained_new}
+def get_external_fhir_base_url_from_resource(resource: dict | None):
+    if not resource or resource.get("resourceType") != "Parameters":
+        return None
+    for param in resource.get("parameter", []):
+        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
+            continue
+        if "resource" in param:
+            continue
+        value, _key = parse_parameter_value(param)
+        return value or None
+    return None
 
-    # TODO: get rid of FCE format completely
-    source_queries_fce = fce_questionnaire.get("sourceQueries", {})
-    source_queries_fhir = get_source_queries(fce_questionnaire.get("extension", []))
-    source_queries = [*source_queries_fce, *source_queries_fhir]
 
-    if isinstance(source_queries, dict):
-        source_queries = [source_queries]
+async def load_source_queries(client, questionnaire, env):
+    contained = {item["id"]: item for item in questionnaire.get("contained", [])}
+    source_queries = get_source_queries(questionnaire.get("extension", []))
 
     for source_query in source_queries:
-        # FHIR reference contains #, while FCE localRef does not
-        ref = (
-            source_query["reference"].removeprefix("#")
-            if "reference" in source_query
-            else source_query.get("localRef")
-        )
+        ref = source_query.get("reference", "").removeprefix("#")
         if ref:
             # TODO: raise a clear error
-            raw_bundle = contained[ref]
+            raw_bundle = contained.get(ref)
             if raw_bundle:
                 bundle = prepare_bundle(raw_bundle, env)
                 env[bundle["id"]] = await client.execute("/", data=bundle)
@@ -236,10 +252,7 @@ def validate_context(context_definition: list[LaunchContext], env):
     all_vars = env.keys()
     errors = []
     for item in context_definition:
-        if isinstance(item["name"], str):
-            name = item["name"]
-        else:
-            name = item["name"]["code"]
+        name = (item.get("name") or {}).get("code", "")
         if name not in all_vars:
             errors.append(
                 {
@@ -275,34 +288,19 @@ def check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles):
         full_urls_set.add(full_url)
 
 
-def answers(inputs, link_id):
-    return fhirpath(
-        inputs,
-        f"repeat(item).where(linkId='{link_id}').answer.value",
-        None,
-        "r4",
-    )
-
-
-fp_options = {
-    "userInvocationTable": {
-        "answers": {
-            "fn": answers,
-            "arity": {0: [], 1: ["String"]},
-        },
-    },
-    "model": r4,
-}
-
-
 def resolve_fpml_template(template, context):
     return resolve_template(
         context.get("QuestionniareResponse", context),
         template,
         context,
-        fp_options,
-        True,
+        strict=True,
+        evaluate=_evaluate,
     )
+
+
+def _evaluate(resource, expression, context):
+    """Evaluator for fpml, whose signature has no model."""
+    return fhirpath(resource, expression, context, "r4")
 
 
 async def apply_converter_for_resources(converter_fn, resources: list) -> list:
@@ -330,10 +328,8 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             )
             if url is None:
                 return None
-            return await client.execute(
-                url,
-                method="GET",
-            )
+            url = URL(url)
+            return await client.execute(url.path, method="GET", params=url.query)
     except Exception as e:
         raise OperationOutcome(
             f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
