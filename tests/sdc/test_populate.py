@@ -2097,3 +2097,18 @@ async def test_initial_expression_populate_sdc_api(fhir_client, safe_db):
             },
         ],
     }
+
+
+@pytest.mark.asyncio
+async def test_populate_writes_the_canonical_url(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "url": "http://example.com/Questionnaire/populated",
+            "item": [{"type": "string", "linkId": "name"}],
+        },
+    )
+
+    populated = await q.execute("$populate", data={"resourceType": "Parameters", "parameter": []})
+    assert populated["questionnaire"] == "http://example.com/Questionnaire/populated"

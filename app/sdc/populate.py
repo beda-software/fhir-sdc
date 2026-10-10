@@ -41,7 +41,7 @@ async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
     root = {
         **env["QuestionnaireResponse"],
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": fhir_questionnaire.get("id"),
+        "questionnaire": fhir_questionnaire.get("url") or fhir_questionnaire.get("id"),
         "item": [],
     }
     env["resource"] = root
