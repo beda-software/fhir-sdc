@@ -12,7 +12,7 @@ async def load_questionnaire_context(
     questionnaire_response: dict | None,
     variables: dict[str, Any],
 ) -> dict:
-    """The FHIRPath env with the launch context checked and the source queries loaded."""
+    """Build the FHIRPath env, check the launch context and load the source queries into it."""
     env = build_fhirpath_env(questionnaire, questionnaire_response, variables)
     launch_context = get_launch_context(questionnaire.get("extension", []))
     if launch_context:

@@ -66,7 +66,7 @@ async def extract(
 ) -> list:
     """Render the Questionnaire's mappers and submit the bundles they produce."""
     mappers = await load_mappers(client, questionnaire)
-    context = build_fhirpath_env(questionnaire, questionnaire_response, variables)
+    env = build_fhirpath_env(questionnaire, questionnaire_response, variables)
     async with ClientSession() as session:
         resp = []
         mappers_bundles = []
@@ -78,7 +78,7 @@ async def extract(
                 if mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
                     result = resolve_fpml_template(
                         mapper["body"],
-                        context,
+                        env,
                     )
                     result_no_decimal = json.loads(json.dumps(result))
                     mappers_bundles.append(result_no_decimal)
@@ -86,14 +86,14 @@ async def extract(
                     # Use 3rd party service FHIRPathMapping or JUTE
                     mappers_bundles.append(
                         await get_external_service_bundle(
-                            session, extract_services[mapper_type], mapper["body"], context
+                            session, extract_services[mapper_type], mapper["body"], env
                         )
                     )
             else:
                 # legacy extraction
                 mappers_bundles.append(
                     await get_external_service_bundle(
-                        session, extract_services["JUTE"], mapper, context
+                        session, extract_services["JUTE"], mapper, env
                     )
                 )
 

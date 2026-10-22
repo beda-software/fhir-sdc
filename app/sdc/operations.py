@@ -37,6 +37,7 @@ async def run_populate(
 
 
 async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | None = None) -> list:
+    # The Questionnaire the route names wins: a caller cannot swap it through the body.
     route_questionnaire = (
         await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
         if questionnaire_id
@@ -53,7 +54,6 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
             ctx.user_client, resource
         )
         require_param(questionnaire_response, "QuestionnaireResponse")
-        # The Questionnaire the route names wins: a caller cannot swap it through the Parameters.
         questionnaire = route_questionnaire or questionnaire
     else:
         raise MissingParamOperationOutcome(

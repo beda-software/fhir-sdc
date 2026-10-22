@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 async def populate(
     client: AsyncFHIRClient,
-    fhir_questionnaire: dict,
+    questionnaire: dict,
     variables: dict[str, Any],
     *,
     sdc_api: bool = False,
@@ -27,19 +27,17 @@ async def populate(
     populated_response = {
         "resourceType": "QuestionnaireResponse",
         "status": "in-progress",
-        "questionnaire": fhir_questionnaire.get("id"),
+        "questionnaire": questionnaire.get("id"),
         "item": [],
     }
-    env = await load_questionnaire_context(
-        client, fhir_questionnaire, populated_response, variables
-    )
-    exts = fhir_questionnaire.get("extension", [])
+    env = await load_questionnaire_context(client, questionnaire, populated_response, variables)
+    exts = questionnaire.get("extension", [])
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"
         )
 
-    for item in fhir_questionnaire["item"]:
+    for item in questionnaire["item"]:
         populated_response["item"].extend(await _handle_item(client, item, env, {}))
 
     if sdc_api:
