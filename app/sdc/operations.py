@@ -24,15 +24,11 @@ async def run_assemble(ctx: SdcContext, questionnaire_id: str) -> dict:
 
 
 async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None):
-    named = (
-        await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
-        if questionnaire_id
-        else None
-    )
     env = await parameter_to_env(ctx.user_client, parameters)
-    if named is not None:
-        env["Questionnaire"] = named
-    questionnaire = require_questionnaire(env.get("Questionnaire"))
+    if questionnaire_id:
+        env["Questionnaire"] = await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
+    questionnaire = env.get("Questionnaire")
+    require_questionnaire(questionnaire)
     return await populate(ctx.user_client, questionnaire, env, sdc_api=is_sdc_api(parameters))
 
 
@@ -61,14 +57,12 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
             "QuestionnaireResponse are required",
         )
 
-    questionnaire = require_questionnaire(questionnaire)
+    require_questionnaire(questionnaire)
     # The Questionnaire the route names wins: a caller cannot swap it through the Parameters.
-    env["Questionnaire"] = questionnaire
-
     context = {
+        **env,
         "QuestionnaireResponse": questionnaire_response,
         "Questionnaire": questionnaire,
-        **env,
     }
     mappers = await load_mappers(ctx.user_client, questionnaire)
     await constraint_check(ctx.user_client, questionnaire, context)
@@ -77,7 +71,8 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
 
 async def run_constraint_check(ctx: SdcContext, parameters: dict):
     env = await parameter_to_env(ctx.user_client, parameters)
-    questionnaire = require_questionnaire(env.get("Questionnaire"))
+    questionnaire = env.get("Questionnaire")
+    require_questionnaire(questionnaire)
     if "QuestionnaireResponse" not in env:
         raise MissingParamOperationOutcome("`QuestionnaireResponse` parameter is required")
 
@@ -86,13 +81,11 @@ async def run_constraint_check(ctx: SdcContext, parameters: dict):
 
 async def run_context(ctx: SdcContext, parameters: dict):
     env = await parameter_to_env(ctx.user_client, parameters)
-    return await get_questionnaire_context(
-        ctx.user_client, require_questionnaire(env.get("Questionnaire")), env
-    )
+    questionnaire = env.get("Questionnaire")
+    require_questionnaire(questionnaire)
+    return await get_questionnaire_context(ctx.user_client, questionnaire, env)
 
 
-def require_questionnaire(questionnaire):
+def require_questionnaire(questionnaire: dict | None) -> None:
     if not questionnaire:
         raise MissingParamOperationOutcome("`Questionnaire` parameter is required")
-
-    return questionnaire
