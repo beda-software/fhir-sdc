@@ -5,7 +5,6 @@ import aiohttp_cors
 import coloredlogs
 import sentry_sdk
 from aiohttp import web
-from fhirpy.lib import AsyncFHIRClient
 from sentry_sdk.integrations.aiohttp import AioHttpIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 
@@ -31,14 +30,6 @@ async def create_gunicorn_app():
         return create_app()
 
 
-async def init_aidbox_app(app):
-    from aidbox_python_sdk.main import init_client, register_app
-
-    app["client"] = await init_client(app["settings"])
-    await register_app(app["sdk"], app["client"])
-    yield
-
-
 # TODO: Add config param for aidbox-python-sdk pytest plugin
 # to select create_app
 def create_app():
@@ -53,13 +44,13 @@ async def fhir_app_on_startup(app: web.Application):
     from app.fhir_server.settings import settings
 
     app["settings"] = settings
-    app["client"] = AsyncFHIRClient(settings.BASE_URL, authorization=f"Basic {settings.AUTH_TOKEN}")
 
 
 def create_fhir_app():
+    from app.fhir_server.middlewares import render_operation_outcome
     from app.fhir_server.operations import routes as fhir_routes
 
-    app = web.Application()
+    app = web.Application(middlewares=[render_operation_outcome])
     app.add_routes(fhir_routes)
     app.on_startup.append(fhir_app_on_startup)
 

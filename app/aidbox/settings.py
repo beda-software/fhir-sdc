@@ -1,43 +1,21 @@
-import logging
 import os
 
-from aidbox_python_sdk.settings import Required
 from aidbox_python_sdk.settings import Settings as AidboxSettings
+
+from app.utils import resolve_fhirpath_service, resolve_jute_service
 
 
 class Settings(AidboxSettings):
-    JUTE_SERVICE = Required(v_type=str)
+    JUTE_SERVICE = str
     FHIRPATH_MAPPING_SERVICE = str
 
 
-create_manifest_attrs = os.getenv("CREATE_MANIFEST_ATTRS", "True").lower() == "true"
-constraint_legacy_behavior = os.getenv("CONSTRAINT_LEGACY_BEHAVIOR", "True").lower() == "true"
-extract_source_queries_legacy_behavior = (
-    os.getenv("EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", "True").lower() == "true"
-)
-
-if create_manifest_attrs:
-    raise Exception(
-        "CREATE_MANIFEST_ATTRS must be set to false, fhir-sdc@2.x.x does not support it"
-    )
-
-if constraint_legacy_behavior:
-    logging.warning(
-        "CONSTRAINT_LEGACY_BEHAVIOR is deprecated and will be enforced to be set to false in fhir-sdc@3.x.x"
-    )
-
-if extract_source_queries_legacy_behavior:
-    logging.warning(
-        "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR is deprecated and will be enforced to be set to false in fhir-sdc@3.x.x"
-    )
-
+# Both behaviours are gone in 3.x.x; leaving the variable on would silently invert every constraint.
+for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR"):
+    if os.getenv(removed_setting, "").lower() == "true":
+        raise Exception(f"{removed_setting} is not supported in fhir-sdc@3.x.x, see the README")
 
 settings = Settings(
-    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "aidbox"),
-    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
-    # For legacy usage:
-    # CONSTRAINT_LEGACY_BEHAVIOR - pre-save legacy behavior of constraint when then condition was reversed
-    CONSTRAINT_LEGACY_BEHAVIOR=constraint_legacy_behavior,
-    # EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR - pass source queries to the extract mappers context
-    EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=extract_source_queries_legacy_behavior,
+    JUTE_SERVICE=resolve_jute_service(),
+    FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )

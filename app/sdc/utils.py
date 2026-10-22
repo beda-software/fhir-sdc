@@ -17,9 +17,6 @@ from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
-# NOTE: it's outside from spec
-EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
-
 
 def get_type(item, data):
     type = item["type"]
@@ -169,7 +166,7 @@ def is_sdc_api(parameters: dict | None) -> bool:
 async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     # TODO: add support for repeating values (with same name)
     env: dict[str, Any] = {}
-    for param in resource["parameter"]:
+    for param in resource.get("parameter", []):
         if param["name"] == "context":
             parts = param["part"]
             name = next(p for p in parts if p["name"] == "name")["valueString"]
@@ -201,60 +198,40 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     return env
 
 
-def find_parameter_resource(parameters: dict, name: str):
-    return next(
-        (p.get("resource") for p in parameters.get("parameter", []) if p["name"] == name), None
-    )
-
-
-def build_legacy_extract_input(parameters: dict, questionnaire_response: dict) -> dict:
-    """Legacy extraction reads the response from its pre-SDC parameter name."""
-    others = [p for p in parameters.get("parameter", []) if p["name"] != "questionnaire-response"]
-    return {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": "questionnaire_response", "resource": questionnaire_response},
-            *others,
-        ],
-    }
+async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str):
+    return await client.resources("Questionnaire").search(_id=questionnaire_id).get()
 
 
 async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
-    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     if not canonical:
         raise MissingParamOperationOutcome("`questionnaire` is required")
 
+    return await resolve_by_canonical(client, "Questionnaire", canonical)
+
+
+async def resolve_by_canonical(client: AsyncFHIRClient, resource_type: str, canonical: str):
+    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     url, _, version = canonical.partition("|")
     search = {"url": url, "version": version} if version else {"url": url}
-    matches = await client.resources("Questionnaire").search(**search).limit(2).fetch()
+    matches = await client.resources(resource_type).search(**search).limit(2).fetch()
     if len(matches) > 1:
-        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` matches several versions")
+        raise MissingParamOperationOutcome(
+            f"{resource_type} `{canonical}` matches several versions"
+        )
 
-    questionnaire = matches[0] if matches else None
-    if questionnaire is None:
-        questionnaire = await client.resources("Questionnaire").search(_id=url).first()
-    if questionnaire is None:
-        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` is not found")
+    if matches:
+        return matches[0]
 
-    return questionnaire
+    resource = await client.resources(resource_type).search(_id=url.rsplit("/", 1)[-1]).first()
+    if resource is None:
+        raise MissingParamOperationOutcome(f"{resource_type} `{canonical}` is not found")
+
+    return resource
 
 
 def parse_parameter_value(parameter) -> tuple[Any, str]:
     _name_key, value_key = parameter.keys()
     return parameter[value_key], value_key.removeprefix("value")
-
-
-def get_external_fhir_base_url_from_resource(resource: dict | None):
-    if not resource or resource.get("resourceType") != "Parameters":
-        return None
-    for param in resource.get("parameter", []):
-        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
-            continue
-        if "resource" in param:
-            continue
-        value, _key = parse_parameter_value(param)
-        return value or None
-    return None
 
 
 async def load_source_queries(client, questionnaire, env):
@@ -339,17 +316,6 @@ def resolve_fpml_template(template, context):
 def _evaluate(resource, expression, context):
     """Evaluator for fpml, whose signature has no model."""
     return fhirpath(resource, expression, context, "r4")
-
-
-async def apply_converter_for_resources(converter_fn, resources: list) -> list:
-    bundle = {
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [{"resource": dict(s)} for s in resources],
-    }
-    fce_bundle = await converter_fn(bundle)
-    result = [s["resource"] for s in fce_bundle["entry"]]
-    return result
 
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
