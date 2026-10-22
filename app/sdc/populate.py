@@ -1,5 +1,6 @@
 import logging
 
+from fhirpy import AsyncFHIRClient
 from funcy import is_list
 
 from .getters import (
@@ -11,6 +12,7 @@ from .getters import (
     get_variable,
 )
 from .utils import (
+    build_fhirpath_env,
     get_type,
     load_source_queries,
     make_value_key,
@@ -22,30 +24,34 @@ from .utils import (
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
+async def populate(
+    client: AsyncFHIRClient,
+    fhir_questionnaire: dict,
+    questionnaire_response: dict | None,
+    variables: dict,
+    *,
+    sdc_api: bool = False,
+) -> dict:
+    # FHIRPath fails on an undefined %QuestionnaireResponse in shared source queries.
+    questionnaire_response = questionnaire_response or {
+        "resourceType": "QuestionnaireResponse",
+        "status": "in-progress",
+    }
+    env = build_fhirpath_env(fhir_questionnaire, questionnaire_response, variables)
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
         validate_context(launch_context, env)
-    if "QuestionnaireResponse" not in env:
-        # Populate operation does not accept QR, but source queries might use it
-        # in constraint-check operations
-        # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
-        env["QuestionnaireResponse"] = {
-            "resourceType": "QuestionnaireResponse",
-            "status": "in-progress",
-        }
 
     await load_source_queries(client, fhir_questionnaire, env)
 
     root = {
-        **env["QuestionnaireResponse"],
+        **questionnaire_response,
         "resourceType": "QuestionnaireResponse",
         "questionnaire": fhir_questionnaire.get("id"),
         "item": [],
     }
     env["resource"] = root
-    env["questionnaire"] = env["Questionnaire"]
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"
