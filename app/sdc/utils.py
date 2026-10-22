@@ -198,12 +198,12 @@ async def parse_parameters(
                     ).to_resource()
                 else:
                     variables[param["name"]] = value
-    questionnaire = pop_first(variables, QUESTIONNAIRE_PARAMETER_NAMES)
-    questionnaire_response = pop_first(variables, QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES)
+    questionnaire = pop_aliases(variables, QUESTIONNAIRE_PARAMETER_NAMES)
+    questionnaire_response = pop_aliases(variables, QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES)
     return questionnaire, questionnaire_response, variables
 
 
-def pop_first(variables: dict[str, Any], names: tuple[str, ...]) -> Any:
+def pop_aliases(variables: dict[str, Any], names: tuple[str, ...]) -> Any:
     values = [variables.pop(name, None) for name in names]
     return next((value for value in values if value), None)
 
