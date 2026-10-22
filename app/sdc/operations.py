@@ -30,15 +30,12 @@ async def run_assemble(ctx: SdcContext, questionnaire_id: str) -> dict:
 
 
 async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None):
-    questionnaire, questionnaire_response, variables = await parse_parameters(
-        ctx.user_client, parameters
-    )
+    questionnaire, _, variables = await parse_parameters(ctx.user_client, parameters)
     if questionnaire_id:
         questionnaire = await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
     return await populate(
         ctx.user_client,
         require_param(questionnaire, "Questionnaire"),
-        questionnaire_response,
         variables,
         sdc_api=is_sdc_api(parameters),
     )

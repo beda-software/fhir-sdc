@@ -27,17 +27,17 @@ logger = logging.getLogger(__name__)
 async def populate(
     client: AsyncFHIRClient,
     fhir_questionnaire: dict,
-    questionnaire_response: dict | None,
     variables: dict,
     *,
     sdc_api: bool = False,
 ) -> dict:
-    # FHIRPath fails on an undefined %QuestionnaireResponse in shared source queries.
-    questionnaire_response = questionnaire_response or {
+    populated_response = {
         "resourceType": "QuestionnaireResponse",
         "status": "in-progress",
+        "questionnaire": fhir_questionnaire.get("id"),
+        "item": [],
     }
-    env = build_fhirpath_env(fhir_questionnaire, questionnaire_response, variables)
+    env = build_fhirpath_env(fhir_questionnaire, populated_response, variables)
     exts = fhir_questionnaire.get("extension", [])
     launch_context = get_launch_context(exts)
     if launch_context:
@@ -45,24 +45,20 @@ async def populate(
 
     await load_source_queries(client, fhir_questionnaire, env)
 
-    root = {
-        **questionnaire_response,
-        "resourceType": "QuestionnaireResponse",
-        "questionnaire": fhir_questionnaire.get("id"),
-        "item": [],
-    }
-    env["resource"] = root
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"
         )
 
     for item in fhir_questionnaire["item"]:
-        root["item"].extend(await _handle_item(client, item, env, {}))
+        populated_response["item"].extend(await _handle_item(client, item, env, {}))
 
     if sdc_api:
-        return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
-    return root
+        return {
+            "resourceType": "Parameters",
+            "parameter": [{"name": "response", "resource": populated_response}],
+        }
+    return populated_response
 
 
 async def _handle_item(client, item, env, context):
