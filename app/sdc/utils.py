@@ -17,6 +17,13 @@ from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
+QUESTIONNAIRE_PARAMETER_NAMES = ("questionnaire", "Questionnaire")
+QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES = (
+    "questionnaire-response",
+    "questionnaire_response",
+    "QuestionnaireResponse",
+)
+
 
 def get_type(item, data):
     type = item["type"]
@@ -163,50 +170,64 @@ def is_sdc_api(parameters: dict | None) -> bool:
     return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
 
 
-async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
+async def parse_parameters(
+    client: AsyncFHIRClient, resource: dict
+) -> tuple[dict | None, dict | None, dict[str, Any]]:
+    """Split Parameters into the Questionnaire, the QuestionnaireResponse and the other variables."""
     # TODO: add support for repeating values (with same name)
-    env: dict[str, Any] = {}
+    variables: dict[str, Any] = {}
     for param in resource.get("parameter", []):
         if param["name"] == "context":
             parts = param["part"]
             name = next(p for p in parts if p["name"] == "name")["valueString"]
             value = next(p for p in parts if p["name"] == "content")
             if "resource" in value:
-                env[name] = value["resource"]
+                variables[name] = value["resource"]
             else:
-                env[name] = await client.reference(
+                variables[name] = await client.reference(
                     reference=value["valueReference"]["reference"]
                 ).to_resource()
         elif "resource" in param:
-            env[param["name"]] = param["resource"]
+            variables[param["name"]] = param["resource"]
         else:
             value, kind = parse_parameter_value(param)
             if value:
                 if param["name"] == "subject" and kind == "Reference":
-                    env[param["name"]] = await client.reference(
+                    variables[param["name"]] = await client.reference(
                         reference=value["reference"]
                     ).to_resource()
                 else:
-                    env[param["name"]] = value
-    # Mapping parameters to fhir resource names
-    questionnaire = env.get("questionnaire")
-    if questionnaire:
-        env["Questionnaire"] = questionnaire
-    questionnaire_response = env.get("questionnaire_response")
+                    variables[param["name"]] = value
+    questionnaire = pop_aliases(variables, QUESTIONNAIRE_PARAMETER_NAMES)
+    questionnaire_response = pop_aliases(variables, QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES)
+    return questionnaire, questionnaire_response, variables
+
+
+def pop_aliases(variables: dict[str, Any], names: tuple[str, ...]) -> dict | None:
+    values = [variables.pop(name, None) for name in names]
+    return next((value for value in values if value), None)
+
+
+def build_fhirpath_env(
+    questionnaire: dict, questionnaire_response: dict | None, variables: dict[str, Any]
+) -> dict[str, Any]:
+    env = {**variables, "Questionnaire": questionnaire, "questionnaire": questionnaire}
     if questionnaire_response:
         env["QuestionnaireResponse"] = questionnaire_response
+        env["questionnaire_response"] = questionnaire_response
+        env["resource"] = questionnaire_response
     return env
 
 
-async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str):
-    return await client.resources("Questionnaire").search(_id=questionnaire_id).get()
+async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str) -> dict:
+    return dict(await client.resources("Questionnaire").search(_id=questionnaire_id).get())
 
 
-async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
+async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None) -> dict:
     if not canonical:
         raise MissingParamOperationOutcome("`questionnaire` is required")
 
-    return await resolve_by_canonical(client, "Questionnaire", canonical)
+    return dict(await resolve_by_canonical(client, "Questionnaire", canonical))
 
 
 async def resolve_by_canonical(client: AsyncFHIRClient, resource_type: str, canonical: str):

@@ -1,22 +1,26 @@
+from typing import Any
+
+from fhirpy import AsyncFHIRClient
+
 from app.cached_fhirpath import fhirpath
 
+from .context import load_questionnaire_context
 from .exception import ConstraintCheckOperationOutcome
-from .getters import get_item_constraints, get_launch_context
-from .utils import load_source_queries, validate_context
+from .getters import get_item_constraints
 
 
-async def constraint_check(client, questionnaire, env):
-    launch_context = get_launch_context(questionnaire.get("extension", []))
-    if launch_context:
-        validate_context(launch_context, env)
-    # Source queries are loaded for the constraints only, so mappers do not see them.
-    env = {**env}
-    await load_source_queries(client, questionnaire, env)
+async def constraint_check(
+    client: AsyncFHIRClient,
+    questionnaire: dict,
+    questionnaire_response: dict,
+    variables: dict[str, Any],
+) -> dict:
+    env = await load_questionnaire_context(client, questionnaire, questionnaire_response, variables)
     errors = []
     _constraint_check_for_item(errors, questionnaire, env)
     if len(errors) > 0:
         raise ConstraintCheckOperationOutcome(errors)
-    return env["QuestionnaireResponse"]
+    return questionnaire_response
 
 
 def _constraint_check_for_item(errors, questionnaire_item, env):
