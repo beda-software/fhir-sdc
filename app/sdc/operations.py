@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-import simplejson as json
 from fhirpy import AsyncFHIRClient
 
 from .assemble import assemble
@@ -21,8 +20,7 @@ class SdcContext:
 
 async def run_assemble(ctx: SdcContext, questionnaire_id: str) -> dict:
     questionnaire = await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
-    assembled = await assemble(ctx.user_client, dict(questionnaire))
-    return json.loads(json.dumps(assembled, default=list))
+    return await assemble(ctx.user_client, dict(questionnaire))
 
 
 async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None):

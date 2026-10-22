@@ -318,17 +318,6 @@ def _evaluate(resource, expression, context):
     return fhirpath(resource, expression, context, "r4")
 
 
-async def apply_converter_for_resources(converter_fn, resources: list) -> list:
-    bundle = {
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [{"resource": dict(s)} for s in resources],
-    }
-    fce_bundle = await converter_fn(bundle)
-    result = [s["resource"] for s in fce_bundle["entry"]]
-    return result
-
-
 async def resolve_expression(client, context, expression: Expression, env, path: str):
     try:
         if expression["language"] == "text/fhirpath":
