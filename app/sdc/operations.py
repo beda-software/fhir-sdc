@@ -7,15 +7,8 @@ from .constraint_check import constraint_check
 from .context import get_questionnaire_context
 from .exception import MissingParamOperationOutcome
 from .extract import extract
-from .mappers import load_mappers
 from .populate import populate
-from .utils import (
-    build_fhirpath_env,
-    is_sdc_api,
-    parse_parameters,
-    resolve_questionnaire,
-    resolve_questionnaire_by_id,
-)
+from .utils import is_sdc_api, parse_parameters, resolve_questionnaire, resolve_questionnaire_by_id
 
 
 @dataclass
@@ -67,10 +60,10 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
         )
 
     require_param(questionnaire, "Questionnaire")
-    mappers = await load_mappers(ctx.user_client, questionnaire)
     await constraint_check(ctx.user_client, questionnaire, questionnaire_response, variables)
-    env = build_fhirpath_env(questionnaire, questionnaire_response, variables)
-    return await extract(ctx.user_client, mappers, env, ctx.extract_services)
+    return await extract(
+        ctx.user_client, questionnaire, questionnaire_response, variables, ctx.extract_services
+    )
 
 
 async def run_constraint_check(ctx: SdcContext, parameters: dict):

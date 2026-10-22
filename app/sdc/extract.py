@@ -1,9 +1,17 @@
+from typing import Any
+
 import simplejson as json
 from aiohttp import ClientSession, web
+from fhirpy import AsyncFHIRClient
 from fhirpy.base.exceptions import OperationOutcome
 from funcy.seqs import flatten
 
-from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
+from .mappers import load_mappers
+from .utils import (
+    build_fhirpath_env,
+    check_mappers_bundles_full_url_duplicates,
+    resolve_fpml_template,
+)
 
 
 async def get_external_service_bundle(session, service, template, context):
@@ -49,16 +57,21 @@ async def execute_mappers_bundles(client, mappers_bundles):
     return await client.execute("/", data=result_bundle)
 
 
-async def extract(client, mappings, context, extract_services):
-    """
-    mappings could be a list of Aidbox Mapping resources
-    or plain jute templates
-    """
+async def extract(
+    client: AsyncFHIRClient,
+    questionnaire: dict,
+    questionnaire_response: dict,
+    variables: dict[str, Any],
+    extract_services: dict,
+) -> list:
+    """Render the Questionnaire's mappers and submit the bundles they produce."""
+    mappers = await load_mappers(client, questionnaire)
+    context = build_fhirpath_env(questionnaire, questionnaire_response, variables)
     async with ClientSession() as session:
         resp = []
         mappers_bundles = []
 
-        for mapper in mappings:
+        for mapper in mappers:
             if "resourceType" in mapper and "body" in mapper:
                 # It is custome mapper resource
                 mapper_type = mapper.get("type", "JUTE")
