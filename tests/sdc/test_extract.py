@@ -2,9 +2,9 @@ import pytest
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
-from app.sdc.utils import find_parameter_resource
 from tests.factories import (
     create_questionnaire,
+    find_parameter_resource,
     make_item_constraint_ext,
     make_launch_context_ext,
     make_parameters,

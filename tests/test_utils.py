@@ -4,9 +4,10 @@ import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
 from app.sdc.utils import (
+    build_fhirpath_env,
     is_sdc_api,
     normalize_answer_value,
-    parameter_to_env,
+    parse_parameters,
     prepare_bundle,
     prepare_link_ids,
     resolve_expression,
@@ -279,7 +280,7 @@ def test_is_sdc_api(payload, expected):
         {"name": "launch-patientId", "valueString": "patient-123"},
     ],
 )
-async def test_parameter_to_env_handles_parameters_correctly(launch_param):
+async def test_parse_parameters_splits_parameters(launch_param):
     client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
@@ -300,16 +301,59 @@ async def test_parameter_to_env_handles_parameters_correctly(launch_param):
         ],
     }
 
-    env = await parameter_to_env(client, parameters)
-
-    assert env["questionnaire"] == questionnaire
-    assert env["questionnaire_response"] == questionnaire_response
-    assert env["launch-patientId"] == "patient-123"
-    assert env["Questionnaire"] == questionnaire
-    assert env["QuestionnaireResponse"] == questionnaire_response
+    parsed = await parse_parameters(client, parameters)
+    assert parsed == (questionnaire, questionnaire_response, {"launch-patientId": "patient-123"})
 
 
-async def test_parameter_to_env_skips_empty_launch_param():
+@pytest.mark.parametrize("name", ["questionnaire", "Questionnaire"])
+async def test_parse_parameters_accepts_every_questionnaire_spelling(name):
+    questionnaire = {"resourceType": "Questionnaire", "id": "q-1"}
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [{"name": name, "resource": questionnaire}],
+    }
+
+    parsed = await parse_parameters(MagicMock(), parameters)
+    assert parsed == (questionnaire, None, {})
+
+
+@pytest.mark.parametrize(
+    "name", ["questionnaire-response", "questionnaire_response", "QuestionnaireResponse"]
+)
+async def test_parse_parameters_accepts_every_questionnaire_response_spelling(name):
+    questionnaire_response = {"resourceType": "QuestionnaireResponse", "id": "qr-1"}
+    parameters = {
+        "resourceType": "Parameters",
+        "parameter": [{"name": name, "resource": questionnaire_response}],
+    }
+
+    parsed = await parse_parameters(MagicMock(), parameters)
+    assert parsed == (None, questionnaire_response, {})
+
+
+def test_build_fhirpath_env_exposes_every_alias():
+    questionnaire = {"resourceType": "Questionnaire", "id": "q-1"}
+    questionnaire_response = {"resourceType": "QuestionnaireResponse", "id": "qr-1"}
+
+    env = build_fhirpath_env(questionnaire, questionnaire_response, {"subject": {"id": "p-1"}})
+    assert env == {
+        "subject": {"id": "p-1"},
+        "Questionnaire": questionnaire,
+        "questionnaire": questionnaire,
+        "QuestionnaireResponse": questionnaire_response,
+        "questionnaire_response": questionnaire_response,
+        "resource": questionnaire_response,
+    }
+
+
+def test_build_fhirpath_env_without_questionnaire_response():
+    questionnaire = {"resourceType": "Questionnaire", "id": "q-1"}
+
+    env = build_fhirpath_env(questionnaire, None, {})
+    assert env == {"Questionnaire": questionnaire, "questionnaire": questionnaire}
+
+
+async def test_parse_parameters_skips_empty_launch_param():
     client = MagicMock()
     questionnaire = {
         "resourceType": "Questionnaire",
@@ -330,15 +374,12 @@ async def test_parameter_to_env_skips_empty_launch_param():
         ],
     }
 
-    env = await parameter_to_env(client, parameters)
-
-    assert "launch-patientId" not in env
-    assert env["Questionnaire"] == questionnaire
-    assert env["QuestionnaireResponse"] == questionnaire_response
+    parsed = await parse_parameters(client, parameters)
+    assert parsed == (questionnaire, questionnaire_response, {})
 
 
 @pytest.mark.asyncio
-async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db):
+async def test_parse_parameters_resolves_context_reference(fhir_client, safe_db):
     obs = fhir_client.resource(
         "Observation",
         status="final",
@@ -362,10 +403,10 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters)
+    _, _, variables = await parse_parameters(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
-    resolved = env["Observation"]
+    resolved = variables["Observation"]
     assert resolved["resourceType"] == "Observation"
     assert resolved["id"] == obs.id
     assert resolved["status"] == "final"
@@ -373,7 +414,7 @@ async def test_parameter_to_env_resolves_context_reference(fhir_client, safe_db)
 
 
 @pytest.mark.asyncio
-async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db):
+async def test_parse_parameters_resolves_subject_reference(fhir_client, safe_db):
     patient = fhir_client.resource("Patient")
     await patient.save()
     patient_ref = {"reference": f"Patient/{patient.id}"}
@@ -385,15 +426,15 @@ async def test_parameter_to_env_resolves_subject_reference(fhir_client, safe_db)
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters)
+    _, _, variables = await parse_parameters(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
-    assert env["subject"]["resourceType"] == "Patient"
-    assert env["subject"]["id"] == patient.id
+    assert variables["subject"]["resourceType"] == "Patient"
+    assert variables["subject"]["id"] == patient.id
 
 
 @pytest.mark.asyncio
-async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_client, safe_db):
+async def test_parse_parameters_does_not_resolve_non_subject_reference(fhir_client, safe_db):
     # This test for backward compatibility with non sdc api behavior
     patient = fhir_client.resource("Patient")
     await patient.save()
@@ -406,11 +447,11 @@ async def test_parameter_to_env_does_not_resolve_non_subject_reference(fhir_clie
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters)
+    _, _, variables = await parse_parameters(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is False
-    assert env["PatientRef"]["display"] == "Integration Patient"
-    assert env["PatientRef"]["reference"] == f"Patient/{patient.id}"
+    assert variables["PatientRef"]["display"] == "Integration Patient"
+    assert variables["PatientRef"]["reference"] == f"Patient/{patient.id}"
 
 
 @pytest.mark.asyncio
@@ -446,10 +487,10 @@ async def test_sdc_api_params(fhir_client, safe_db):
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters)
+    _, _, variables = await parse_parameters(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
-    resolved = env["Patient"]
+    resolved = variables["Patient"]
     assert resolved["resourceType"] == "Patient"
     assert resolved["id"] == patient.id
     assert resolved["name"][0]["family"] == "ApiParams"
@@ -483,10 +524,10 @@ async def test_sdc_api_params_with_resource(fhir_client, safe_db):
         ],
     }
 
-    env = await parameter_to_env(fhir_client, parameters)
+    _, _, variables = await parse_parameters(fhir_client, parameters)
 
     assert is_sdc_api(parameters) is True
-    resolved = env["Patient"]
+    resolved = variables["Patient"]
     assert resolved["resourceType"] == "Patient"
     assert resolved["name"][0]["family"] == "ApiParams"
     assert resolved["name"][0]["given"] == ["SdcIntegration"]

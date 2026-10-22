@@ -2,9 +2,9 @@ import json
 
 import pytest
 
-from app.sdc.utils import find_parameter_resource
 from tests.factories import (
     JUTE_BODY_EXTENSION_SD,
+    find_parameter_resource,
     make_item_constraint_ext,
     make_jute_structure_map,
     make_launch_context_ext,
