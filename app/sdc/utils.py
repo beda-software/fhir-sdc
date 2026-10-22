@@ -198,6 +198,24 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     return env
 
 
+def find_parameter_resource(parameters: dict, name: str) -> dict | None:
+    return next(
+        (p.get("resource") for p in parameters.get("parameter", []) if p["name"] == name), None
+    )
+
+
+def build_legacy_extract_input(parameters: dict, questionnaire_response: dict) -> dict:
+    """Name the response as Questionnaire/$extract does, so mappers see the same variables."""
+    others = [p for p in parameters.get("parameter", []) if p["name"] != "questionnaire-response"]
+    return {
+        "resourceType": "Parameters",
+        "parameter": [
+            {"name": "questionnaire_response", "resource": questionnaire_response},
+            *others,
+        ],
+    }
+
+
 async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str):
     return await client.resources("Questionnaire").search(_id=questionnaire_id).get()
 

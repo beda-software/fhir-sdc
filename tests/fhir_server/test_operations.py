@@ -2,12 +2,14 @@ import json
 
 import pytest
 
+from app.sdc.utils import find_parameter_resource
 from tests.factories import (
     JUTE_BODY_EXTENSION_SD,
     make_item_constraint_ext,
     make_jute_structure_map,
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
+    make_sdc_extract_parameters,
     make_source_queries_ext,
     make_target_structure_map_ext,
 )
@@ -663,6 +665,7 @@ async def test_extract_runs_every_mapper_in_extension_order(
             },
         ),
         ("/Questionnaire/$extract", {"resourceType": "Patient"}),
+        ("/QuestionnaireResponse/$extract", {"resourceType": "Parameters", "parameter": []}),
         (
             "/QuestionnaireResponse/$constraint-check",
             {
@@ -736,3 +739,62 @@ async def test_extract_refuses_a_structure_map_without_a_jute_body(
     resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
     assert resp.status == 422
     assert "jute body" in (await resp.json())["issue"][0]["diagnostics"]
+
+
+async def test_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
+
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
+    )
+    assert resp.status == 200
+
+    return_bundle = find_parameter_resource(await resp.json(), "return")
+    assert [entry["request"]["url"] for entry in return_bundle["entry"]] == [
+        "Patient/embedded-jute-patient"
+    ]
+
+    patients = await fhir_client.resources("Patient").search(_id="embedded-jute-patient").fetch()
+    assert patients == []
+
+
+async def test_stored_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = fhir_client.resource("QuestionnaireResponse", status="completed", questionnaire=q.id)
+    await qr.save()
+
+    resp = await fhir_server_client.post(f"/QuestionnaireResponse/{qr.id}/$extract")
+    assert resp.status == 200
+    assert len(find_parameter_resource(await resp.json(), "return")["entry"]) == 1
+
+
+async def test_questionnaire_response_extract_reports_nothing_to_extract(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource("Questionnaire", status="active", item=[])
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
+
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
+    )
+    result = await resp.json()
+    assert find_parameter_resource(result, "return") is None
+    assert find_parameter_resource(result, "issues")["issue"][0]["severity"] == "information"

@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from fhirpy.base.exceptions import OperationOutcome
 
 from app.sdc.utils import (
     is_sdc_api,
@@ -10,9 +11,11 @@ from app.sdc.utils import (
     prepare_link_ids,
     resolve_expression,
     resolve_fpml_template,
+    resolve_questionnaire,
     resolve_string_template,
 )
 from app.utils import build_user_client
+from tests.factories import create_questionnaire
 
 
 def test_prepare_bundle_undefined_context():
@@ -574,3 +577,25 @@ def test_user_client_forwards_only_the_callers_own_headers():
         "Authorization": "Bearer caller-token",
         "x-correlation-id": "abc",
     }
+
+
+@pytest.mark.asyncio
+async def test_resolve_questionnaire_requires_a_canonical(fhir_client, safe_db):
+    with pytest.raises(OperationOutcome, match="`questionnaire` is required"):
+        await resolve_questionnaire(fhir_client, None)
+
+
+@pytest.mark.asyncio
+async def test_resolve_questionnaire_reports_an_unknown_canonical(fhir_client, safe_db):
+    with pytest.raises(OperationOutcome, match="is not found"):
+        await resolve_questionnaire(fhir_client, "http://example.com/Questionnaire/missing")
+
+
+@pytest.mark.asyncio
+async def test_resolve_questionnaire_refuses_an_ambiguous_canonical(fhir_client, safe_db):
+    url = "http://example.com/Questionnaire/versioned"
+    await create_questionnaire(fhir_client, {"status": "active", "url": url, "version": "1.0"})
+    await create_questionnaire(fhir_client, {"status": "active", "url": url, "version": "2.0"})
+
+    with pytest.raises(OperationOutcome, match="several versions"):
+        await resolve_questionnaire(fhir_client, url)

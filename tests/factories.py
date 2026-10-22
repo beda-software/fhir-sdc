@@ -30,10 +30,6 @@ def make_sdc_extract_parameters(questionnaire_response, questionnaire=None):
     return {"resourceType": "Parameters", "parameter": parameter}
 
 
-def get_parameter_resource(parameters, name):
-    return next((p["resource"] for p in parameters["parameter"] if p["name"] == name), None)
-
-
 def make_questionnaire(questionnaire):
     return {
         **questionnaire,
