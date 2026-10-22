@@ -203,7 +203,7 @@ async def parse_parameters(
     return questionnaire, questionnaire_response, variables
 
 
-def pop_aliases(variables: dict[str, Any], names: tuple[str, ...]) -> Any:
+def pop_aliases(variables: dict[str, Any], names: tuple[str, ...]) -> dict | None:
     values = [variables.pop(name, None) for name in names]
     return next((value for value in values if value), None)
 

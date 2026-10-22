@@ -22,7 +22,9 @@ async def run_assemble(ctx: SdcContext, questionnaire_id: str) -> dict:
     return await assemble(ctx.user_client, questionnaire)
 
 
-async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None):
+async def run_populate(
+    ctx: SdcContext, parameters: dict, questionnaire_id: str | None = None
+) -> dict:
     questionnaire, _, variables = await parse_parameters(ctx.user_client, parameters)
     if questionnaire_id:
         questionnaire = await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
@@ -34,7 +36,7 @@ async def run_populate(ctx: SdcContext, parameters: dict, questionnaire_id: str 
     )
 
 
-async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | None = None):
+async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | None = None) -> list:
     route_questionnaire = (
         await resolve_questionnaire_by_id(ctx.user_client, questionnaire_id)
         if questionnaire_id
@@ -66,7 +68,7 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
     )
 
 
-async def run_constraint_check(ctx: SdcContext, parameters: dict):
+async def run_constraint_check(ctx: SdcContext, parameters: dict) -> dict:
     questionnaire, questionnaire_response, variables = await parse_parameters(
         ctx.user_client, parameters
     )
@@ -78,7 +80,7 @@ async def run_constraint_check(ctx: SdcContext, parameters: dict):
     )
 
 
-async def run_context(ctx: SdcContext, parameters: dict):
+async def run_context(ctx: SdcContext, parameters: dict) -> dict:
     questionnaire, questionnaire_response, variables = await parse_parameters(
         ctx.user_client, parameters
     )
