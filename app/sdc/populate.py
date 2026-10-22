@@ -1,25 +1,18 @@
 import logging
+from typing import Any
 
 from fhirpy import AsyncFHIRClient
 from funcy import is_list
 
+from .context import load_questionnaire_context
 from .getters import (
     get_choice_column_paths,
     get_initial_expression,
     get_item_context,
     get_item_population_context,
-    get_launch_context,
     get_variable,
 )
-from .utils import (
-    build_fhirpath_env,
-    get_type,
-    load_source_queries,
-    make_value_key,
-    normalize_answer_value,
-    resolve_expression,
-    validate_context,
-)
+from .utils import get_type, make_value_key, normalize_answer_value, resolve_expression
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +20,7 @@ logger = logging.getLogger(__name__)
 async def populate(
     client: AsyncFHIRClient,
     fhir_questionnaire: dict,
-    variables: dict,
+    variables: dict[str, Any],
     *,
     sdc_api: bool = False,
 ) -> dict:
@@ -37,14 +30,10 @@ async def populate(
         "questionnaire": fhir_questionnaire.get("id"),
         "item": [],
     }
-    env = build_fhirpath_env(fhir_questionnaire, populated_response, variables)
+    env = await load_questionnaire_context(
+        client, fhir_questionnaire, populated_response, variables
+    )
     exts = fhir_questionnaire.get("extension", [])
-    launch_context = get_launch_context(exts)
-    if launch_context:
-        validate_context(launch_context, env)
-
-    await load_source_queries(client, fhir_questionnaire, env)
-
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"

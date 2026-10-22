@@ -4,7 +4,7 @@ from fhirpy import AsyncFHIRClient
 
 from .assemble import assemble
 from .constraint_check import constraint_check
-from .context import get_questionnaire_context
+from .context import load_questionnaire_context
 from .exception import MissingParamOperationOutcome
 from .extract import extract
 from .populate import populate
@@ -82,7 +82,7 @@ async def run_context(ctx: SdcContext, parameters: dict):
     questionnaire, questionnaire_response, variables = await parse_parameters(
         ctx.user_client, parameters
     )
-    return await get_questionnaire_context(
+    return await load_questionnaire_context(
         ctx.user_client,
         require_param(questionnaire, "Questionnaire"),
         questionnaire_response,
