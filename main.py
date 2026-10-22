@@ -30,14 +30,6 @@ async def create_gunicorn_app():
         return create_app()
 
 
-async def init_aidbox_app(app):
-    from aidbox_python_sdk.main import init_client, register_app
-
-    app["client"] = await init_client(app["settings"])
-    await register_app(app["sdk"], app["client"])
-    yield
-
-
 # TODO: Add config param for aidbox-python-sdk pytest plugin
 # to select create_app
 def create_app():

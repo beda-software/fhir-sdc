@@ -2,7 +2,8 @@ from dataclasses import dataclass
 
 from fhirpy import AsyncFHIRClient
 
-from app.utils import build_user_client
+from app.sdc.operations import SdcContext
+from app.utils import build_user_client, get_extract_services
 
 from .sdk import sdk
 
@@ -42,7 +43,7 @@ class AidboxSdcRequest:
     extracted from original aidbox request
     """
 
-    user_client: AsyncFHIRClient
+    context: SdcContext
     route_params: dict
     resource: dict
     request: dict
@@ -52,7 +53,10 @@ def prepare_args(fn):
     def wrap(operation, request):
         route_client = resolve_fhir_client(operation, request)
         request = AidboxSdcRequest(
-            build_user_client(request["headers"], route_client.url),
+            SdcContext(
+                build_user_client(request["headers"], route_client.url),
+                get_extract_services(request["app"]),
+            ),
             request["route-params"],
             request.get("resource", None),
             request,

@@ -1,5 +1,7 @@
 import os
 
+import simplejson as json
+from aiohttp import web
 from fhirpy import AsyncFHIRClient
 
 # The incoming request's own framing and addressing; forwarding them would describe the wrong request.
@@ -34,3 +36,8 @@ def build_user_client(headers, base_url) -> AsyncFHIRClient:
         name: value for name, value in headers.items() if name.lower() not in NOT_FORWARDED_HEADERS
     }
     return AsyncFHIRClient(base_url, extra_headers=forwarded)
+
+
+def render_json(result) -> web.Response:
+    """simplejson keeps the Decimals that FHIRPath and the mappers produce."""
+    return web.json_response(result, dumps=json.dumps)

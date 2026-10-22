@@ -641,3 +641,98 @@ async def test_extract_runs_every_mapper_in_extension_order(
         "from-embedded-1",
         "from-embedded-2",
     ]
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        (
+            "/QuestionnaireResponse/$constraint-check",
+            {"resourceType": "Parameters", "parameter": []},
+        ),
+        (
+            "/Questionnaire/$extract",
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "Questionnaire",
+                        "resource": {"resourceType": "Questionnaire", "status": "active"},
+                    }
+                ],
+            },
+        ),
+        ("/Questionnaire/$extract", {"resourceType": "Patient"}),
+        (
+            "/QuestionnaireResponse/$constraint-check",
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "Questionnaire",
+                        "resource": {"resourceType": "Questionnaire", "status": "active"},
+                    }
+                ],
+            },
+        ),
+    ],
+)
+async def test_incomplete_input_is_a_missing_parameter(fhir_server_client, path, body):
+    resp = await fhir_server_client.post(path, json=body)
+    assert resp.status == 422
+    assert (await resp.json())["issue"][0]["code"] == "missing-parameter"
+
+
+async def test_extract_resolves_a_versioned_structure_map_canonical(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = await save_jute_structure_map(fhir_client, "versioned-sm", "from-versioned-sm")
+    structure_map["version"] = "1.0.0"
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext(f"{structure_map['url']}|1.0.0")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    assert await extracted_patient_ids(resp) == ["from-versioned-sm"]
+
+
+async def test_extract_refuses_a_structure_map_without_a_jute_body(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = fhir_client.resource(
+        "StructureMap",
+        id="plain-sm",
+        url="http://example.com/StructureMap/plain-sm",
+        name="plain-sm",
+        status="active",
+        group=[
+            {
+                "name": "main",
+                "typeMode": "none",
+                "input": [{"name": "source", "mode": "source"}],
+                "rule": [{"name": "noop", "source": [{"context": "source"}]}],
+            }
+        ],
+    )
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext("StructureMap/plain-sm")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 422
+    assert "jute body" in (await resp.json())["issue"][0]["diagnostics"]

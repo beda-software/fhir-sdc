@@ -198,24 +198,35 @@ async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
     return env
 
 
+async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str):
+    return await client.resources("Questionnaire").search(_id=questionnaire_id).get()
+
+
 async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None):
-    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     if not canonical:
         raise MissingParamOperationOutcome("`questionnaire` is required")
 
+    return await resolve_by_canonical(client, "Questionnaire", canonical)
+
+
+async def resolve_by_canonical(client: AsyncFHIRClient, resource_type: str, canonical: str):
+    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
     url, _, version = canonical.partition("|")
     search = {"url": url, "version": version} if version else {"url": url}
-    matches = await client.resources("Questionnaire").search(**search).limit(2).fetch()
+    matches = await client.resources(resource_type).search(**search).limit(2).fetch()
     if len(matches) > 1:
-        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` matches several versions")
+        raise MissingParamOperationOutcome(
+            f"{resource_type} `{canonical}` matches several versions"
+        )
 
-    questionnaire = matches[0] if matches else None
-    if questionnaire is None:
-        questionnaire = await client.resources("Questionnaire").search(_id=url).first()
-    if questionnaire is None:
-        raise MissingParamOperationOutcome(f"Questionnaire `{canonical}` is not found")
+    if matches:
+        return matches[0]
 
-    return questionnaire
+    resource = await client.resources(resource_type).search(_id=url.rsplit("/", 1)[-1]).first()
+    if resource is None:
+        raise MissingParamOperationOutcome(f"{resource_type} `{canonical}` is not found")
+
+    return resource
 
 
 def parse_parameter_value(parameter) -> tuple[Any, str]:
@@ -305,17 +316,6 @@ def resolve_fpml_template(template, context):
 def _evaluate(resource, expression, context):
     """Evaluator for fpml, whose signature has no model."""
     return fhirpath(resource, expression, context, "r4")
-
-
-async def apply_converter_for_resources(converter_fn, resources: list) -> list:
-    bundle = {
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [{"resource": dict(s)} for s in resources],
-    }
-    fce_bundle = await converter_fn(bundle)
-    result = [s["resource"] for s in fce_bundle["entry"]]
-    return result
 
 
 async def resolve_expression(client, context, expression: Expression, env, path: str):
