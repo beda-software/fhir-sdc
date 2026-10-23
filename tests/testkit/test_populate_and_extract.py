@@ -4,9 +4,9 @@ import fhirpy_types_r4b as r4b
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-from app.aidbox.settings import settings
 from fhir_sdc_testkit import ExtractionError, answer, launch_context, populate_and_extract
 from tests.factories import (
+    create_mapping,
     create_questionnaire,
     make_initial_expression_ext,
     make_item_constraint_ext,
@@ -16,50 +16,23 @@ from tests.factories import (
 
 
 @pytest.fixture
-def strict_constraints(monkeypatch):
-    """A constraint expression states what must hold; the legacy behaviour this suite runs inverts it."""
-    monkeypatch.setattr(settings, "CONSTRAINT_LEGACY_BEHAVIOR", False)
-
-
-async def create_mapping(fhir_client, body):
-    attribute = fhir_client.resource(
-        "Attribute",
-        type={"resourceType": "Entity", "id": "code"},
-        path=["type"],
-        resource={"resourceType": "Entity", "id": "Mapping"},
-    )
-    await attribute.save()
-    mapping = fhir_client.resource("Mapping", type="FHIRPath", body=body)
-    await mapping.save()
-    return mapping
-
-
-def build_patient_bundle(bundle_type="transaction", **patient):
-    return {
-        "resourceType": "Bundle",
-        "type": bundle_type,
-        "entry": [
-            {
-                "request": {"url": "/Patient", "method": "POST"},
-                "resource": {"resourceType": "Patient", **patient},
-            }
-        ],
-    }
-
-
-def read_answer(link_id):
-    return (
-        f"{{{{ QuestionnaireResponse.repeat(item).where(linkId='{link_id}').answer.valueString }}}}"
-    )
+async def subject(typed_fhir_client):
+    patient = await typed_fhir_client.create(r4b.Patient())
+    return r4b.Reference(reference=f"Patient/{patient.id}")
 
 
 async def test_populated_and_typed_answers_reach_the_mapper(
-    fhir_client, typed_fhir_client, safe_db
+    fhir_client, typed_fhir_client, subject, safe_db
 ):
     mapping = await create_mapping(
         fhir_client,
         build_patient_bundle(
-            name=[{"family": read_answer("family"), "given": [read_answer("given")]}]
+            name=[
+                {
+                    "family": build_answer_template("family"),
+                    "given": [build_answer_template("given")],
+                }
+            ]
         ),
     )
     launch_patient = await typed_fhir_client.create(
@@ -87,7 +60,7 @@ async def test_populated_and_typed_answers_reach_the_mapper(
     response = await populate_and_extract(
         typed_fhir_client,
         questionnaire.id,
-        parameters=launch_context({"LaunchPatient": launch_patient}),
+        parameters=launch_context({"LaunchPatient": launch_patient}, subject=subject),
         answers={"family": [answer(valueString="Test")]},
     )
     assert response.status == "completed"
@@ -96,7 +69,9 @@ async def test_populated_and_typed_answers_reach_the_mapper(
     assert created.name[0].given == ["Leo"]
 
 
-async def test_repeating_group_occurrences_are_saved(fhir_client, typed_fhir_client, safe_db):
+async def test_repeating_group_occurrences_are_saved(
+    fhir_client, typed_fhir_client, subject, safe_db
+):
     questionnaire = await create_questionnaire(
         fhir_client,
         {
@@ -115,6 +90,7 @@ async def test_repeating_group_occurrences_are_saved(fhir_client, typed_fhir_cli
     response = await populate_and_extract(
         typed_fhir_client,
         questionnaire.id,
+        parameters=launch_context({}, subject=subject),
         answers={
             "people": [
                 {"family": [answer(valueString="First")]},
@@ -128,7 +104,7 @@ async def test_repeating_group_occurrences_are_saved(fhir_client, typed_fhir_cli
 
 
 async def test_violated_constraint_refuses_the_submission(
-    fhir_client, typed_fhir_client, strict_constraints, safe_db
+    fhir_client, typed_fhir_client, subject, safe_db
 ):
     questionnaire = await create_questionnaire(
         fhir_client,
@@ -160,14 +136,38 @@ async def test_violated_constraint_refuses_the_submission(
         await populate_and_extract(
             typed_fhir_client,
             questionnaire.id,
+            parameters=launch_context({}, subject=subject),
             answers={"given": [answer(valueString="Leo")]},
         )
     assert refused.value.resource["issue"][0]["code"] == "family-required"
 
 
-async def test_rejected_mapper_entry_raises(fhir_client, typed_fhir_client, safe_db):
+async def test_rejected_transaction_raises(fhir_client, typed_fhir_client, subject, safe_db):
     mapping = await create_mapping(
-        fhir_client, build_patient_bundle("batch", gender=read_answer("gender"))
+        fhir_client, build_patient_bundle(gender=build_answer_template("gender"))
+    )
+    questionnaire = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"linkId": "gender", "type": "string"}],
+        },
+    )
+
+    with pytest.raises(OperationOutcome) as rejected:
+        await populate_and_extract(
+            typed_fhir_client,
+            questionnaire.id,
+            parameters=launch_context({}, subject=subject),
+            answers={"gender": [answer(valueString="not-a-gender")]},
+        )
+    assert rejected.value.resource["issue"][0]["code"] == "invalid"
+
+
+async def test_rejected_batch_entry_raises(fhir_client, typed_fhir_client, subject, safe_db):
+    mapping = await create_mapping(
+        fhir_client, build_patient_bundle("batch", gender=build_answer_template("gender"))
     )
     questionnaire = await create_questionnaire(
         fhir_client,
@@ -182,5 +182,25 @@ async def test_rejected_mapper_entry_raises(fhir_client, typed_fhir_client, safe
         await populate_and_extract(
             typed_fhir_client,
             questionnaire.id,
+            parameters=launch_context({}, subject=subject),
             answers={"gender": [answer(valueString="not-a-gender")]},
         )
+
+
+def build_patient_bundle(bundle_type="transaction", **patient):
+    return {
+        "resourceType": "Bundle",
+        "type": bundle_type,
+        "entry": [
+            {
+                "request": {"url": "/Patient", "method": "POST"},
+                "resource": {"resourceType": "Patient", **patient},
+            }
+        ],
+    }
+
+
+def build_answer_template(link_id):
+    return (
+        f"{{{{ QuestionnaireResponse.repeat(item).where(linkId='{link_id}').answer.valueString }}}}"
+    )

@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from fhirpathpy import compile
+import fhirpathpy
 from fhirpathpy.models import models
 
 FHIRPATH_CACHE_SIZE = 2**14
@@ -29,7 +29,7 @@ options = {
 @lru_cache(maxsize=FHIRPATH_CACHE_SIZE)
 def cached_compile(expression, model=None):
     m = models.get(model)
-    return compile(expression, m, options)
+    return fhirpathpy.compile(expression, m, options)
 
 
 def fhirpath(context, expression, env=None, model=None):

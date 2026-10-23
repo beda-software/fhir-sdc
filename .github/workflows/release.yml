@@ -34,9 +34,11 @@ jobs:
           docker buildx build --platform linux/arm64,linux/amd64
           --cache-from ${{ env.CACHE_IMAGE }} --push
           --tag ${{ env.BUILD_IMAGE }}:${{ steps.extract_branch.outputs.branch }} --tag ${{ env.CACHE_IMAGE }} .
+  TestTestkit:
+    uses: ./.github/workflows/testkit.yml
   PublishTestkit:
     runs-on: ubuntu-latest
-    needs: [BuildAndTest]
+    needs: [BuildAndTest, TestTestkit]
     environment: pypi
     permissions:
       contents: read
@@ -51,11 +53,6 @@ jobs:
       - uses: astral-sh/setup-uv@v5
         with:
           python-version: "3.11"
-      - run: uv sync --locked
-      - run: uv run ruff format --check .
-      - run: uv run ruff check .
-      - run: uv run mypy
-      - run: uv run pytest
       - run: uv build
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:

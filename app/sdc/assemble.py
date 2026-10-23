@@ -25,12 +25,12 @@ def _launch_context_key(ext):
 
 WHITELISTED_EXTENSION_URLS = {
     LAUNCH_CONTEXT_URL: _launch_context_key,
-    QUESTIONNAIRE_MAPPER_URL: lambda ext: ext.get("valueReference", {})
-    .get("reference", "")
-    .split("/")[-1],
-    SOURCE_QUERIES_URL: lambda ext: ext.get("valueReference", {})
-    .get("reference", "")
-    .removeprefix("#"),
+    QUESTIONNAIRE_MAPPER_URL: lambda ext: (
+        ext.get("valueReference", {}).get("reference", "").split("/")[-1]
+    ),
+    SOURCE_QUERIES_URL: lambda ext: (
+        ext.get("valueReference", {}).get("reference", "").removeprefix("#")
+    ),
     TARGET_STRUCTURE_MAP_URL: lambda ext: ext.get("valueCanonical"),
     CQF_LIBRARY_URL: lambda ext: ext.get("valueCanonical"),
 }
@@ -116,10 +116,10 @@ def _collect_sub_questionnaire_ids_map(questionnaire_items, sub_questionnaire_id
 async def _load_sub_questionnaires(
     client,
     questionnaire_items,
-    prev_sub_questionnaire_ids_map: dict = {},
+    prev_sub_questionnaire_ids_map: dict | None = None,
 ):
     sub_questionnaire_ids_map = _collect_sub_questionnaire_ids_map(
-        questionnaire_items, prev_sub_questionnaire_ids_map
+        questionnaire_items, prev_sub_questionnaire_ids_map or {}
     )
 
     not_loaded = [k for k, v in sub_questionnaire_ids_map.items() if v is None]
@@ -140,10 +140,7 @@ async def _load_sub_questionnaires(
         if fhir_subq.get("item"):
             subqs_all_items.extend(fhir_subq["item"])
 
-    sub_questionnaire_ids_map = await _load_sub_questionnaires(
-        client, subqs_all_items, sub_questionnaire_ids_map
-    )
-    return sub_questionnaire_ids_map
+    return await _load_sub_questionnaires(client, subqs_all_items, sub_questionnaire_ids_map)
 
 
 def _load_sub_questionnaire(sub_exts, root_contained, parent_item, item, sub_questionnaire_ids_map):

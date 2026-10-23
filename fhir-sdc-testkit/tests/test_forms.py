@@ -1,14 +1,8 @@
 import fhirpy_types_r4b as r4b
 import pytest
 
-from fhir_sdc_testkit import (
-    ExtractionError,
-    answer,
-    fill_questionnaire_response,
-    launch_context,
-    raise_for_extraction_errors,
-    read_populated,
-)
+from fhir_sdc_testkit import answer
+from fhir_sdc_testkit.forms import fill_questionnaire_response, get_populated_response
 
 QUESTIONNAIRE = r4b.Questionnaire(
     id="survey",
@@ -53,25 +47,7 @@ FRANCE = answer(valueCoding=r4b.Coding(code="FR"))
 PHONE = answer(valueString="+1 555 0100")
 OTHER_PHONE = answer(valueString="+1 555 0111")
 LABEL = answer(valueString="home")
-PATIENT = r4b.Patient(id="patient-1")
-PRACTITIONER = r4b.Practitioner(id="practitioner-1")
-REJECTED = {"response": {"status": "422", "outcome": {"issue": []}}}
 GERMANY = answer(valueCoding=r4b.Coding(code="DE"))
-
-
-def build_populated(*items: r4b.QuestionnaireResponseItem) -> r4b.QuestionnaireResponse:
-    return r4b.QuestionnaireResponse(status="in-progress", item=list(items))
-
-
-def build_item(
-    link_id: str,
-    *,
-    value: r4b.QuestionnaireResponseItemAnswer | None = None,
-    items: list[r4b.QuestionnaireResponseItem] | None = None,
-) -> r4b.QuestionnaireResponseItem:
-    return r4b.QuestionnaireResponseItem(
-        linkId=link_id, answer=[value] if value else None, item=items
-    )
 
 
 def test_top_level_answer_is_added() -> None:
@@ -191,43 +167,6 @@ def test_link_id_outside_a_repeating_group_raises_inside_it() -> None:
         )
 
 
-def test_launch_context_resource_becomes_a_context_parameter() -> None:
-    parameters = launch_context({"Patient": PATIENT})
-    assert parameters == build_parameters(build_context("Patient", resource=PATIENT))
-
-
-def test_launch_context_reference_becomes_reference_content() -> None:
-    reference = r4b.Reference(reference="Patient/patient-1")
-
-    parameters = launch_context({"Patient": reference})
-    assert parameters == build_parameters(build_context("Patient", reference=reference))
-
-
-def test_launch_context_list_becomes_one_parameter_per_resource() -> None:
-    parameters = launch_context({"Authors": [PATIENT, PRACTITIONER]})
-    assert parameters == build_parameters(
-        build_context("Authors", resource=PATIENT), build_context("Authors", resource=PRACTITIONER)
-    )
-
-
-def build_parameters(*parameters: r4b.ParametersParameter) -> r4b.Parameters:
-    return r4b.Parameters(parameter=list(parameters))
-
-
-def build_context(
-    name: str, *, resource: r4b.AnyResource | None = None, reference: r4b.Reference | None = None
-) -> r4b.ParametersParameter:
-    content = (
-        r4b.ParametersParameter(name="content", valueReference=reference)
-        if reference
-        else r4b.ParametersParameter(name="content", resource=resource)
-    )
-    return r4b.ParametersParameter(
-        name="context",
-        part=[r4b.ParametersParameter(name="name", valueString=name), content],
-    )
-
-
 def test_item_under_a_question_is_addressed_by_link_id() -> None:
     detail = answer(valueString="peanuts")
 
@@ -250,28 +189,13 @@ def test_populated_parameters_are_unwrapped() -> None:
         ],
     }
 
-    response = read_populated(populated)
+    response = get_populated_response(populated)
     assert response.status == "in-progress"
 
 
-def test_populated_response_is_read_as_is() -> None:
-    response = read_populated({"resourceType": "QuestionnaireResponse", "status": "in-progress"})
-    assert response.status == "in-progress"
-
-
-def test_rejected_entry_raises() -> None:
-    extracted = [{"entry": [REJECTED]}]
-
-    with pytest.raises(ExtractionError, match="422"):
-        raise_for_extraction_errors(extracted)
-
-
-def test_accepted_entries_pass() -> None:
-    extracted = [
-        {"entry": [{"response": {"status": "201 Created"}}, {"response": {"status": "200"}}]}
-    ]
-
-    raise_for_extraction_errors(extracted)
+def test_bare_populated_response_raises() -> None:
+    with pytest.raises(ValueError, match="launch context"):
+        get_populated_response({"resourceType": "QuestionnaireResponse", "status": "in-progress"})
 
 
 def test_items_follow_questionnaire_order() -> None:
@@ -307,64 +231,16 @@ def test_repeating_occurrences_keep_their_order_after_sorting() -> None:
     ]
 
 
-def test_operation_outcome_raises() -> None:
-    outcome = {
-        "resourceType": "OperationOutcome",
-        "issue": [{"severity": "error", "code": "processing"}],
-    }
-
-    with pytest.raises(ExtractionError, match="processing"):
-        raise_for_extraction_errors(outcome)
+def build_populated(*items: r4b.QuestionnaireResponseItem) -> r4b.QuestionnaireResponse:
+    return r4b.QuestionnaireResponse(status="in-progress", item=list(items))
 
 
-def test_unexpected_response_raises() -> None:
-    with pytest.raises(ExtractionError, match="Bundle"):
-        raise_for_extraction_errors({"resourceType": "Bundle", "entry": [REJECTED]})
-
-
-def test_parameters_return_bundle_is_checked() -> None:
-    extracted = {
-        "resourceType": "Parameters",
-        "parameter": [
-            {"name": "return", "resource": {"resourceType": "Bundle", "entry": [REJECTED]}}
-        ],
-    }
-
-    with pytest.raises(ExtractionError, match="422"):
-        raise_for_extraction_errors(extracted)
-
-
-def test_entries_without_a_response_are_left_alone() -> None:
-    transaction = {
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [{"request": {"method": "POST", "url": "Patient"}}],
-    }
-
-    raise_for_extraction_errors([transaction])
-
-
-def build_issues(*severities: str) -> dict[str, object]:
-    return {
-        "resourceType": "Parameters",
-        "parameter": [
-            {
-                "name": "issues",
-                "resource": {
-                    "resourceType": "OperationOutcome",
-                    "issue": [
-                        {"severity": severity, "code": "processing"} for severity in severities
-                    ],
-                },
-            }
-        ],
-    }
-
-
-def test_error_issue_raises() -> None:
-    with pytest.raises(ExtractionError, match="error"):
-        raise_for_extraction_errors(build_issues("warning", "error"))
-
-
-def test_warning_issues_pass() -> None:
-    raise_for_extraction_errors(build_issues("warning", "information"))
+def build_item(
+    link_id: str,
+    *,
+    value: r4b.QuestionnaireResponseItemAnswer | None = None,
+    items: list[r4b.QuestionnaireResponseItem] | None = None,
+) -> r4b.QuestionnaireResponseItem:
+    return r4b.QuestionnaireResponseItem(
+        linkId=link_id, answer=[value] if value else None, item=items
+    )

@@ -16,21 +16,8 @@ def get_aidbox_fhir_client(aidbox_client):
     )
 
 
-def get_typed_fhir_client(aidbox_client):
-    """fhirpy cannot serialize pydantic resources without `dump_resource`."""
-    return AsyncFHIRClient(
-        f"{aidbox_client.url}/fhir",
-        authorization=aidbox_client.authorization,
-        extra_headers=aidbox_client.extra_headers,
-        dump_resource=lambda resource: resource.model_dump(),
-    )
-
-
 def get_organization_client(aidbox_client, organization):
-    if isinstance(organization, str):
-        org_id = organization
-    else:
-        org_id = organization.id
+    org_id = organization if isinstance(organization, str) else organization.id
     return AsyncFHIRClient(
         f"{aidbox_client.url}/Organization/{org_id}/fhir/",
         authorization=aidbox_client.authorization,
@@ -78,8 +65,8 @@ def prepare_args(fn):
 
 def aidbox_operation(method, path, **kwrgs):
     def register(fn):
-        sdk.operation(method, ["Organization", {"name": "org_id"}, "fhir"] + path, **kwrgs)(fn)
-        sdk.operation(method, ["fhir"] + path, **kwrgs)(fn)
+        sdk.operation(method, ["Organization", {"name": "org_id"}, "fhir", *path], **kwrgs)(fn)
+        sdk.operation(method, ["fhir", *path], **kwrgs)(fn)
         return fn
 
     return register

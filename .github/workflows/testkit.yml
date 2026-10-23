@@ -8,6 +8,7 @@ on:
     paths:
       - "fhir-sdc-testkit/**"
       - ".github/workflows/testkit.yml"
+  workflow_call:
 defaults:
   run:
     working-directory: fhir-sdc-testkit

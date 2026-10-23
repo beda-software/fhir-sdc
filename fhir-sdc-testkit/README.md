@@ -1,16 +1,16 @@
 # fhir-sdc-testkit
 
-Test an SDC Questionnaire and its Mapping the way a form is really filled: `$populate` runs, answers are placed at
-each `linkId`'s nesting, the QuestionnaireResponse is saved, then `$extract` runs — checking `itemConstraint`s and
-raising `OperationOutcome` on a violation. Only what a user types (or the frontend calculates) is faked;
-`initialExpression`, source queries, constraints and the Mapping run against a real [fhir-sdc](../README.md) server.
+Test an SDC Questionnaire and its extraction the way a form is really filled: `$populate` runs, answers are placed at
+each `linkId`'s nesting, the QuestionnaireResponse is saved, then `QuestionnaireResponse/$extract` runs and the
+bundle it returns is submitted. Only what a user types (or the frontend calculates) is faked; everything else runs on
+a real server implementing the [SDC](https://build.fhir.org/ig/HL7/sdc/) operations, such as
+[fhir-sdc](../README.md).
 
 ```sh
 pip install fhir-sdc-testkit
 ```
 
-It is released from the same tag as the server, so install the version you run:
-`fhir-sdc-testkit==3.1.0` goes with `bedasoftware/fhir-sdc:3.1.0`.
+It is released from the fhir-sdc repository, with the same version as the fhir-sdc release it is tested against.
 
 ## The client
 
@@ -38,7 +38,9 @@ async def test_intake_records_the_address(fhir_client):
     await populate_and_extract(
         fhir_client,
         "patient-intake",
-        parameters=launch_context({"Patient": patient}),
+        parameters=launch_context(
+            {"Patient": patient}, subject=r4b.Reference(reference=f"Patient/{patient.id}")
+        ),
         answers={"postal-code": [answer(valueString="75001")]},
     )
 
@@ -46,8 +48,8 @@ async def test_intake_records_the_address(fhir_client):
     assert updated.address[0].postalCode == "75001"
 ```
 
-`populate_and_extract` returns the saved QuestionnaireResponse that the extraction ran on. Assert on the resources the
-Mapping produced by fetching them from the server.
+`populate_and_extract` returns the saved QuestionnaireResponse that the extraction ran on. Assert on the resources
+the extraction produced by fetching them from the server.
 
 ### Answers
 
@@ -76,30 +78,29 @@ Inside a set, `linkId`s are flat again. A `linkId` that does not belong to the g
 
 ### Parameters
 
-`parameters` is passed verbatim to `$populate` and merged into the `$extract` call, so anything the server accepts can
-go in it. `launch_context()` builds the common case — a resource or a `Reference` under each context name:
+`parameters` is required: it is passed to `$populate` and merged into the `$extract` call, so anything the server
+accepts can go in it. `launch_context()` builds the SDC `$populate` input — a resource or a `Reference` under each
+context name, and the optional `subject`. Pass at least one of them: a `$populate` reply that is not `Parameters`
+raises `ValueError`.
 
 ```python
 parameters=launch_context({"Patient": patient, "Author": r4b.Reference(reference="Practitioner/1")})
 ```
 
-A list under a name builds one `context` parameter per resource, but the server keeps only the last of them —
-until that is fixed, treat the list form as unsupported.
+A list under a name builds one `context` with a `content` part per value, as SDC defines it. fhir-sdc uses only the
+first `content` for now.
 
-Add anything else by building the `Parameters` yourself:
+## Failures
 
-```python
-parameters=r4b.Parameters(parameter=[
-    *launch_context({"Patient": patient}).parameter,
-    r4b.ParametersParameter(name="subject", valueReference=r4b.Reference(reference=f"Patient/{patient.id}")),
-])
-```
-
-## Constraint violations
+An error response from the server raises fhirpy's exception for its status — `OperationOutcome` for most 4xx and 5xx
+responses. A violated `itemConstraint` the server checks during `$extract` and a rejected transaction both arrive this
+way; they differ in `issue[].code`. fhir-sdc reports a constraint's `key`, and a server's own validation code, such as
+`invalid`, for a transaction. An `error` or `fatal` issue in the `$extract` result and a batch entry the server
+rejects raise `ExtractionError`.
 
 ```python
 with pytest.raises(OperationOutcome) as refused:
-    await populate_and_extract(fhir_client, "patient-intake", answers=answers)
+    await populate_and_extract(fhir_client, "patient-intake", parameters=parameters, answers=answers)
 assert refused.value.resource["issue"][0]["code"] == "postal-code-required"
 ```
 
@@ -111,5 +112,5 @@ uv run pytest
 uv run ruff format . && uv run ruff check . && uv run mypy
 ```
 
-That suite covers answer placement without a server. `$populate`, constraints and extraction are covered against a
-running Aidbox and SDC by `tests/testkit/` in the repository root — `./run_test.sh tests/testkit`.
+That suite runs without a server. `$populate`, constraints and extraction are covered against a running Aidbox and
+fhir-sdc by `tests/testkit/` in the repository root — `./run_test.sh tests/testkit`.

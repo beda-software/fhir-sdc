@@ -6,7 +6,11 @@ from typing import Any, NamedTuple, cast
 import fhirpy_types_r4b as r4b
 from fhirpy import AsyncFHIRClient
 
-from fhir_sdc_testkit.extraction import raise_for_extraction_errors
+from fhir_sdc_testkit.extraction import (
+    find_bundle_to_submit,
+    raise_for_failed_issues,
+    raise_for_rejected_entries,
+)
 from fhir_sdc_testkit.sugar import Answers
 
 
@@ -19,37 +23,45 @@ async def populate_and_extract(
     fhir_client: AsyncFHIRClient,
     questionnaire_id: str,
     *,
-    parameters: r4b.Parameters | None = None,
+    parameters: r4b.Parameters,
     answers: Answers,
 ) -> r4b.QuestionnaireResponse:
     """Returns the saved QuestionnaireResponse the extraction ran on. A failed constraint raises."""
-    given = list(parameters.parameter or []) if parameters else []
+    given = list(parameters.parameter or [])
     questionnaire = await fhir_client.get(r4b.Questionnaire, questionnaire_id)
     populated = await fhir_client.execute(
         f"Questionnaire/{questionnaire_id}/$populate",
         data=r4b.Parameters(parameter=given).model_dump(),
     )
-    response = fill_questionnaire_response(questionnaire, read_populated(populated), answers)
+    response = fill_questionnaire_response(
+        questionnaire, get_populated_response(populated), answers
+    )
     saved = await fhir_client.create(response)
     extract_parameters = [
         r4b.ParametersParameter(name="questionnaire", resource=questionnaire),
-        # fhir-sdc reads the response from `questionnaire_response`; SDC names it with a hyphen.
-        r4b.ParametersParameter(name="questionnaire_response", resource=saved),
         r4b.ParametersParameter(name="questionnaire-response", resource=saved),
         *given,
     ]
     extracted = await fhir_client.execute(
-        "Questionnaire/$extract", data=r4b.Parameters(parameter=extract_parameters).model_dump()
+        "QuestionnaireResponse/$extract",
+        data=r4b.Parameters(parameter=extract_parameters).model_dump(),
     )
-    raise_for_extraction_errors(extracted)
+    raise_for_failed_issues(extracted)
+    bundle = find_bundle_to_submit(extracted)
+    if bundle is not None:
+        raise_for_rejected_entries(await fhir_client.execute("/", data=bundle))
     return saved
 
 
-def read_populated(populated: Mapping[str, Any]) -> r4b.QuestionnaireResponse:
-    """$populate answers with Parameters, not a bare response, once a `context` is passed."""
-    if populated.get("resourceType") == "Parameters":
-        populated = next(p for p in populated["parameter"] if p["name"] == "response")["resource"]
-    return r4b.QuestionnaireResponse.model_validate(populated)
+def get_populated_response(populated: Mapping[str, Any]) -> r4b.QuestionnaireResponse:
+    if populated.get("resourceType") != "Parameters":
+        raise ValueError(
+            f"$populate returned {populated.get('resourceType')}, not SDC Parameters: "
+            "pass a subject or a launch context"
+        )
+
+    response = next(p for p in populated["parameter"] if p["name"] == "response")
+    return r4b.QuestionnaireResponse.model_validate(response["resource"])
 
 
 def fill_questionnaire_response(
@@ -57,26 +69,12 @@ def fill_questionnaire_response(
 ) -> r4b.QuestionnaireResponse:
     """Set each answer at its linkId's nesting in the Questionnaire, replacing a populated one."""
     response = populated.model_copy(deep=True, update={"status": "completed"})
-    if response.item is None:
-        response.item = []
+    children = get_or_create_children(response)
     fill_items(
-        questionnaire.item or [], response.item, answers, scope=f"Questionnaire/{questionnaire.id}"
+        questionnaire.item or [], children, answers, scope=f"Questionnaire/{questionnaire.id}"
     )
-    sort_items(questionnaire.item or [], response.item)
+    sort_items(questionnaire.item or [], children)
     return response
-
-
-def sort_items(
-    items: list[r4b.QuestionnaireItem], children: list[r4b.QuestionnaireResponseItem]
-) -> None:
-    """Answered items are appended as they come; a response follows the Questionnaire's order."""
-    order = {item.linkId: index for index, item in enumerate(items)}
-    children.sort(key=lambda child: order.get(child.linkId, len(order)))
-    definitions = {item.linkId: item for item in items}
-    for child in children:
-        definition = definitions.get(child.linkId)
-        if definition is not None and child.item:
-            sort_items(definition.item or [], child.item)
 
 
 def fill_items(
@@ -114,20 +112,44 @@ def build_link_id_paths(
     return paths
 
 
-def is_repeating_group(item: r4b.QuestionnaireItem) -> bool:
-    return item.type == "group" and bool(item.repeats)
-
-
 def find_or_create_siblings(
     children: list[r4b.QuestionnaireResponseItem], path: tuple[str, ...]
 ) -> list[r4b.QuestionnaireResponseItem]:
     """The item list holding the path's last linkId, creating the groups above it."""
     for link_id in path[:-1]:
-        parent = find_or_append_item(children, link_id)
-        if parent.item is None:
-            parent.item = []
-        children = parent.item
+        children = get_or_create_children(find_or_append_item(children, link_id))
     return children
+
+
+def is_repeating_group(item: r4b.QuestionnaireItem) -> bool:
+    return item.type == "group" and bool(item.repeats)
+
+
+def fill_occurrences(
+    group: r4b.QuestionnaireItem,
+    siblings: list[r4b.QuestionnaireResponseItem],
+    answer_sets: Sequence[Answers],
+) -> None:
+    """One answer set per occurrence, positionally over the populated ones. Extra ones are kept."""
+    occurrences = find_or_append_occurrences(siblings, group.linkId, len(answer_sets))
+    for occurrence, answers in zip(occurrences, answer_sets, strict=True):
+        fill_items(
+            group.item or [],
+            get_or_create_children(occurrence),
+            answers,
+            scope=f"repeating group {group.linkId!r}",
+        )
+
+
+def find_or_append_occurrences(
+    children: list[r4b.QuestionnaireResponseItem], link_id: str, count: int
+) -> list[r4b.QuestionnaireResponseItem]:
+    occurrences = [child for child in children if child.linkId == link_id]
+    while len(occurrences) < count:
+        item = r4b.QuestionnaireResponseItem(linkId=link_id)
+        children.append(item)
+        occurrences.append(item)
+    return occurrences[:count]
 
 
 def find_or_append_item(
@@ -142,27 +164,21 @@ def find_or_append_item(
     return item
 
 
-def fill_occurrences(
-    group: r4b.QuestionnaireItem,
-    siblings: list[r4b.QuestionnaireResponseItem],
-    answer_sets: Sequence[Answers],
-) -> None:
-    """One answer set per occurrence, positionally over the populated ones. Extra ones are kept."""
-    occurrences = find_or_append_occurrences(siblings, group.linkId, len(answer_sets))
-    for occurrence, answers in zip(occurrences, answer_sets, strict=True):
-        if occurrence.item is None:
-            occurrence.item = []
-        fill_items(
-            group.item or [], occurrence.item, answers, scope=f"repeating group {group.linkId!r}"
-        )
-
-
-def find_or_append_occurrences(
-    children: list[r4b.QuestionnaireResponseItem], link_id: str, count: int
+def get_or_create_children(
+    parent: r4b.QuestionnaireResponse | r4b.QuestionnaireResponseItem,
 ) -> list[r4b.QuestionnaireResponseItem]:
-    occurrences = [child for child in children if child.linkId == link_id]
-    while len(occurrences) < count:
-        item = r4b.QuestionnaireResponseItem(linkId=link_id)
-        children.append(item)
-        occurrences.append(item)
-    return occurrences[:count]
+    if parent.item is None:
+        parent.item = []
+    return parent.item
+
+
+def sort_items(
+    items: list[r4b.QuestionnaireItem], children: list[r4b.QuestionnaireResponseItem]
+) -> None:
+    """Answered items are appended as they come; a response follows the Questionnaire's order."""
+    order = {item.linkId: index for index, item in enumerate(items)}
+    children.sort(key=lambda child: order[child.linkId])
+    definitions = {item.linkId: item for item in items}
+    for child in children:
+        if child.item:
+            sort_items(definitions[child.linkId].item or [], child.item)
