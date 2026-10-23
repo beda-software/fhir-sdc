@@ -1,6 +1,5 @@
 from aiohttp import web
 
-from ..sdc import resolve_expression
 from ..sdc.operations import (
     SdcContext,
     run_assemble,
@@ -10,6 +9,7 @@ from ..sdc.operations import (
     run_populate,
     run_questionnaire_response_extract,
 )
+from ..sdc.source_queries import resolve_expression
 from ..utils import build_user_client, get_extract_services, render_json
 
 routes = web.RouteTableDef()

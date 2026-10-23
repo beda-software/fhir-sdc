@@ -26,8 +26,7 @@ sentry_sdk.init(integrations=[AioHttpIntegration(), sentry_logging])
 async def create_gunicorn_app():
     if os.getenv("APP_ID") is None:
         return create_fhir_app()
-    else:
-        return create_app()
+    return create_app()
 
 
 # TODO: Add config param for aidbox-python-sdk pytest plugin

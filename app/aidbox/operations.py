@@ -1,4 +1,3 @@
-from ..sdc import resolve_expression
 from ..sdc.operations import (
     run_assemble,
     run_constraint_check,
@@ -7,6 +6,7 @@ from ..sdc.operations import (
     run_populate,
     run_questionnaire_response_extract,
 )
+from ..sdc.source_queries import resolve_expression
 from ..utils import render_json
 from .utils import AidboxSdcRequest, aidbox_operation, prepare_args
 

@@ -9,6 +9,18 @@ env:
   CACHE_IMAGE: bedasoftware/fhir-sdc:latest
   TESTS_AIDBOX_LICENSE: ${{ secrets.tests_aidbox_license }}
 jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/ruff-action@v4
+        with:
+          version: "0.17.2"
+          args: "format --check --diff"
+      - uses: astral-sh/ruff-action@v4
+        with:
+          version: "0.17.2"
+          args: "check"
   Build:
     runs-on: ubuntu-latest
     steps:

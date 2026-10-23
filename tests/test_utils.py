@@ -27,7 +27,7 @@ def test_prepare_bundle_undefined_context():
         }
     }
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="undefined environment variable"):
         prepare_bundle(bundle_entry, {})
 
 
@@ -161,7 +161,7 @@ def test_prepare_link_ids_does_not_encode_params():
 
 
 @pytest.mark.parametrize(
-    "answer_type,values,expected",
+    ("answer_type", "values", "expected"),
     [
         ("string", ["abc", "dfe", "htd"], "/Patient?_id=abc,dfe,htd"),
         ("number", [1, 4, 5], "/Patient?_id=1,4,5"),
