@@ -4,7 +4,13 @@ import fhirpy_types_r4b as r4b
 import pytest
 from fhirpy.base.exceptions import OperationOutcome
 
-from fhir_sdc_testkit import ExtractionError, answer, launch_context, populate_and_extract
+from fhir_sdc_testkit import (
+    ExtractionError,
+    answer,
+    launch_context,
+    populate,
+    populate_and_extract,
+)
 from tests.factories import (
     create_mapping,
     create_questionnaire,
@@ -57,16 +63,75 @@ async def test_populated_and_typed_answers_reach_the_mapper(
         },
     )
 
-    response = await populate_and_extract(
+    response, _ = await populate_and_extract(
         typed_fhir_client,
         questionnaire.id,
         parameters=launch_context({"LaunchPatient": launch_patient}, subject=subject),
         answers={"family": [answer(valueString="Test")]},
+        submit=True,
     )
     assert response.status == "completed"
 
     [created] = await typed_fhir_client.resources(r4b.Patient).search(family="Test").fetch_all()
     assert created.name[0].given == ["Leo"]
+
+
+async def test_unsubmitted_extraction_returns_the_bundle_and_saves_nothing(
+    fhir_client, typed_fhir_client, subject, safe_db
+):
+    mapping = await create_mapping(
+        fhir_client, build_patient_bundle(name=[{"family": build_answer_template("family")}])
+    )
+    questionnaire = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"linkId": "family", "type": "string"}],
+        },
+    )
+
+    response, bundle = await populate_and_extract(
+        typed_fhir_client,
+        questionnaire.id,
+        parameters=launch_context({}, subject=subject),
+        answers={"family": [answer(valueString="Test")]},
+    )
+    assert response.id is None
+    assert [entry["resource"]["name"] for entry in bundle["entry"]] == [[{"family": "Test"}]]
+
+    created = await typed_fhir_client.resources(r4b.Patient).search(family="Test").fetch_all()
+    assert created == []
+
+
+async def test_populate_returns_the_populated_response_unsaved(
+    fhir_client, typed_fhir_client, subject, safe_db
+):
+    launch_patient = await typed_fhir_client.create(
+        r4b.Patient(name=[r4b.HumanName(given=["Leo"])])
+    )
+    questionnaire = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_launch_context_ext("LaunchPatient", "Patient")],
+            "item": [
+                {
+                    "linkId": "given",
+                    "type": "string",
+                    "extension": [make_initial_expression_ext("%LaunchPatient.name.given")],
+                }
+            ],
+        },
+    )
+
+    populated = await populate(
+        typed_fhir_client,
+        questionnaire.id,
+        parameters=launch_context({"LaunchPatient": launch_patient}, subject=subject),
+    )
+    assert populated.id is None
+    assert populated.item[0].answer[0].valueString == "Leo"
 
 
 async def test_repeating_group_occurrences_are_saved(
@@ -87,7 +152,7 @@ async def test_repeating_group_occurrences_are_saved(
         },
     )
 
-    response = await populate_and_extract(
+    response, _ = await populate_and_extract(
         typed_fhir_client,
         questionnaire.id,
         parameters=launch_context({}, subject=subject),
@@ -97,6 +162,7 @@ async def test_repeating_group_occurrences_are_saved(
                 {"family": [answer(valueString="Second")]},
             ]
         },
+        submit=True,
     )
 
     saved = await typed_fhir_client.get(r4b.QuestionnaireResponse, response.id)
@@ -161,6 +227,7 @@ async def test_rejected_transaction_raises(fhir_client, typed_fhir_client, subje
             questionnaire.id,
             parameters=launch_context({}, subject=subject),
             answers={"gender": [answer(valueString="not-a-gender")]},
+            submit=True,
         )
     assert rejected.value.resource["issue"][0]["code"] == "invalid"
 
@@ -184,6 +251,7 @@ async def test_rejected_batch_entry_raises(fhir_client, typed_fhir_client, subje
             questionnaire.id,
             parameters=launch_context({}, subject=subject),
             answers={"gender": [answer(valueString="not-a-gender")]},
+            submit=True,
         )
 
 

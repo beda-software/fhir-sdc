@@ -1,8 +1,9 @@
 # fhir-sdc-testkit
 
 Test an SDC Questionnaire and its extraction the way a form is really filled: `$populate` runs, answers are placed at
-each `linkId`'s nesting, the QuestionnaireResponse is saved, then `QuestionnaireResponse/$extract` runs and the
-bundle it returns is submitted. Only what a user types (or the frontend calculates) is faked; everything else runs on
+each `linkId`'s nesting, then `QuestionnaireResponse/$extract` runs. With `submit=True` the QuestionnaireResponse is
+saved before extraction and the bundle is submitted after it. Only what a user types (or the frontend calculates) is
+faked; everything else runs on
 a real server implementing the [SDC](https://build.fhir.org/ig/HL7/sdc/) operations, such as
 [fhir-sdc](../README.md).
 
@@ -42,14 +43,18 @@ async def test_intake_records_the_address(fhir_client):
             {"Patient": patient}, subject=r4b.Reference(reference=f"Patient/{patient.id}")
         ),
         answers={"postal-code": [answer(valueString="75001")]},
+        submit=True,
     )
 
     updated = await fhir_client.get(r4b.Patient, patient.id)
     assert updated.address[0].postalCode == "75001"
 ```
 
-`populate_and_extract` returns the saved QuestionnaireResponse that the extraction ran on. Assert on the resources
-the extraction produced by fetching them from the server.
+`populate_and_extract` returns the QuestionnaireResponse and the bundle `$extract` returned (`None` when there is
+nothing to extract). Without `submit` neither is saved, so the bundle can be asserted on directly. With it, the
+response is the saved one — saved first, since a Mapping may reference it by id — and the bundle has been submitted.
+
+`populate` and `extract` run the two operations on their own and save nothing.
 
 ### Answers
 
@@ -95,8 +100,8 @@ first `content` for now.
 An error response from the server raises fhirpy's exception for its status — `OperationOutcome` for most 4xx and 5xx
 responses. A violated `itemConstraint` the server checks during `$extract` and a rejected transaction both arrive this
 way; they differ in `issue[].code`. fhir-sdc reports a constraint's `key`, and a server's own validation code, such as
-`invalid`, for a transaction. An `error` or `fatal` issue in the `$extract` result and a batch entry the server
-rejects raise `ExtractionError`.
+`invalid`, for a transaction. An `error` or `fatal` issue in the `$extract` result and, with `submit`, a batch entry
+the server rejects raise `ExtractionError`.
 
 ```python
 with pytest.raises(OperationOutcome) as refused:

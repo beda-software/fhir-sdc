@@ -25,32 +25,29 @@ async def populate_and_extract(
     *,
     parameters: r4b.Parameters,
     answers: Answers,
-) -> r4b.QuestionnaireResponse:
-    """Returns the saved QuestionnaireResponse the extraction ran on. A failed constraint raises."""
-    given = list(parameters.parameter or [])
+    submit: bool = False,
+) -> tuple[r4b.QuestionnaireResponse, dict[str, Any] | None]:
+    """The filled QuestionnaireResponse and its extracted bundle; `submit` saves both, as a form does."""
     questionnaire = await fhir_client.get(r4b.Questionnaire, questionnaire_id)
-    populated = await fhir_client.execute(
-        f"Questionnaire/{questionnaire_id}/$populate",
-        data=r4b.Parameters(parameter=given).model_dump(),
-    )
-    response = fill_questionnaire_response(
-        questionnaire, get_populated_response(populated), answers
-    )
-    saved = await fhir_client.create(response)
-    extract_parameters = [
-        r4b.ParametersParameter(name="questionnaire", resource=questionnaire),
-        r4b.ParametersParameter(name="questionnaire-response", resource=saved),
-        *given,
-    ]
-    extracted = await fhir_client.execute(
-        "QuestionnaireResponse/$extract",
-        data=r4b.Parameters(parameter=extract_parameters).model_dump(),
-    )
-    raise_for_failed_issues(extracted)
-    bundle = find_bundle_to_submit(extracted)
-    if bundle is not None:
+    populated = await populate(fhir_client, questionnaire_id, parameters=parameters)
+    response = fill_questionnaire_response(questionnaire, populated, answers)
+    if submit:
+        # A Mapping may reference the response by id, so it is saved before extraction.
+        response = await fhir_client.create(response)
+    bundle = await extract(fhir_client, questionnaire, response, parameters=parameters)
+    if submit and bundle is not None:
         raise_for_rejected_entries(await fhir_client.execute("/", data=bundle))
-    return saved
+    return response, bundle
+
+
+async def populate(
+    fhir_client: AsyncFHIRClient, questionnaire_id: str, *, parameters: r4b.Parameters
+) -> r4b.QuestionnaireResponse:
+    """SDC `Questionnaire/{id}/$populate`: the populated response, not saved."""
+    populated = await fhir_client.execute(
+        f"Questionnaire/{questionnaire_id}/$populate", data=parameters.model_dump()
+    )
+    return get_populated_response(populated)
 
 
 def get_populated_response(populated: Mapping[str, Any]) -> r4b.QuestionnaireResponse:
@@ -182,3 +179,24 @@ def sort_items(
     for child in children:
         if child.item:
             sort_items(definitions[child.linkId].item or [], child.item)
+
+
+async def extract(
+    fhir_client: AsyncFHIRClient,
+    questionnaire: r4b.Questionnaire,
+    questionnaire_response: r4b.QuestionnaireResponse,
+    *,
+    parameters: r4b.Parameters,
+) -> dict[str, Any] | None:
+    """SDC `QuestionnaireResponse/$extract`: the bundle to submit, not submitted."""
+    extract_parameters = [
+        r4b.ParametersParameter(name="questionnaire", resource=questionnaire),
+        r4b.ParametersParameter(name="questionnaire-response", resource=questionnaire_response),
+        *(parameters.parameter or []),
+    ]
+    extracted = await fhir_client.execute(
+        "QuestionnaireResponse/$extract",
+        data=r4b.Parameters(parameter=extract_parameters).model_dump(),
+    )
+    raise_for_failed_issues(extracted)
+    return find_bundle_to_submit(extracted)
