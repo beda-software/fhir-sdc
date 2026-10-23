@@ -2,12 +2,15 @@ import pytest
 from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
-from app.aidbox.settings import settings
 from tests.factories import (
     create_questionnaire,
+    find_parameter_resource,
     make_item_constraint_ext,
+    make_launch_context_ext,
     make_parameters,
+    make_questionnaire_embedded_mapper_ext,
     make_questionnaire_mapper_ext,
+    make_sdc_extract_parameters,
     make_source_queries_ext,
 )
 
@@ -308,7 +311,7 @@ async def test_extract_fails_because_of_constraint_check(fhir_client, safe_db):
                                 requirements="v2 should be the same as v1",
                                 severity="error",
                                 human="v2 is not equal to v1",
-                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                expression="%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
                             )
                         ],
                     },
@@ -361,7 +364,7 @@ async def test_extract_using_list_endpoint_fails_because_of_constraint_check_lis
                                 requirements="v2 should be the same as v1",
                                 severity="error",
                                 human="v2 is not equal to v1",
-                                expression="(%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')).not()",
+                                expression="%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
                             )
                         ],
                     },
@@ -739,27 +742,391 @@ async def extract_using_list_endpoint(fhir_client, q):
 @pytest.mark.parametrize(
     "extract_fn", [extract_using_instance_endpoint, extract_using_list_endpoint]
 )
-async def test_extract_passes_source_queries_to_mapper_in_legacy_behavior(
-    fhir_client, safe_db, monkeypatch, extract_fn
-):
-    monkeypatch.setattr(settings, "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", True)
-    q = await create_source_query_questionnaire(fhir_client)
-
-    await extract_fn(fhir_client, q)
-
-    p = await fhir_client.resources("Patient").search(_id="new-patient").get()
-    assert p.get_by_path(["name", 0, "text"]) == "Bundle"
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "extract_fn", [extract_using_instance_endpoint, extract_using_list_endpoint]
-)
-async def test_extract_does_not_pass_source_queries_to_mapper(
-    fhir_client, safe_db, monkeypatch, extract_fn
-):
-    monkeypatch.setattr(settings, "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", False)
+async def test_extract_does_not_pass_source_queries_to_mapper(fhir_client, safe_db, extract_fn):
     q = await create_source_query_questionnaire(fhir_client)
 
     with pytest.raises(OperationOutcome, match="undefined environment variable: SourceQuery"):
         await extract_fn(fhir_client, q)
+
+
+@pytest.mark.asyncio
+async def test_extract_resolves_questionnaire_by_canonical_url(fhir_client, safe_db):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        url="http://example.com/Questionnaire/by-url",
+        version="1.0",
+        item=[{"type": "string", "linkId": "patientId"}],
+        extension=[make_questionnaire_mapper_ext((await _create_patient_mapping(fhir_client)).id)],
+    )
+    await q.save()
+
+    qr = {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": f"{q['url']}|1.0",
+        "item": [{"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]}],
+    }
+    extraction = await fhir_client.execute("Questionnaire/$extract", data=qr)
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(id=PATIENT_1_ID).fetch_all()
+    assert len(p) == 1
+
+
+async def _create_patient_mapping(fhir_client):
+    mapping = fhir_client.resource("Mapping", **PATIENT_BUNDLE_DATA)
+    await mapping.save()
+    return mapping
+
+
+async def create_patient_questionnaire(fhir_client):
+    mapping = fhir_client.resource(
+        "Mapping",
+        type="FHIRPath",
+        body={
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"url": "/Patient", "method": "POST"},
+                    "resource": {
+                        "resourceType": "Patient",
+                        "id": "{{ QuestionnaireResponse.item.where(linkId='patientId').answer.valueString }}",
+                    },
+                }
+            ],
+        },
+    )
+    await mapping.save()
+
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"type": "string", "linkId": "patientId"}],
+        },
+    )
+
+
+def make_patient_questionnaire_response(questionnaire_id):
+    return {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": questionnaire_id,
+        "item": [{"linkId": "patientId", "answer": [{"valueString": "newPatient"}]}],
+    }
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_questionnaire_response_body(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    extraction = await fhir_client.execute(
+        "Questionnaire/$extract", data=make_patient_questionnaire_response(q.id)
+    )
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(_id="newPatient").fetch_all()
+    assert len(p) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_lowercase_questionnaire_parameter(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    extraction = await fhir_client.execute(
+        "Questionnaire/$extract",
+        data=make_parameters(
+            questionnaire=q.serialize(),
+            questionnaire_response=make_patient_questionnaire_response(q.id),
+        ),
+    )
+    assert len(extraction) == 1
+
+    p = await fhir_client.resources("Patient").search(_id="newPatient").fetch_all()
+    assert len(p) == 1
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_without_questionnaire_raises(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    with pytest.raises(OperationOutcome, match="`Questionnaire` parameter is required"):
+        await fhir_client.execute(
+            "Questionnaire/$extract",
+            data=make_parameters(questionnaire_response=make_patient_questionnaire_response(q.id)),
+        )
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_without_questionnaire_response_raises(fhir_client, safe_db):
+    q = await create_patient_questionnaire(fhir_client)
+
+    with pytest.raises(OperationOutcome, match="`QuestionnaireResponse` parameter is required"):
+        await fhir_client.execute(
+            "Questionnaire/$extract", data=make_parameters(questionnaire=q.serialize())
+        )
+
+
+@pytest.mark.asyncio
+async def test_extract_validates_launch_context(fhir_client, safe_db):
+    mapping = fhir_client.resource("Mapping", type="FHIRPath", body={"resourceType": "Bundle"})
+    await mapping.save()
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [
+                make_launch_context_ext("LaunchPatient", "Patient"),
+                make_questionnaire_mapper_ext(mapping.id),
+            ],
+            "item": [{"type": "string", "linkId": "patientId"}],
+        },
+    )
+
+    with pytest.raises(OperationOutcome, match="LaunchPatient"):
+        await fhir_client.execute(
+            "Questionnaire/$extract", data=make_patient_questionnaire_response(q.id)
+        )
+
+
+@pytest.mark.asyncio
+async def test_extract_without_a_mapper_extracts_nothing(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {"status": "active", "item": [{"type": "string", "linkId": "patientId"}]},
+    )
+    qr = fhir_client.resource(
+        "QuestionnaireResponse",
+        **{
+            "questionnaire": q.id,
+            "item": [{"linkId": "patientId", "answer": [{"valueString": "newPatient"}]}],
+        },
+    )
+
+    extraction = await q.execute("$extract", data=qr)
+    assert extraction == []
+
+
+@pytest.mark.asyncio
+async def test_extract_runs_an_inline_mapper(fhir_client, safe_db):
+    mapping = {
+        "resourceType": "Mapping",
+        "body": {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": "Patient/inline-mapped"},
+                    "resource": {"resourceType": "Patient", "id": "inline-mapped"},
+                }
+            ],
+        },
+    }
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"type": "string", "linkId": "note"}],
+        extension=[make_questionnaire_embedded_mapper_ext(mapping)],
+    )
+    await q.save()
+
+    extraction = await q.execute(
+        "$extract", data={"resourceType": "QuestionnaireResponse", "questionnaire": q.id}
+    )
+    assert len(extraction) == 1
+
+    patient = await fhir_client.resources("Patient").search(_id="inline-mapped").get()
+    assert patient.id == "inline-mapped"
+
+
+@pytest.mark.asyncio
+async def test_extract_by_id_ignores_a_questionnaire_sent_in_parameters(fhir_client, safe_db):
+    named = await create_extracting_questionnaire(fhir_client, "from-the-route")
+    sent = await create_extracting_questionnaire(fhir_client, "from-the-body")
+
+    extraction = await named.execute(
+        "$extract",
+        data=make_parameters(
+            Questionnaire=sent.serialize(),
+            QuestionnaireResponse={"resourceType": "QuestionnaireResponse"},
+        ),
+    )
+    assert len(extraction) == 1
+
+    written = await fhir_client.resources("Patient").search(_id="from-the-body").fetch_all()
+    assert written == []
+
+    patient = await fhir_client.resources("Patient").search(_id="from-the-route").get()
+    assert patient.id == "from-the-route"
+
+
+async def create_extracting_questionnaire(fhir_client, patient_id):
+    mapping = fhir_client.resource(
+        "Mapping",
+        body={
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"method": "PUT", "url": f"Patient/{patient_id}"},
+                    "resource": {"resourceType": "Patient", "id": patient_id},
+                }
+            ],
+        },
+    )
+    await mapping.save()
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(mapping.id)],
+            "item": [{"type": "string", "linkId": "note"}],
+        },
+    )
+
+
+def make_extract_questionnaire_response(questionnaire_id):
+    return {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": questionnaire_id,
+        "item": [{"linkId": "patientId", "answer": [{"valueString": PATIENT_1_ID}]}],
+    }
+
+
+async def create_extract_questionnaire(fhir_client, *mapping_bodies):
+    mappings = []
+    for mapping_body in mapping_bodies:
+        mapping = fhir_client.resource("Mapping", **mapping_body)
+        await mapping.save()
+        mappings.append(mapping)
+
+    return await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "extension": [make_questionnaire_mapper_ext(m.id) for m in mappings],
+            "item": [{"type": "string", "linkId": "patientId"}],
+        },
+    )
+
+
+async def extract_questionnaire_response(fhir_client, parameters):
+    return await fhir_client.execute("QuestionnaireResponse/$extract", data=parameters)
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_returns_the_bundle_to_submit(fhir_client, safe_db):
+    q = await create_extract_questionnaire(fhir_client, PATIENT_BUNDLE_DATA)
+
+    extraction = await extract_questionnaire_response(
+        fhir_client, make_sdc_extract_parameters(make_extract_questionnaire_response(q.id))
+    )
+    assert find_parameter_resource(extraction, "issues") is None
+
+    return_bundle = find_parameter_resource(extraction, "return")
+    assert return_bundle["type"] == "transaction"
+    assert [entry["request"]["method"] for entry in return_bundle["entry"]] == ["POST"]
+
+    patients = await fhir_client.resources("Patient").search(_id=PATIENT_1_ID).fetch_all()
+    assert patients == []
+
+
+@pytest.mark.asyncio
+async def test_stored_questionnaire_response_extract_ignores_a_response_in_the_body(
+    fhir_client, safe_db
+):
+    q = await create_extract_questionnaire(fhir_client, PATIENT_BUNDLE_DATA)
+    qr = fhir_client.resource(
+        "QuestionnaireResponse", status="completed", **make_extract_questionnaire_response(q.id)
+    )
+    await qr.save()
+    unresolvable = {**make_extract_questionnaire_response(q.id), "questionnaire": "not-stored"}
+
+    extraction = await fhir_client.execute(
+        f"QuestionnaireResponse/{qr.id}/$extract",
+        data=make_sdc_extract_parameters(unresolvable),
+    )
+    assert len(find_parameter_resource(extraction, "return")["entry"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_uses_the_given_questionnaire(fhir_client, safe_db):
+    q = await create_extract_questionnaire(fhir_client, PATIENT_BUNDLE_DATA)
+    qr = {**make_extract_questionnaire_response(q.id), "questionnaire": "not-stored"}
+
+    extraction = await extract_questionnaire_response(
+        fhir_client, make_sdc_extract_parameters(qr, questionnaire=q.serialize())
+    )
+    assert len(find_parameter_resource(extraction, "return")["entry"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_reports_nothing_to_extract(fhir_client, safe_db):
+    q = await create_extract_questionnaire(fhir_client)
+
+    extraction = await extract_questionnaire_response(
+        fhir_client, make_sdc_extract_parameters(make_extract_questionnaire_response(q.id))
+    )
+    assert find_parameter_resource(extraction, "return") is None
+    assert find_parameter_resource(extraction, "issues")["issue"][0]["severity"] == "information"
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_reports_an_empty_mapper_result(fhir_client, safe_db):
+    empty_mapping = {
+        "type": "FHIRPath",
+        "body": {"resourceType": "Bundle", "type": "transaction", "entry": []},
+    }
+    q = await create_extract_questionnaire(fhir_client, empty_mapping)
+
+    extraction = await extract_questionnaire_response(
+        fhir_client, make_sdc_extract_parameters(make_extract_questionnaire_response(q.id))
+    )
+    assert find_parameter_resource(extraction, "return") is None
+    assert find_parameter_resource(extraction, "issues")["issue"][0]["severity"] == "information"
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_requires_the_response(fhir_client, safe_db):
+    with pytest.raises(OperationOutcome, match="questionnaire-response"):
+        await extract_questionnaire_response(
+            fhir_client, {"resourceType": "Parameters", "parameter": []}
+        )
+
+
+@pytest.mark.asyncio
+async def test_questionnaire_response_extract_refuses_a_violated_constraint(fhir_client, safe_db):
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {"type": "string", "linkId": "v1"},
+                {
+                    "type": "string",
+                    "linkId": "v2",
+                    "extension": [
+                        make_item_constraint_ext(
+                            key="v1eqv2",
+                            requirements="v2 should be the same as v1",
+                            severity="error",
+                            human="v2 is not equal to v1",
+                            expression="%QuestionnaireResponse.item.where(linkId='v1') = %QuestionnaireResponse.item.where(linkId='v2')",
+                        )
+                    ],
+                },
+            ],
+        },
+    )
+    qr = {
+        "resourceType": "QuestionnaireResponse",
+        "questionnaire": q.id,
+        "item": [
+            {"linkId": "v1", "answer": [{"valueString": "1"}]},
+            {"linkId": "v2", "answer": [{"valueString": "2"}]},
+        ],
+    }
+
+    with pytest.raises(OperationOutcome, match="v2 is not equal to v1"):
+        await extract_questionnaire_response(fhir_client, make_sdc_extract_parameters(qr))

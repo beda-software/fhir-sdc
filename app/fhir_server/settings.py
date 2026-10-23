@@ -1,5 +1,6 @@
-import logging
 import os
+
+from app.utils import resolve_fhirpath_service, resolve_jute_service
 
 
 class FHIRAppSettings:
@@ -11,26 +12,13 @@ class FHIRAppSettings:
             setattr(self, name, value)
 
 
-constraint_legacy_behavior = os.getenv("CONSTRAINT_LEGACY_BEHAVIOR", "False").lower() == "true"
-extract_source_queries_legacy_behavior = (
-    os.getenv("EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", "True").lower() == "true"
-)
-
-if constraint_legacy_behavior:
-    logging.warning(
-        "CONSTRAINT_LEGACY_BEHAVIOR is deprecated and will be enforced to be set to false in fhir-sdc@3.x.x"
-    )
-
-if extract_source_queries_legacy_behavior:
-    logging.warning(
-        "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR is deprecated and will be enforced to be set to false in fhir-sdc@3.x.x"
-    )
+# Both behaviours are gone in 3.x.x; leaving the variable on would silently invert every constraint.
+for removed_setting in ("CONSTRAINT_LEGACY_BEHAVIOR", "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR"):
+    if os.getenv(removed_setting, "").lower() == "true":
+        raise Exception(f"{removed_setting} is not supported in fhir-sdc@3.x.x, see the README")
 
 settings = FHIRAppSettings(
-    JUTE_SERVICE=os.getenv("JUTE_SERVICE", "http://jute:8090/parse-template"),
+    JUTE_SERVICE=resolve_jute_service(),
     BASE_URL=os.getenv("BASE_URL", "http://devbox:8080/fhir"),
-    AUTH_TOKEN=os.getenv("AUTH_TOKEN"),
-    FHIRPATH_MAPPING_SERVICE=os.getenv("FHIRPATH_MAPPING_SERVICE"),
-    CONSTRAINT_LEGACY_BEHAVIOR=constraint_legacy_behavior,
-    EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=extract_source_queries_legacy_behavior,
+    FHIRPATH_MAPPING_SERVICE=resolve_fhirpath_service(),
 )

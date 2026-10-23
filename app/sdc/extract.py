@@ -1,11 +1,23 @@
+from typing import Any
+
 import simplejson as json
 from aiohttp import ClientSession, web
+from fhirpy import AsyncFHIRClient
+from fhirpy.base.exceptions import OperationOutcome
 from funcy.seqs import flatten
 
-from .utils import check_mappers_bundles_full_url_duplicates, resolve_fpml_template
+from .mappers import load_mappers
+from .utils import (
+    build_fhirpath_env,
+    check_mappers_bundles_full_url_duplicates,
+    resolve_fpml_template,
+)
 
 
 async def get_external_service_bundle(session, service, template, context):
+    if not service:
+        raise OperationOutcome("No service is configured to render this mapper")
+
     async with session.post(
         service,
         json={
@@ -19,7 +31,7 @@ async def get_external_service_bundle(session, service, template, context):
             raise web.HTTPBadRequest(body=await result.text())
 
 
-async def execute_mappers_bundles(client, mappers_bundles):
+def build_result_bundle(mappers_bundles: list[dict]) -> dict:
     try:
         # NOTE: `bundle.get("entry", None) or []` is used to catch cases, when
         # bundle is like `{'type': 'transaction', 'entry': None, 'resourceType': 'Bundle'}`
@@ -36,42 +48,34 @@ async def execute_mappers_bundles(client, mappers_bundles):
 
     not_transaction = any(bundle.get("type") != "transaction" for bundle in mappers_bundles)
 
-    result_bundle = {
+    return {
         "resourceType": "Bundle",
         "type": "batch" if not_transaction else "transaction",
         "entry": flattened_mappers_bundles,
     }
 
-    return await client.execute("/", data=result_bundle)
 
-
-async def extract(client, mappings, context, extract_services):
-    """
-    mappings could be a list of Aidbox Mapping resources
-    or plain jute templates
-    """
+async def build_extract_bundle(
+    client: AsyncFHIRClient,
+    questionnaire: dict,
+    questionnaire_response: dict,
+    variables: dict[str, Any],
+    extract_services: dict,
+) -> dict | None:
+    """Render the Questionnaire's mappers into one bundle, or None when they render nothing."""
+    mappers = await load_mappers(client, questionnaire)
+    env = build_fhirpath_env(questionnaire, questionnaire_response, variables)
     async with ClientSession() as session:
-        resp = []
         mappers_bundles = []
 
-        for mapper in mappings:
+        for mapper in mappers:
             if "resourceType" in mapper and "body" in mapper:
                 # It is custome mapper resource
                 mapper_type = mapper.get("type", "JUTE")
-                if mapper_type == "JUTE" and extract_services["JUTE"] == "aidbox":
-                    mapper_bundle = await mapper.execute("$debug", data=context)
-                    if mapper_bundle is None:
-                        continue
-
-                    if "entry" not in mapper_bundle:
-                        continue
-
-                    mappers_bundles.append(mapper_bundle)
-
-                elif mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
+                if mapper_type == "FHIRPath" and extract_services["FHIRPath"] == "fpml":
                     result = resolve_fpml_template(
                         mapper["body"],
-                        context,
+                        env,
                     )
                     result_no_decimal = json.loads(json.dumps(result))
                     mappers_bundles.append(result_no_decimal)
@@ -79,18 +83,17 @@ async def extract(client, mappings, context, extract_services):
                     # Use 3rd party service FHIRPathMapping or JUTE
                     mappers_bundles.append(
                         await get_external_service_bundle(
-                            session, extract_services[mapper_type], mapper["body"], context
+                            session, extract_services[mapper_type], mapper["body"], env
                         )
                     )
             else:
                 # legacy extraction
                 mappers_bundles.append(
                     await get_external_service_bundle(
-                        session, extract_services["JUTE"], mapper, context
+                        session, extract_services["JUTE"], mapper, env
                     )
                 )
 
-        if len(mappers_bundles) > 0:
-            resp.append(await execute_mappers_bundles(client, mappers_bundles))
-
-        return resp
+        # A mapper that renders nothing answers with null, which is not a bundle.
+        mappers_bundles = [bundle for bundle in mappers_bundles if bundle]
+        return build_result_bundle(mappers_bundles) if mappers_bundles else None

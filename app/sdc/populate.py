@@ -1,62 +1,51 @@
 import logging
+from typing import Any
 
+from fhirpy import AsyncFHIRClient
 from funcy import is_list
 
+from .context import load_questionnaire_context
 from .getters import (
     get_choice_column_paths,
     get_initial_expression,
     get_item_context,
     get_item_population_context,
-    get_launch_context,
     get_variable,
 )
-from .utils import (
-    get_type,
-    load_source_queries,
-    make_value_key,
-    normalize_answer_value,
-    resolve_expression,
-    validate_context,
-)
+from .utils import get_type, make_value_key, normalize_answer_value, resolve_expression
 
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
-    exts = fhir_questionnaire.get("extension", [])
-    launch_context = get_launch_context(exts)
-    if launch_context:
-        validate_context(launch_context, env)
-    if "QuestionnaireResponse" not in env:
-        # Populate operation does not accept QR, but source queries might use it
-        # in constraint-check operations
-        # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
-        env["QuestionnaireResponse"] = {
-            "resourceType": "QuestionnaireResponse",
-            "status": "in-progress",
-        }
-
-    await load_source_queries(client, fhir_questionnaire, env)
-
-    root = {
-        **env["QuestionnaireResponse"],
+async def populate(
+    client: AsyncFHIRClient,
+    questionnaire: dict,
+    variables: dict[str, Any],
+    *,
+    sdc_api: bool = False,
+) -> dict:
+    populated_response = {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": fhir_questionnaire.get("id"),
+        "status": "in-progress",
+        "questionnaire": questionnaire.get("id"),
         "item": [],
     }
-    env["resource"] = root
-    env["questionnaire"] = env["Questionnaire"]
+    env = await load_questionnaire_context(client, questionnaire, populated_response, variables)
+    exts = questionnaire.get("extension", [])
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"
         )
 
-    for item in fhir_questionnaire["item"]:
-        root["item"].extend(await _handle_item(client, item, env, {}))
+    for item in questionnaire["item"]:
+        populated_response["item"].extend(await _handle_item(client, item, env, {}))
 
     if sdc_api:
-        return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
-    return root
+        return {
+            "resourceType": "Parameters",
+            "parameter": [{"name": "response", "resource": populated_response}],
+        }
+    return populated_response
 
 
 async def _handle_item(client, item, env, context):

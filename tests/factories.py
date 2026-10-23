@@ -1,3 +1,5 @@
+import json
+
 from app.sdc.getters import (
     CHOICE_COLUMN_URL,
     CQF_LIBRARY_URL,
@@ -18,6 +20,20 @@ def make_parameters(**payload):
         "resourceType": "Parameters",
         "parameter": [{"name": name, "resource": resource} for name, resource in payload.items()],
     }
+
+
+def make_sdc_extract_parameters(questionnaire_response, questionnaire=None):
+    parameter = [{"name": "questionnaire-response", "resource": questionnaire_response}]
+    if questionnaire is not None:
+        parameter.append({"name": "questionnaire", "resource": questionnaire})
+
+    return {"resourceType": "Parameters", "parameter": parameter}
+
+
+def find_parameter_resource(parameters, name):
+    return next(
+        (p.get("resource") for p in parameters.get("parameter", []) if p["name"] == name), None
+    )
 
 
 def make_questionnaire(questionnaire):
@@ -160,8 +176,6 @@ def make_questionnaire_mapper_ext(mapping_id):
 
 
 def make_questionnaire_embedded_mapper_ext(mapping_body: dict):
-    import json
-
     language = "fpml" if mapping_body.get("type") == "FHIRPath" else "jute"
     return {
         "url": "https://emr-core.beda.software/StructureDefinition/questionnaire-mapper",
@@ -197,3 +211,63 @@ def make_cqf_library_ext(canonical):
         "url": CQF_LIBRARY_URL,
         "valueCanonical": canonical,
     }
+
+
+def make_jute_structure_map(structure_map_id: str, template: dict) -> dict:
+    """A StructureMap carrying a jute template where fhir-sdc looks for it."""
+    return {
+        "resourceType": "StructureMap",
+        "id": structure_map_id,
+        "url": f"http://example.com/StructureMap/{structure_map_id}",
+        "name": structure_map_id,
+        "status": "active",
+        "group": [
+            {
+                "name": "jute-group",
+                "typeMode": "none",
+                "input": [{"name": "source", "mode": "source"}],
+                "rule": [
+                    {
+                        "name": "apply-jute",
+                        "source": [{"context": "source"}],
+                        "extension": [
+                            {
+                                "url": "http://beda.software/fhir-extensions/jute-body",
+                                "valueString": json.dumps(template),
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+
+JUTE_BODY_EXTENSION_SD = {
+    "resourceType": "StructureDefinition",
+    "id": "jute-body",
+    "url": "http://beda.software/fhir-extensions/jute-body",
+    "name": "JuteBody",
+    "status": "active",
+    "kind": "complex-type",
+    "abstract": False,
+    "type": "Extension",
+    "context": [{"type": "element", "expression": "Element"}],
+    "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Extension",
+    "derivation": "constraint",
+    "differential": {
+        "element": [
+            {"id": "Extension", "path": "Extension", "max": "1"},
+            {
+                "id": "Extension.url",
+                "path": "Extension.url",
+                "fixedUri": "http://beda.software/fhir-extensions/jute-body",
+            },
+            {
+                "id": "Extension.value[x]",
+                "path": "Extension.value[x]",
+                "type": [{"code": "string"}],
+            },
+        ]
+    },
+}
