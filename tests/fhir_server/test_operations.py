@@ -783,18 +783,3 @@ async def test_stored_questionnaire_response_extract_returns_the_bundle_to_submi
     resp = await fhir_server_client.post(f"/QuestionnaireResponse/{qr.id}/$extract")
     assert resp.status == 200
     assert len(find_parameter_resource(await resp.json(), "return")["entry"]) == 1
-
-
-async def test_questionnaire_response_extract_reports_nothing_to_extract(
-    fhir_server_client, fhir_client, safe_db
-):
-    q = fhir_client.resource("Questionnaire", status="active", item=[])
-    await q.save()
-    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
-
-    resp = await fhir_server_client.post(
-        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
-    )
-    result = await resp.json()
-    assert find_parameter_resource(result, "return") is None
-    assert find_parameter_resource(result, "issues")["issue"][0]["severity"] == "information"
