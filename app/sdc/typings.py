@@ -1,4 +1,4 @@
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 
 class Expression(TypedDict, total=False):
@@ -9,8 +9,8 @@ class Expression(TypedDict, total=False):
 
 class Coding(TypedDict, total=False):
     code: str
-    system: Optional[str]
-    display: Optional[str]
+    system: str | None
+    display: str | None
 
 
 class LaunchContext(TypedDict, total=False):

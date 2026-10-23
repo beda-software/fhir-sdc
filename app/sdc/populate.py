@@ -48,7 +48,7 @@ async def populate(
     return populated_response
 
 
-async def _handle_item(client, item, env, context):
+async def _handle_item(client, item, env, context):  # noqa: PLR0912
     # Make a copy of the env to populate with variables for nested items
     env = env.copy()
 

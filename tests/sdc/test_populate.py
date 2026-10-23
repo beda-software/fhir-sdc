@@ -1214,25 +1214,22 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
         "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
     }
 
-    try:
+    with pytest.raises(OperationOutcome) as exc:
         await q.execute("$populate", data=make_parameters(LaunchPatient=launch_patient))
-    except Exception as e:
-        assert json.loads(str(e)) == {
-            "resourceType": "OperationOutcome",
-            "issue": [
-                {
-                    "severity": "fatal",
-                    "code": "invalid",
-                    "diagnostics": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
-                }
-            ],
-            "text": {
-                "status": "generated",
-                "div": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
-            },
-        }
-        return
-    assert False
+    assert json.loads(str(exc.value)) == {
+        "resourceType": "OperationOutcome",
+        "issue": [
+            {
+                "severity": "fatal",
+                "code": "invalid",
+                "diagnostics": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+            }
+        ],
+        "text": {
+            "status": "generated",
+            "div": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+        },
+    }
 
 
 @pytest.mark.asyncio
@@ -1794,7 +1791,7 @@ async def test_variable_defined_in_one_group_not_visible_in_sibling_group_popula
 
     with pytest.raises(OperationOutcome) as exc:
         await q.execute("$populate", data=make_parameters())
-        assert exc.value.resource["issue"][0]["code"] == "invalid"
+    assert exc.value.resource["issue"][0]["code"] == "invalid"
 
 
 @pytest.mark.asyncio

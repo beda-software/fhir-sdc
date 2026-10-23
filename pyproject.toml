@@ -4,10 +4,25 @@ target-version = "py311"
 extend-exclude = ["htmlcov", "locales", "resources", "requirements", "embed"]
 
 [tool.ruff.lint]
-select = ["I"]
+select = ["I", "E", "F", "N", "B", "C4", "PT", "UP", "A", "RET", "RUF", "SIM", "PYI", "T20", "PIE", "G", "ISC", "PL"]
+# E501 is disabled because line limit is controlled by ruff format
+# RUF015 is disabled because index access is preferred way for us
+# PIE804 is disabled because we often use FHIR like camelCase variables
+# SIM102 is disabled because nested if's are more readable
+# SIM117 is disabled because nested with's are more readable
+ignore = ["E501", "RUF006", "RUF015", "PIE804", "SIM102", "SIM117", "ISC001"]
+unfixable = ["F401"]
+
+[tool.ruff.lint.pylint]
+max-args = 8
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests", "sdc"]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**/*.py" = ["PLR0913", "PLR2004"]
+# Importing the Aidbox app needs its settings, which the FHIR-server deployment does not have.
+"main.py" = ["PLC0415"]
 
 [tool.autohooks]
 mode = "pipenv"

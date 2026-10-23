@@ -12,7 +12,7 @@ from funcy.types import is_list, is_mapping
 from yarl import URL
 
 from app.cached_fhirpath import fhirpath
-from app.sdc.getters import get_source_queries
+from app.sdc.getters import get_source_queries, get_variable
 from app.sdc.typings import Expression, LaunchContext
 
 from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
@@ -23,53 +23,34 @@ QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES = (
     "questionnaire_response",
     "QuestionnaireResponse",
 )
+# Item types whose answer value[x] is named differently; every other type keeps its own name.
+ANSWER_VALUE_TYPES = {
+    "text": "string",
+    "display": "string",
+    "attachment": "Attachment",
+    "reference": "Reference",
+    "quantity": "Quantity",
+    "url": "uri",
+    # TODO: deprecate email and phone
+    "email": "string",
+    "phone": "string",
+}
 
 
 def get_type(item, data):
-    type = item["type"]
-    if type == "choice" or type == "open-choice":
-        option_type = [
-            key.removeprefix("value")
-            for key in get_by_path(item, ["answerOption", 0], {}).keys()
-            if key.startswith("value")
-        ]
-        if option_type:
-            type = next(iter(option_type))
-        else:
-            type = "Coding"
+    item_type = item["type"]
+    if item_type in {"choice", "open-choice"}:
         if isinstance(data[0], str):
             return "string"
-    elif type == "text":
-        type = "string"
-    elif type == "integer":
-        type = "integer"
-    elif type == "decimal":
-        type = "decimal"
-    elif type == "date":
-        type = "date"
-    elif type == "dateTime":
-        type = "dateTime"
-    elif type == "time":
-        type = "time"
-    elif type == "boolean":
-        type = "boolean"
-    elif type == "attachment":
-        type = "Attachment"
-    elif type == "display":
-        type = "string"
-    elif type == "reference":
-        type = "Reference"
-    elif type == "quantity":
-        type = "Quantity"
-    elif type == "url":
-        type = "uri"  # FHIR uses valueUri for url item type
-    # TODO: deprecate email and phone
-    elif type == "email":
-        type = "string"
-    elif type == "phone":
-        type = "string"
 
-    return type
+        option_type = [
+            key.removeprefix("value")
+            for key in get_by_path(item, ["answerOption", 0], {})
+            if key.startswith("value")
+        ]
+        return option_type[0] if option_type else "Coding"
+
+    return ANSWER_VALUE_TYPES.get(item_type, item_type)
 
 
 def make_value_key(type_: str) -> str:
@@ -111,8 +92,7 @@ def update_link_id_or_question(variables):
     def _update_link_id_or_question(value, key):
         if key in ["linkId", "question"]:
             return resolve_string_template({}, value, variables)
-        else:
-            return value
+        return value
 
     return _update_link_id_or_question
 
@@ -154,8 +134,6 @@ def resolve_string_template(
 
 
 def prepare_assemble_variables(item):
-    from app.sdc.getters import get_variable
-
     variables = {}
     for var in get_variable(item.get("extension", [])):
         if var and var.get("language") == "text/fhirpath":
@@ -272,12 +250,12 @@ async def load_source_queries(client, questionnaire, env):
 def validate_assemble_context(assemble_context: list[str], env):
     errors = []
     for var_name in assemble_context:
-        if var_name not in env.keys():
+        if var_name not in env:
             errors.append(
                 {
                     "severity": "error",
                     "key": "undefined-var",
-                    "human": "Context variable {} not defined".format(var_name),
+                    "human": f"Context variable {var_name} not defined",
                 }
             )
     if len(errors) > 0:
@@ -294,7 +272,7 @@ def validate_context(context_definition: list[LaunchContext], env):
                 {
                     "severity": "error",
                     "key": "undefined-var",
-                    "human": "Context variable {} not defined".format(name),
+                    "human": f"Context variable {name} not defined",
                 }
             )
     if len(errors) > 0:
@@ -343,7 +321,7 @@ async def resolve_expression(client, context, expression: Expression, env, path:
     try:
         if expression["language"] == "text/fhirpath":
             return fhirpath(context, expression["expression"], env)
-        elif expression["language"] == "application/x-fhir-query":
+        if expression["language"] == "application/x-fhir-query":
             url = resolve_string_template(
                 context,
                 expression["expression"],
@@ -357,7 +335,7 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             return await client.execute(url.path, method="GET", params=url.query)
     except Exception as e:
         raise OperationOutcome(
-            f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
-        )
+            f'Error resolving expression at {path}: "{expression["expression"]}" - {e!s}'
+        ) from e
 
     raise OperationOutcome(f"Unsupported expression language: {expression['language']} at {path}")

@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from typing import Any
 
 import simplejson as json
@@ -25,10 +26,9 @@ async def get_external_service_bundle(session, service, template, context):
             "context": context,
         },
     ) as result:
-        if 200 <= result.status <= 299:
+        if HTTPStatus.OK <= result.status < HTTPStatus.MULTIPLE_CHOICES:
             return await result.json()
-        else:
-            raise web.HTTPBadRequest(body=await result.text())
+        raise web.HTTPBadRequest(body=await result.text())
 
 
 def build_result_bundle(mappers_bundles: list[dict]) -> dict:
@@ -41,7 +41,7 @@ def build_result_bundle(mappers_bundles: list[dict]) -> dict:
         flattened_mappers_bundles = list(
             flatten(bundle.get("entry", None) or [] for bundle in mappers_bundles)
         )
-    except:
+    except Exception:
         flattened_mappers_bundles = []
 
     check_mappers_bundles_full_url_duplicates(flattened_mappers_bundles)

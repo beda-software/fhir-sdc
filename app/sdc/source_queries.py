@@ -8,7 +8,6 @@ def resolve_expression(resource):
         env = resource["env"]
         expression = resource["expression"]
     except KeyError as e:
-        raise OperationOutcome(str(e))
+        raise OperationOutcome(str(e)) from e
 
-    resolved_expression = resolve_string_template({}, expression, env)
-    return resolved_expression
+    return resolve_string_template({}, expression, env)
