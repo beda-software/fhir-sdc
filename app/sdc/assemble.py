@@ -25,12 +25,12 @@ def _launch_context_key(ext):
 
 WHITELISTED_EXTENSION_URLS = {
     LAUNCH_CONTEXT_URL: _launch_context_key,
-    QUESTIONNAIRE_MAPPER_URL: lambda ext: ext.get("valueReference", {})
-    .get("reference", "")
-    .split("/")[-1],
-    SOURCE_QUERIES_URL: lambda ext: ext.get("valueReference", {})
-    .get("reference", "")
-    .removeprefix("#"),
+    QUESTIONNAIRE_MAPPER_URL: lambda ext: (
+        ext.get("valueReference", {}).get("reference", "").split("/")[-1]
+    ),
+    SOURCE_QUERIES_URL: lambda ext: (
+        ext.get("valueReference", {}).get("reference", "").removeprefix("#")
+    ),
     TARGET_STRUCTURE_MAP_URL: lambda ext: ext.get("valueCanonical"),
     CQF_LIBRARY_URL: lambda ext: ext.get("valueCanonical"),
 }
