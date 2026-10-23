@@ -1,37 +1,17 @@
-[tool.black]
+[tool.ruff]
 line-length = 100
-target-version = ['py311']
-exclude = '''
-(
-  /(
-    | \.git
-    | \.pytest_cache
-    | htmlcov
-    | locales
-    | resources
-    | requirements
-    | embed
-  )/
-)
-'''
+target-version = "py311"
+extend-exclude = ["htmlcov", "locales", "resources", "requirements", "embed"]
 
-[tool.isort]
-multi_line_output = 3
-include_trailing_comma = true
-use_parentheses = true
-line_length = 100
-default_section = "THIRDPARTY"
-known_first_party = ["app", "tests", "sdc"]
+[tool.ruff.lint]
+select = ["I"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests", "sdc"]
 
 [tool.autohooks]
 mode = "pipenv"
-pre-commit = ["autohooks.plugins.black", "autohooks.plugins.isort"]
-
-[tool.pylint.FORMAT]
-max-line-length=100
-
-[tool.pylint.'MESSAGES CONTROL']
-disable = ["C0114", "C0116"]
+pre-commit = ["autohooks.plugins.ruff.format", "autohooks.plugins.ruff"]
 
 [tool.pytest.ini_options]
 log_cli = true
