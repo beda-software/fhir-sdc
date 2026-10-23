@@ -5,6 +5,7 @@ from ..sdc.operations import (
     run_context,
     run_extract,
     run_populate,
+    run_questionnaire_response_extract,
 )
 from ..utils import render_json
 from .utils import AidboxSdcRequest, aidbox_operation, prepare_args
@@ -39,6 +40,22 @@ async def extract_questionnaire_operation(request: AidboxSdcRequest):
 async def extract_questionnaire_instance_operation(request: AidboxSdcRequest):
     return render_json(
         await run_extract(request.context, request.resource, request.route_params["id"])
+    )
+
+
+@aidbox_operation(["POST"], ["QuestionnaireResponse", "$extract"])
+@prepare_args
+async def extract_questionnaire_response_operation(request: AidboxSdcRequest):
+    return render_json(await run_questionnaire_response_extract(request.context, request.resource))
+
+
+@aidbox_operation(["POST"], ["QuestionnaireResponse", {"name": "id"}, "$extract"])
+@prepare_args
+async def extract_questionnaire_response_instance_operation(request: AidboxSdcRequest):
+    return render_json(
+        await run_questionnaire_response_extract(
+            request.context, request.resource or {}, request.route_params["id"]
+        )
     )
 
 

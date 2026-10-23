@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from fhirpy import AsyncFHIRClient
 
@@ -6,7 +7,7 @@ from .assemble import assemble
 from .constraint_check import constraint_check
 from .context import load_questionnaire_context
 from .exception import MissingParamOperationOutcome
-from .extract import extract
+from .extract import build_extract_bundle
 from .populate import populate
 from .utils import is_sdc_api, parse_parameters, resolve_questionnaire, resolve_questionnaire_by_id
 
@@ -61,11 +62,66 @@ async def run_extract(ctx: SdcContext, resource: dict, questionnaire_id: str | N
             "QuestionnaireResponse are required",
         )
 
-    require_param(questionnaire, "Questionnaire")
+    bundle = await build_checked_extract_bundle(
+        ctx, require_param(questionnaire, "Questionnaire"), questionnaire_response, variables
+    )
+    return [await ctx.user_client.execute("/", data=bundle)] if bundle else []
+
+
+async def run_questionnaire_response_extract(
+    ctx: SdcContext, parameters: dict, questionnaire_response_id: str | None = None
+) -> dict:
+    """SDC `$extract`: return the bundle for the client to submit instead of submitting it."""
+    questionnaire, questionnaire_response, variables = await parse_parameters(
+        ctx.user_client, parameters
+    )
+    if questionnaire_response_id:
+        questionnaire_response = dict(
+            await ctx.user_client.resources("QuestionnaireResponse")
+            .search(_id=questionnaire_response_id)
+            .get()
+        )
+    require_param(questionnaire_response, "questionnaire-response")
+    questionnaire = questionnaire or await resolve_questionnaire(
+        ctx.user_client, questionnaire_response.get("questionnaire")
+    )
+    bundle = await build_checked_extract_bundle(
+        ctx, questionnaire, questionnaire_response, variables
+    )
+    return build_extract_output(bundle)
+
+
+async def build_checked_extract_bundle(
+    ctx: SdcContext,
+    questionnaire: dict,
+    questionnaire_response: dict,
+    variables: dict[str, Any],
+) -> dict | None:
     await constraint_check(ctx.user_client, questionnaire, questionnaire_response, variables)
-    return await extract(
+    return await build_extract_bundle(
         ctx.user_client, questionnaire, questionnaire_response, variables, ctx.extract_services
     )
+
+
+def build_extract_output(bundle: dict | None) -> dict:
+    """SDC `$extract` output: the bundle to submit in `return`, or why there is none in `issues`."""
+    if bundle and bundle["entry"]:
+        return {"resourceType": "Parameters", "parameter": [{"name": "return", "resource": bundle}]}
+
+    nothing_extracted = {
+        "resourceType": "OperationOutcome",
+        "issue": [
+            {
+                "severity": "information",
+                "code": "informational",
+                "diagnostics": "Nothing to extract",
+            }
+        ],
+    }
+    return {
+        "resourceType": "Parameters",
+        "parameter": [{"name": "issues", "resource": nothing_extracted}],
+    }
 
 
 async def run_constraint_check(ctx: SdcContext, parameters: dict) -> dict:

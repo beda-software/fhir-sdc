@@ -31,7 +31,7 @@ async def get_external_service_bundle(session, service, template, context):
             raise web.HTTPBadRequest(body=await result.text())
 
 
-async def execute_mappers_bundles(client, mappers_bundles):
+def build_result_bundle(mappers_bundles: list[dict]) -> dict:
     try:
         # NOTE: `bundle.get("entry", None) or []` is used to catch cases, when
         # bundle is like `{'type': 'transaction', 'entry': None, 'resourceType': 'Bundle'}`
@@ -48,27 +48,24 @@ async def execute_mappers_bundles(client, mappers_bundles):
 
     not_transaction = any(bundle.get("type") != "transaction" for bundle in mappers_bundles)
 
-    result_bundle = {
+    return {
         "resourceType": "Bundle",
         "type": "batch" if not_transaction else "transaction",
         "entry": flattened_mappers_bundles,
     }
 
-    return await client.execute("/", data=result_bundle)
 
-
-async def extract(
+async def build_extract_bundle(
     client: AsyncFHIRClient,
     questionnaire: dict,
     questionnaire_response: dict,
     variables: dict[str, Any],
     extract_services: dict,
-) -> list:
-    """Render the Questionnaire's mappers and submit the bundles they produce."""
+) -> dict | None:
+    """Render the Questionnaire's mappers into one bundle, or None when they render nothing."""
     mappers = await load_mappers(client, questionnaire)
     env = build_fhirpath_env(questionnaire, questionnaire_response, variables)
     async with ClientSession() as session:
-        resp = []
         mappers_bundles = []
 
         for mapper in mappers:
@@ -97,9 +94,6 @@ async def extract(
                     )
                 )
 
-        # A mapper that renders nothing answers with null, which is not a bundle to submit.
+        # A mapper that renders nothing answers with null, which is not a bundle.
         mappers_bundles = [bundle for bundle in mappers_bundles if bundle]
-        if len(mappers_bundles) > 0:
-            resp.append(await execute_mappers_bundles(client, mappers_bundles))
-
-        return resp
+        return build_result_bundle(mappers_bundles) if mappers_bundles else None

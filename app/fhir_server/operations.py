@@ -8,6 +8,7 @@ from ..sdc.operations import (
     run_context,
     run_extract,
     run_populate,
+    run_questionnaire_response_extract,
 )
 from ..utils import build_user_client, get_extract_services, render_json
 
@@ -38,6 +39,21 @@ async def extract_questionnaire_handler(request: web.Request):
 async def extract_questionnaire_instance_operation(request: web.Request):
     context = build_sdc_context(request)
     return render_json(await run_extract(context, await request.json(), request.match_info["id"]))
+
+
+@routes.post("/QuestionnaireResponse/$extract")
+async def extract_questionnaire_response_handler(request: web.Request):
+    context = build_sdc_context(request)
+    return render_json(await run_questionnaire_response_extract(context, await request.json()))
+
+
+@routes.post("/QuestionnaireResponse/{id}/$extract")
+async def extract_questionnaire_response_instance_handler(request: web.Request):
+    context = build_sdc_context(request)
+    parameters = await request.json() if request.can_read_body else {}
+    return render_json(
+        await run_questionnaire_response_extract(context, parameters, request.match_info["id"])
+    )
 
 
 @routes.post("/Questionnaire/$populate")
