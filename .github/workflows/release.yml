@@ -34,3 +34,26 @@ jobs:
           docker buildx build --platform linux/arm64,linux/amd64
           --cache-from ${{ env.CACHE_IMAGE }} --push
           --tag ${{ env.BUILD_IMAGE }}:${{ steps.extract_branch.outputs.branch }} --tag ${{ env.CACHE_IMAGE }} .
+  TestTestkit:
+    uses: ./.github/workflows/testkit.yml
+  PublishTestkit:
+    runs-on: ubuntu-latest
+    needs: [BuildAndTest, TestTestkit]
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: fhir-sdc-testkit
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+      - run: uv build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: fhir-sdc-testkit/dist

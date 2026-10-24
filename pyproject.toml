@@ -17,7 +17,7 @@ unfixable = ["F401"]
 max-args = 8
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "tests", "sdc"]
+known-first-party = ["app", "tests", "sdc", "fhir_sdc_testkit"]
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**/*.py" = ["PLR0913", "PLR2004"]
