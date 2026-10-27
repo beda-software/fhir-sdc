@@ -23,7 +23,7 @@ from tests.factories import (
 
 
 @pytest.fixture
-async def subject(typed_fhir_client):
+async def subject(typed_fhir_client, safe_db):
     patient = await typed_fhir_client.create(r4b.Patient())
     return r4b.Reference(reference=f"Patient/{patient.id}")
 
