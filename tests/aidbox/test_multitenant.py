@@ -9,6 +9,7 @@ from tests.factories import (
     make_launch_context_ext,
     make_parameters,
     make_questionnaire,
+    make_questionnaire_mapper_ext,
     make_source_queries_ext,
 )
 
@@ -107,3 +108,67 @@ async def test_populate(aidbox_client, safe_db):
         "QuestionnaireResponse.repeat(item).where(linkId='firstName').answer.valueString",
         {},
     ) == [given]
+
+
+async def create_org_questionnaire(aidbox_client, name, patient_id):
+    org = aidbox_client.resource("Organization", **{"name": name})
+    await org.save()
+    org_client = get_organization_client(aidbox_client, org)
+
+    mapping = org_client.resource(
+        "Mapping",
+        **{
+            "body": {
+                "resourceType": "Bundle",
+                "type": "transaction",
+                "entry": [
+                    {
+                        "request": {"method": "PUT", "url": f"Patient/{patient_id}"},
+                        "resource": {"resourceType": "Patient", "id": patient_id},
+                    }
+                ],
+            }
+        },
+    )
+    await mapping.save()
+    q = org_client.resource(
+        "Questionnaire",
+        **make_questionnaire(
+            {
+                "status": "active",
+                "extension": [make_questionnaire_mapper_ext(mapping.id)],
+                "item": [],
+            }
+        ),
+    )
+    await q.save()
+    return org_client, q
+
+
+@pytest.mark.asyncio
+async def test_extract_instance_endpoint(aidbox_client, safe_db):
+    org_client, q = await create_org_questionnaire(aidbox_client, "org_i", "extracted-instance")
+
+    extraction = await q.execute(
+        "$extract", data=org_client.resource("QuestionnaireResponse", questionnaire=q.id)
+    )
+    assert len(extraction) == 1
+
+    patient = await org_client.resources("Patient").search(_id="extracted-instance").get()
+    assert patient.id == "extracted-instance"
+
+
+@pytest.mark.asyncio
+async def test_extract_collection_endpoint(aidbox_client, safe_db):
+    org_client, q = await create_org_questionnaire(aidbox_client, "org_c", "extracted-collection")
+
+    extraction = await org_client.execute(
+        "Questionnaire/$extract",
+        method="POST",
+        data={"resourceType": "QuestionnaireResponse", "questionnaire": q.id},
+        params=None,
+    )
+    assert len(extraction) == 1
+
+    patient = await org_client.resources("Patient").search(_id="extracted-collection").get()
+    assert patient.id == "extracted-collection"

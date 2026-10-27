@@ -3,22 +3,53 @@
 
 The whole SDC specification you can find here http://hl7.org/fhir/uv/sdc/
 
-## Using with Aidbox
+## Upgrading to 3.x.x
 
-In order to use extraction on behalf of the user, the Aidbox should be configured with `box_features_mapping_enable__access__control=true` environment variable.
+`CONSTRAINT_LEGACY_BEHAVIOR` and `EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR` are gone, and both now behave as `False` did:
 
-## New projects setup
+- an `itemConstraint` expression states what must hold, and the submission is refused when it evaluates to false.
+  Expressions written for the legacy behaviour describe the error instead, and have to be negated;
+- source queries are loaded for the constraint check only, so mappers receive the `$extract` parameters alone.
 
-For new installations, you must specify the following environment variables:
-```
-CONSTRAINT_LEGACY_BEHAVIOR=False
-EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False
-```
+Setting either variable no longer has any effect.
 
-`EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR=False` stops passing source queries to mappers during extraction: they are still
-loaded for the constraint check, but mappers receive only the `$extract` parameters.
+`JUTE_SERVICE=aidbox` is gone too: JUTE mappers always run through a JUTE service, and the app refuses to start while
+the variable still says `aidbox`. Leaving `JUTE_SERVICE` or `FHIRPATH_MAPPING_SERVICE` unset is fine — extraction then
+refuses only the mappers that would have needed the missing service.
 
-**NOTE:** In fhir-sdc@3.x.x will be enforced to be explicitly set to false. 
+The FHIR server app now runs every query as the caller: it forwards the request's own credentials and no longer
+reads `AUTH_TOKEN`. Callers need read access to `Questionnaire` and `StructureMap`, or `$populate`, `$assemble` and
+`$extract` start refusing callers that could use them before.
+
+The Aidbox app does the same: callers need read access to `Questionnaire` and `Mapping`.
+
+The `externalFhirBaseUrl` parameter is gone. It let a caller pick the server fhir-sdc sent its requests to, which made
+the engine a proxy into whatever its network could reach. Requests always go to the server fhir-sdc is configured with.
+
+## Access policies
+
+fhir-sdc makes every request with the caller's credentials, so the caller needs policies for:
+
+- `GET /fhir/Questionnaire/{id}/$assemble`
+- `POST /fhir/Questionnaire/$populate`, `POST /fhir/Questionnaire/{id}/$populate`
+- `POST /fhir/Questionnaire/$extract`, `POST /fhir/Questionnaire/{id}/$extract`
+- `POST /fhir/QuestionnaireResponse/$constraint-check`
+- `GET /fhir/Questionnaire?_id={id}` — the Questionnaire, and its sub-Questionnaires as `_id={id},{id}`
+- `GET /fhir/Questionnaire?url={url}` (`&version={version}`) — a QuestionnaireResponse's Questionnaire
+- `GET /fhir/Mapping?_id={id}` — the mappers
+- `GET /fhir/StructureMap?_id={id}` — the mappers, in the FHIR server app only
+- `POST /fhir` — `Questionnaire/$extract` submits the extraction
+
+Anything else depends on the forms: context references, source queries and the resources the mappers write need the
+policies the caller would need to reach them directly. Organization-scoped routes use the same paths under
+`/Organization/{org_id}`. The test seeds in `initBundle.json` grant this list, bar `StructureMap`: the operations and
+`POST /fhir` to anyone, the searches to the `sdc` Client.
+
+## Testing questionnaires
+
+`fhir-sdc-testkit/` is a published package that drives a Questionnaire through `$populate`, answers and `$extract`
+against a running server, so a form and its Mapping can be covered from Python tests. See
+[fhir-sdc-testkit/README.md](fhir-sdc-testkit/README.md).
 
 ## Further plans:
 - JUTE-based population

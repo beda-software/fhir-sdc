@@ -1,0 +1,73 @@
+[project]
+name = "fhir-sdc-testkit"
+dynamic = ["version"]
+description = "Drive an SDC Questionnaire through $populate, answers and $extract in tests"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "beda.software", email = "hi@beda.software" }]
+keywords = ["fhir", "sdc", "questionnaire", "testing", "pytest"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Framework :: Pytest",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Topic :: Software Development :: Testing",
+]
+dependencies = ["fhirpy>=2.2.0", "fhirpy-types-r4b>=0.1.1"]
+
+[project.urls]
+Homepage = "https://github.com/beda-software/fhir-sdc"
+Source = "https://github.com/beda-software/fhir-sdc/tree/master/fhir-sdc-testkit"
+
+[dependency-groups]
+dev = ["pytest>=8.0", "ruff>=0.15", "mypy>=1.11"]
+
+[build-system]
+requires = ["hatchling>=1.27", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+# Released with the engine: the v*.*.* tag is the version users match to their server.
+[tool.hatch.version]
+source = "vcs"
+raw-options = { root = ".." }
+
+[tool.hatch.build.hooks.vcs]
+version-file = "fhir_sdc_testkit/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fhir_sdc_testkit"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+# README snippets are keyword arguments, not statements the formatter can parse.
+extend-exclude = ["*.md"]
+
+[tool.ruff.lint]
+select = ["I", "E", "F", "N", "B", "C4", "PT", "UP", "A", "RET", "RUF", "SIM", "PYI", "T20", "PIE", "PL", "ANN"]
+# E501 is disabled because line limit is controlled by ruff format
+# PIE804 is disabled because FHIR resources are built from camelCase keyword arguments
+ignore = ["E501", "PIE804"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["fhir_sdc_testkit"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["PLR2004"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-ra --color=yes"
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["fhir_sdc_testkit", "tests"]
+ignore_missing_imports = true
+check_untyped_defs = true
+plugins = ["pydantic.mypy"]
+
+[tool.pydantic-mypy]
+init_typed = true

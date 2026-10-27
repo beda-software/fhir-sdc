@@ -12,60 +12,45 @@ from funcy.types import is_list, is_mapping
 from yarl import URL
 
 from app.cached_fhirpath import fhirpath
-from app.sdc.getters import get_source_queries
+from app.sdc.getters import get_source_queries, get_variable
 from app.sdc.typings import Expression, LaunchContext
 
-from .exception import ConstraintCheckOperationOutcome
+from .exception import ConstraintCheckOperationOutcome, MissingParamOperationOutcome
 
-# NOTE: it's outside from spec
-EXTERNAL_FHIR_BASE_URL_PARAM_KEY = "externalFhirBaseUrl"
+QUESTIONNAIRE_PARAMETER_NAMES = ("questionnaire", "Questionnaire")
+QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES = (
+    "questionnaire-response",
+    "questionnaire_response",
+    "QuestionnaireResponse",
+)
+# Item types whose answer value[x] is named differently; every other type keeps its own name.
+ANSWER_VALUE_TYPES = {
+    "text": "string",
+    "display": "string",
+    "attachment": "Attachment",
+    "reference": "Reference",
+    "quantity": "Quantity",
+    "url": "uri",
+    # TODO: deprecate email and phone
+    "email": "string",
+    "phone": "string",
+}
 
 
 def get_type(item, data):
-    type = item["type"]
-    if type == "choice" or type == "open-choice":
-        option_type = [
-            key.removeprefix("value")
-            for key in get_by_path(item, ["answerOption", 0], {}).keys()
-            if key.startswith("value")
-        ]
-        if option_type:
-            type = next(iter(option_type))
-        else:
-            type = "Coding"
+    item_type = item["type"]
+    if item_type in {"choice", "open-choice"}:
         if isinstance(data[0], str):
             return "string"
-    elif type == "text":
-        type = "string"
-    elif type == "integer":
-        type = "integer"
-    elif type == "decimal":
-        type = "decimal"
-    elif type == "date":
-        type = "date"
-    elif type == "dateTime":
-        type = "dateTime"
-    elif type == "time":
-        type = "time"
-    elif type == "boolean":
-        type = "boolean"
-    elif type == "attachment":
-        type = "Attachment"
-    elif type == "display":
-        type = "string"
-    elif type == "reference":
-        type = "Reference"
-    elif type == "quantity":
-        type = "Quantity"
-    elif type == "url":
-        type = "uri"  # FHIR uses valueUri for url item type
-    # TODO: deprecate email and phone
-    elif type == "email":
-        type = "string"
-    elif type == "phone":
-        type = "string"
 
-    return type
+        option_type = [
+            key.removeprefix("value")
+            for key in get_by_path(item, ["answerOption", 0], {})
+            if key.startswith("value")
+        ]
+        return option_type[0] if option_type else "Coding"
+
+    return ANSWER_VALUE_TYPES.get(item_type, item_type)
 
 
 def make_value_key(type_: str) -> str:
@@ -107,8 +92,7 @@ def update_link_id_or_question(variables):
     def _update_link_id_or_question(value, key):
         if key in ["linkId", "question"]:
             return resolve_string_template({}, value, variables)
-        else:
-            return value
+        return value
 
     return _update_link_id_or_question
 
@@ -150,8 +134,6 @@ def resolve_string_template(
 
 
 def prepare_assemble_variables(item):
-    from app.sdc.getters import get_variable
-
     variables = {}
     for var in get_variable(item.get("extension", [])):
         if var and var.get("language") == "text/fhirpath":
@@ -166,57 +148,100 @@ def is_sdc_api(parameters: dict | None) -> bool:
     return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
 
 
-async def parameter_to_env(client: AsyncFHIRClient, resource) -> dict[str, Any]:
+def find_subject_reference(parameters: dict) -> dict | None:
+    return next(
+        (
+            p["valueReference"]
+            for p in parameters.get("parameter", [])
+            if p.get("name") == "subject" and "valueReference" in p
+        ),
+        None,
+    )
+
+
+async def parse_parameters(
+    client: AsyncFHIRClient, resource: dict
+) -> tuple[dict | None, dict | None, dict[str, Any]]:
+    """Split Parameters into the Questionnaire, the QuestionnaireResponse and the other variables."""
     # TODO: add support for repeating values (with same name)
-    env: dict[str, Any] = {}
-    for param in resource["parameter"]:
+    variables: dict[str, Any] = {}
+    for param in resource.get("parameter", []):
         if param["name"] == "context":
             parts = param["part"]
             name = next(p for p in parts if p["name"] == "name")["valueString"]
             value = next(p for p in parts if p["name"] == "content")
             if "resource" in value:
-                env[name] = value["resource"]
+                variables[name] = value["resource"]
             else:
-                env[name] = await client.reference(
+                variables[name] = await client.reference(
                     reference=value["valueReference"]["reference"]
                 ).to_resource()
         elif "resource" in param:
-            env[param["name"]] = param["resource"]
+            variables[param["name"]] = param["resource"]
         else:
             value, kind = parse_parameter_value(param)
             if value:
                 if param["name"] == "subject" and kind == "Reference":
-                    env[param["name"]] = await client.reference(
+                    variables[param["name"]] = await client.reference(
                         reference=value["reference"]
                     ).to_resource()
                 else:
-                    env[param["name"]] = value
-    # Mapping parameters to fhir resource names
-    questionnaire = env.get("questionnaire")
-    if questionnaire:
-        env["Questionnaire"] = questionnaire
-    questionnaire_response = env.get("questionnaire_response")
+                    variables[param["name"]] = value
+    questionnaire = pop_aliases(variables, QUESTIONNAIRE_PARAMETER_NAMES)
+    questionnaire_response = pop_aliases(variables, QUESTIONNAIRE_RESPONSE_PARAMETER_NAMES)
+    return questionnaire, questionnaire_response, variables
+
+
+def pop_aliases(variables: dict[str, Any], names: tuple[str, ...]) -> dict | None:
+    values = [variables.pop(name, None) for name in names]
+    return next((value for value in values if value), None)
+
+
+def build_fhirpath_env(
+    questionnaire: dict, questionnaire_response: dict | None, variables: dict[str, Any]
+) -> dict[str, Any]:
+    env = {**variables, "Questionnaire": questionnaire, "questionnaire": questionnaire}
     if questionnaire_response:
         env["QuestionnaireResponse"] = questionnaire_response
+        env["questionnaire_response"] = questionnaire_response
+        env["resource"] = questionnaire_response
     return env
+
+
+async def resolve_questionnaire_by_id(client: AsyncFHIRClient, questionnaire_id: str) -> dict:
+    return dict(await client.resources("Questionnaire").search(_id=questionnaire_id).get())
+
+
+async def resolve_questionnaire(client: AsyncFHIRClient, canonical: str | None) -> dict:
+    if not canonical:
+        raise MissingParamOperationOutcome("`questionnaire` is required")
+
+    return dict(await resolve_by_canonical(client, "Questionnaire", canonical))
+
+
+async def resolve_by_canonical(client: AsyncFHIRClient, resource_type: str, canonical: str):
+    """By canonical url as the spec defines it, then by id, which is what fhir-sdc used to write."""
+    url, _, version = canonical.partition("|")
+    search = {"url": url, "version": version} if version else {"url": url}
+    matches = await client.resources(resource_type).search(**search).limit(2).fetch()
+    if len(matches) > 1:
+        raise MissingParamOperationOutcome(
+            f"{resource_type} `{canonical}` matches several versions"
+        )
+
+    if matches:
+        return matches[0]
+
+    resource = await client.resources(resource_type).search(_id=url.rsplit("/", 1)[-1]).first()
+    if resource is None:
+        raise MissingParamOperationOutcome(f"{resource_type} `{canonical}` is not found")
+
+    return resource
 
 
 def parse_parameter_value(parameter) -> tuple[Any, str]:
     _name_key, value_key = parameter.keys()
     return parameter[value_key], value_key.removeprefix("value")
-
-
-def get_external_fhir_base_url_from_resource(resource: dict | None):
-    if not resource or resource.get("resourceType") != "Parameters":
-        return None
-    for param in resource.get("parameter", []):
-        if param.get("name") != EXTERNAL_FHIR_BASE_URL_PARAM_KEY:
-            continue
-        if "resource" in param:
-            continue
-        value, _key = parse_parameter_value(param)
-        return value or None
-    return None
 
 
 async def load_source_queries(client, questionnaire, env):
@@ -236,12 +261,12 @@ async def load_source_queries(client, questionnaire, env):
 def validate_assemble_context(assemble_context: list[str], env):
     errors = []
     for var_name in assemble_context:
-        if var_name not in env.keys():
+        if var_name not in env:
             errors.append(
                 {
                     "severity": "error",
                     "key": "undefined-var",
-                    "human": "Context variable {} not defined".format(var_name),
+                    "human": f"Context variable {var_name} not defined",
                 }
             )
     if len(errors) > 0:
@@ -258,7 +283,7 @@ def validate_context(context_definition: list[LaunchContext], env):
                 {
                     "severity": "error",
                     "key": "undefined-var",
-                    "human": "Context variable {} not defined".format(name),
+                    "human": f"Context variable {name} not defined",
                 }
             )
     if len(errors) > 0:
@@ -303,22 +328,11 @@ def _evaluate(resource, expression, context):
     return fhirpath(resource, expression, context, "r4")
 
 
-async def apply_converter_for_resources(converter_fn, resources: list) -> list:
-    bundle = {
-        "resourceType": "Bundle",
-        "type": "collection",
-        "entry": [{"resource": dict(s)} for s in resources],
-    }
-    fce_bundle = await converter_fn(bundle)
-    result = [s["resource"] for s in fce_bundle["entry"]]
-    return result
-
-
 async def resolve_expression(client, context, expression: Expression, env, path: str):
     try:
         if expression["language"] == "text/fhirpath":
             return fhirpath(context, expression["expression"], env)
-        elif expression["language"] == "application/x-fhir-query":
+        if expression["language"] == "application/x-fhir-query":
             url = resolve_string_template(
                 context,
                 expression["expression"],
@@ -332,7 +346,7 @@ async def resolve_expression(client, context, expression: Expression, env, path:
             return await client.execute(url.path, method="GET", params=url.query)
     except Exception as e:
         raise OperationOutcome(
-            f'Error resolving expression at {path}: "{expression["expression"]}" - {str(e)}'
-        )
+            f'Error resolving expression at {path}: "{expression["expression"]}" - {e!s}'
+        ) from e
 
     raise OperationOutcome(f"Unsupported expression language: {expression['language']} at {path}")

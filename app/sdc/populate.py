@@ -1,65 +1,57 @@
 import logging
+from typing import Any
 
+from fhirpy import AsyncFHIRClient
 from funcy import is_list
 
+from .context import load_questionnaire_context
 from .getters import (
     get_choice_column_paths,
     get_initial_expression,
     get_item_context,
     get_item_population_context,
-    get_launch_context,
     get_variable,
 )
-from .utils import (
-    get_type,
-    load_source_queries,
-    make_value_key,
-    normalize_answer_value,
-    resolve_expression,
-    validate_context,
-)
+from .utils import get_type, make_value_key, normalize_answer_value, resolve_expression
 
 logger = logging.getLogger(__name__)
 
 
-async def populate(client, fhir_questionnaire, env, *, sdc_api: bool = False):
-    exts = fhir_questionnaire.get("extension", [])
-    launch_context = get_launch_context(exts)
-    if launch_context:
-        validate_context(launch_context, env)
-    if "QuestionnaireResponse" not in env:
-        # Populate operation does not accept QR, but source queries might use it
-        # in constraint-check operations
-        # This "hack" allows using QuestionnaireResponse as env variable (otherwise fhirpath will fail)
-        env["QuestionnaireResponse"] = {
-            "resourceType": "QuestionnaireResponse",
-            "status": "in-progress",
-        }
-
-    await load_source_queries(client, fhir_questionnaire, env)
-
-    root = {
-        **env["QuestionnaireResponse"],
+async def populate(
+    client: AsyncFHIRClient,
+    questionnaire: dict,
+    variables: dict[str, Any],
+    *,
+    sdc_api: bool = False,
+    subject: dict | None = None,
+) -> dict:
+    populated_response = {
         "resourceType": "QuestionnaireResponse",
-        "questionnaire": fhir_questionnaire.get("url") or fhir_questionnaire.get("id"),
+        "status": "in-progress",
+        "questionnaire": questionnaire.get("url") or questionnaire.get("id"),
         "item": [],
     }
-    env["resource"] = root
-    env["questionnaire"] = env["Questionnaire"]
+    if subject:
+        populated_response["subject"] = subject
+    env = await load_questionnaire_context(client, questionnaire, populated_response, variables)
+    exts = questionnaire.get("extension", [])
     for variable in get_variable(exts):
         env[variable["name"]] = await resolve_expression(
             client, {}, variable, env, f"variable.{variable['name']}"
         )
 
-    for item in fhir_questionnaire["item"]:
-        root["item"].extend(await _handle_item(client, item, env, {}))
+    for item in questionnaire["item"]:
+        populated_response["item"].extend(await _handle_item(client, item, env, {}))
 
     if sdc_api:
-        return {"resourceType": "Parameters", "parameter": [{"name": "response", "resource": root}]}
-    return root
+        return {
+            "resourceType": "Parameters",
+            "parameter": [{"name": "response", "resource": populated_response}],
+        }
+    return populated_response
 
 
-async def _handle_item(client, item, env, context):
+async def _handle_item(client, item, env, context):  # noqa: PLR0912
     # Make a copy of the env to populate with variables for nested items
     env = env.copy()
 
@@ -120,8 +112,9 @@ async def _handle_item(client, item, env, context):
     root_item = init_item()
 
     initial_expression = get_initial_expression(item_exts)
+    initial_selected_answers = get_initial_selected_answers(item)
+    answers = []
     if initial_expression:
-        answers = []
         data = await resolve_expression(
             client,
             context,
@@ -132,19 +125,17 @@ async def _handle_item(client, item, env, context):
         if data:
             type_ = get_type(item, data)
             display_path = next(iter(get_choice_column_paths(item_exts)), None)
-            if is_repeating:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
-                    for d in data
-                ]
-            else:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, data[0], display_path)}
-                ]
-        if answers:
-            root_item["answer"] = answers
+            answers = [
+                {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
+                for d in data
+            ]
     elif "initial" in item:
-        root_item["answer"] = item["initial"]
+        answers = item["initial"]
+    elif initial_selected_answers:
+        answers = initial_selected_answers
+
+    if answers:
+        root_item["answer"] = answers if is_repeating else answers[:1]
 
     if "item" in item:
         populated_items = []
@@ -154,3 +145,11 @@ async def _handle_item(client, item, env, context):
         root_item["item"] = populated_items
 
     return [root_item]
+
+
+def get_initial_selected_answers(item: dict) -> list[dict]:
+    return [
+        {key: value for key, value in option.items() if key.startswith("value")}
+        for option in item.get("answerOption", [])
+        if option.get("initialSelected")
+    ]

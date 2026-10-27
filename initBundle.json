@@ -10,6 +10,149 @@
         "method": "POST",
         "url": "/$upload-fhir-npm-packages"
       }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-anyone-execute-sdc-operations"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-anyone-execute-sdc-operations",
+        "description": "Allows anyone to call the fhir-sdc operations.",
+        "engine": "matcho",
+        "matcho": {
+          "uri": "#^(/Organization/[^/]+)?/fhir/(Questionnaire|QuestionnaireResponse)(/[^/]+)?/\\$(assemble|populate|extract|constraint-check)$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-anyone-execute-transaction"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-anyone-execute-transaction",
+        "description": "Allows anyone to submit a transaction bundle; Aidbox still authorizes every entry.",
+        "engine": "matcho",
+        "matcho": {
+          "request-method": "post",
+          "uri": "#^(/Organization/[^/]+)?/fhir/?$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Client/sdc"
+      },
+      "resource": {
+        "resourceType": "Client",
+        "id": "sdc",
+        "secret": "sdc-secret",
+        "grant_types": [
+          "basic"
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-sdc-search-questionnaires"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-sdc-search-questionnaires",
+        "description": "Allows the sdc client to search Questionnaires.",
+        "engine": "matcho",
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ],
+        "matcho": {
+          "request-method": "get",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Questionnaire$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-sdc-search-mappings"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-sdc-search-mappings",
+        "description": "Allows the sdc client to search Mappings.",
+        "engine": "matcho",
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ],
+        "matcho": {
+          "request-method": "get",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Mapping$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-sdc-update-patients"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-sdc-update-patients",
+        "description": "Allows the sdc client to update Patients.",
+        "engine": "matcho",
+        "link": [
+          {
+            "reference": "Client/sdc"
+          }
+        ],
+        "matcho": {
+          "request-method": "put",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        }
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "Client/sdc-no-forms"
+      },
+      "resource": {
+        "resourceType": "Client",
+        "id": "sdc-no-forms",
+        "secret": "sdc-no-forms-secret",
+        "grant_types": [
+          "basic"
+        ]
+      }
+    },
+    {
+      "request": {
+        "method": "PUT",
+        "url": "AccessPolicy/as-sdc-no-forms-update-patients"
+      },
+      "resource": {
+        "resourceType": "AccessPolicy",
+        "id": "as-sdc-no-forms-update-patients",
+        "description": "Allows the sdc-no-forms client to update Patients, and nothing else.",
+        "engine": "matcho",
+        "link": [
+          {
+            "reference": "Client/sdc-no-forms"
+          }
+        ],
+        "matcho": {
+          "request-method": "put",
+          "uri": "#^(/Organization/[^/]+)?/fhir/Patient(/.*)?$"
+        }
+      }
     }
   ]
 }

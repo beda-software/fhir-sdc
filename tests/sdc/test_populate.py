@@ -51,6 +51,97 @@ async def test_initial_populate(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
+async def test_initial_selected_populate(fhir_client, safe_db):
+    """The option marked initialSelected becomes the answer."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "choice",
+                    "linkId": "color",
+                    "answerOption": [
+                        {"valueCoding": red},
+                        {"valueCoding": green, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [{"linkId": "color", "answer": [{"valueCoding": green}]}]
+
+
+@pytest.mark.asyncio
+async def test_initial_values_are_cut_to_first_for_single_item_populate(fhir_client, safe_db):
+    """A non-repeating item keeps only the first of several initial values."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "name",
+                    "initial": [{"valueString": "first"}, {"valueString": "second"}],
+                },
+                {
+                    "type": "choice",
+                    "linkId": "color",
+                    "answerOption": [
+                        {"valueCoding": red, "initialSelected": True},
+                        {"valueCoding": green, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [
+        {"linkId": "name", "answer": [{"valueString": "first"}]},
+        {"linkId": "color", "answer": [{"valueCoding": red}]},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_initial_selected_repeats_populate(fhir_client, safe_db):
+    """Options marked initialSelected become the answers of a repeating item."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    blue = {"system": "http://example.com", "code": "blue"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "choice",
+                    "linkId": "colors",
+                    "repeats": True,
+                    "answerOption": [
+                        {"valueCoding": red, "initialSelected": True},
+                        {"valueCoding": green},
+                        {"valueCoding": blue, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [
+        {"linkId": "colors", "answer": [{"valueCoding": red}, {"valueCoding": blue}]},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db):
     """
     Cover all get_type() branches: string, integer, decimal, date, dateTime, time,
@@ -1214,25 +1305,22 @@ async def test_fhirpath_failure_populate(fhir_client, safe_db):
         "name": [{"given": ["Peter", "James"], "family": "Chalmers"}],
     }
 
-    try:
+    with pytest.raises(OperationOutcome) as exc:
         await q.execute("$populate", data=make_parameters(LaunchPatient=launch_patient))
-    except Exception as e:
-        assert json.loads(str(e)) == {
-            "resourceType": "OperationOutcome",
-            "issue": [
-                {
-                    "severity": "fatal",
-                    "code": "invalid",
-                    "diagnostics": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
-                }
-            ],
-            "text": {
-                "status": "generated",
-                "div": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
-            },
-        }
-        return
-    assert False
+    assert json.loads(str(exc.value)) == {
+        "resourceType": "OperationOutcome",
+        "issue": [
+            {
+                "severity": "fatal",
+                "code": "invalid",
+                "diagnostics": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+            }
+        ],
+        "text": {
+            "status": "generated",
+            "div": 'Error resolving expression at patientName.initialExpression: "%LaunchPatient.name.given.toQuantity()" - Could not convert to quantity: input collection contains multiple items',
+        },
+    }
 
 
 @pytest.mark.asyncio
@@ -1794,7 +1882,7 @@ async def test_variable_defined_in_one_group_not_visible_in_sibling_group_popula
 
     with pytest.raises(OperationOutcome) as exc:
         await q.execute("$populate", data=make_parameters())
-        assert exc.value.resource["issue"][0]["code"] == "invalid"
+    assert exc.value.resource["issue"][0]["code"] == "invalid"
 
 
 @pytest.mark.asyncio
@@ -2083,6 +2171,7 @@ async def test_initial_expression_populate_sdc_api(fhir_client, safe_db):
                     "resourceType": "QuestionnaireResponse",
                     "status": "in-progress",
                     "questionnaire": q.id,
+                    "subject": patient_ref,
                     "item": [
                         {
                             "linkId": "patientGiven",

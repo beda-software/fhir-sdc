@@ -1,24 +1,53 @@
-import json
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
 
 from tests.factories import (
+    JUTE_BODY_EXTENSION_SD,
+    find_parameter_resource,
     make_item_constraint_ext,
+    make_jute_structure_map,
     make_launch_context_ext,
     make_questionnaire_embedded_mapper_ext,
+    make_sdc_extract_parameters,
     make_source_queries_ext,
     make_target_structure_map_ext,
 )
 
 
-def _make_fake_structure_map(template_str):
-    """Return a mock fhirpy resource whose get_by_path returns template_str."""
-    fake_sm = MagicMock()
-    fake_sm.get_by_path.return_value = template_str
-    mock_sm_set = MagicMock()
-    mock_sm_set.search.return_value.get = AsyncMock(return_value=fake_sm)
-    return mock_sm_set
+async def save_jute_structure_map(fhir_client, structure_map_id, patient_id):
+    """Aidbox refuses the jute-body extension until its StructureDefinition is registered."""
+    await fhir_client.resource("StructureDefinition", **JUTE_BODY_EXTENSION_SD).save()
+    sm = fhir_client.resource(
+        "StructureMap", **make_jute_structure_map(structure_map_id, make_patient_bundle(patient_id))
+    )
+    await sm.save()
+    return sm
+
+
+def make_embedded_jute_mapping(patient_id):
+    return {
+        "resourceType": "Mapping",
+        "id": f"mapping-{patient_id}",
+        "body": make_patient_bundle(patient_id),
+    }
+
+
+def make_patient_bundle(patient_id):
+    return {
+        "resourceType": "Bundle",
+        "type": "transaction",
+        "entry": [
+            {
+                "request": {"method": "PUT", "url": f"Patient/{patient_id}"},
+                "resource": {"resourceType": "Patient", "id": patient_id},
+            }
+        ],
+    }
+
+
+async def extracted_patient_ids(resp):
+    """The ids the mappers wrote, in mapper order."""
+    [bundle] = await resp.json()
+    return [entry["resource"]["id"] for entry in bundle["entry"]]
 
 
 async def test_healthcheck(fhir_server_client):
@@ -179,7 +208,8 @@ async def test_extract_instance_missing_qr_error(fhir_server_client, fhir_client
 
     parameters = {"resourceType": "Parameters", "parameter": []}
     resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=parameters)
-    assert resp.status == 500
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_extract_instance_bad_resource_type_error(fhir_server_client, fhir_client, safe_db):
@@ -194,7 +224,8 @@ async def test_extract_instance_bad_resource_type_error(fhir_server_client, fhir
         f"/Questionnaire/{q.id}/$extract",
         json={"resourceType": "Patient"},
     )
-    assert resp.status == 500
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_populate_collection(fhir_server_client):
@@ -219,6 +250,24 @@ async def test_populate_collection(fhir_server_client):
     assert result["resourceType"] == "QuestionnaireResponse"
 
 
+@pytest.mark.parametrize(
+    "parameters",
+    [{"resourceType": "Parameters"}, {"resourceType": "Parameters", "parameter": []}],
+)
+async def test_populate_collection_without_questionnaire_parameter(fhir_server_client, parameters):
+    resp = await fhir_server_client.post("/Questionnaire/$populate", json=parameters)
+    assert resp.status == 422
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
+
+
+async def test_populate_instance_unknown_questionnaire(fhir_server_client):
+    resp = await fhir_server_client.post(
+        "/Questionnaire/missing/$populate", json={"resourceType": "Parameters", "parameter": []}
+    )
+    assert resp.status == 502
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
+
+
 async def test_populate_collection_missing_questionnaire(fhir_server_client):
     # Capital-Q "Questionnaire" with empty resource → env["Questionnaire"] = {} → falsy → 422
     parameters = {
@@ -230,8 +279,7 @@ async def test_populate_collection_missing_questionnaire(fhir_server_client):
 
     resp = await fhir_server_client.post("/Questionnaire/$populate", json=parameters)
     assert resp.status == 422
-    result = await resp.json()
-    assert result["error"] == "bad_request"
+    assert (await resp.json())["resourceType"] == "OperationOutcome"
 
 
 async def test_populate_instance(fhir_server_client, fhir_client, safe_db):
@@ -252,20 +300,7 @@ async def test_populate_instance(fhir_server_client, fhir_client, safe_db):
 
 
 async def test_extract_collection_with_jute_template(fhir_server_client, fhir_client, safe_db):
-    # entry must be non-empty; Aidbox rejects Bundle.entry: []
-    template_str = json.dumps(
-        {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"method": "PUT", "url": "Patient/jute-extract-col"},
-                    "resource": {"resourceType": "Patient", "id": "jute-extract-col"},
-                }
-            ],
-        }
-    )
-    mock_sm_set = _make_fake_structure_map(template_str)
+    await save_jute_structure_map(fhir_client, "collection-sm", "jute-extract-col")
 
     parameters = {
         "resourceType": "Parameters",
@@ -276,7 +311,7 @@ async def test_extract_collection_with_jute_template(fhir_server_client, fhir_cl
                     "resourceType": "Questionnaire",
                     "status": "active",
                     "item": [],
-                    "extension": [make_target_structure_map_ext("StructureMap/fake-sm")],
+                    "extension": [make_target_structure_map_ext("StructureMap/collection-sm")],
                 },
             },
             {
@@ -286,52 +321,26 @@ async def test_extract_collection_with_jute_template(fhir_server_client, fhir_cl
         ],
     }
 
-    with patch.object(fhir_client, "resources", return_value=mock_sm_set):
-        resp = await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
-
+    resp = await fhir_server_client.post("/Questionnaire/$extract", json=parameters)
     assert resp.status == 200
-    result = await resp.json()
-    assert isinstance(result, list)
-    assert len(result) == 1
+    assert await extracted_patient_ids(resp) == ["jute-extract-col"]
 
 
 async def test_extract_instance_with_jute_template(fhir_server_client, fhir_client, safe_db):
+    await save_jute_structure_map(fhir_client, "instance-sm", "jute-extract-inst")
     q = fhir_client.resource(
         "Questionnaire",
         status="active",
         item=[{"linkId": "q1", "type": "display"}],
-        extension=[make_target_structure_map_ext("StructureMap/fake-sm")],
+        extension=[make_target_structure_map_ext("StructureMap/instance-sm")],
     )
     await q.save()
 
-    template_str = json.dumps(
-        {
-            "resourceType": "Bundle",
-            "type": "transaction",
-            "entry": [
-                {
-                    "request": {"method": "PUT", "url": "Patient/jute-extract-inst"},
-                    "resource": {"resourceType": "Patient", "id": "jute-extract-inst"},
-                }
-            ],
-        }
-    )
-    mock_sm_set = _make_fake_structure_map(template_str)
-    original_resources = fhir_client.resources
-
-    def selective_resources(resource_type):
-        if resource_type == "StructureMap":
-            return mock_sm_set
-        return original_resources(resource_type)
-
     qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
-    with patch.object(fhir_client, "resources", side_effect=selective_resources):
-        resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
 
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
     assert resp.status == 200
-    result = await resp.json()
-    assert isinstance(result, list)
-    assert len(result) == 1
+    assert await extracted_patient_ids(resp) == ["jute-extract-inst"]
 
 
 async def test_extract_instance_parameters_with_launch_context(
@@ -363,20 +372,7 @@ async def test_extract_instance_parameters_with_launch_context(
     assert await resp.json() == []
 
 
-_EMBEDDED_JUTE_MAPPING = {
-    "resourceType": "Mapping",
-    "id": "embedded-jute-test",
-    "body": {
-        "resourceType": "Bundle",
-        "type": "transaction",
-        "entry": [
-            {
-                "request": {"method": "PUT", "url": "Patient/embedded-jute-patient"},
-                "resource": {"resourceType": "Patient", "id": "embedded-jute-patient"},
-            }
-        ],
-    },
-}
+_EMBEDDED_JUTE_MAPPING = make_embedded_jute_mapping("embedded-jute-patient")
 
 
 async def test_extract_collection_embedded_mapper(fhir_server_client, fhir_client, safe_db):
@@ -484,30 +480,9 @@ async def extract_using_instance_endpoint(fhir_server_client, fhir_client):
 @pytest.mark.parametrize(
     "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
 )
-async def test_extract_passes_source_queries_to_mapper_in_legacy_behavior(
-    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
-):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", True
-    )
-
-    resp = await extract_fn(fhir_server_client, fhir_client)
-    assert resp.status == 200
-
-    p = await fhir_client.resources("Patient").search(_id="new-patient").get()
-    assert p.get_by_path(["name", 0, "text"]) == "Bundle"
-
-
-@pytest.mark.parametrize(
-    "extract_fn", [extract_using_collection_endpoint, extract_using_instance_endpoint]
-)
 async def test_extract_does_not_pass_source_queries_to_mapper(
-    fhir_server_client, fhir_client, safe_db, monkeypatch, extract_fn
+    fhir_server_client, fhir_client, safe_db, extract_fn
 ):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "EXTRACT_SOURCE_QUERIES_LEGACY_BEHAVIOR", False
-    )
-
     resp = await extract_fn(fhir_server_client, fhir_client)
     assert resp.status == 400
     assert "undefined environment variable: SourceQuery" in await resp.text()
@@ -589,23 +564,220 @@ async def check_constraint_using_instance_extract_endpoint_with_parameters(
         check_constraint_using_instance_extract_endpoint_with_parameters,
     ],
 )
-@pytest.mark.parametrize(
-    ("legacy_behavior", "passing_expression"), [(True, "false"), (False, "true")]
-)
-async def test_constraint_check_respects_legacy_behavior(
+async def test_constraint_check_passes_a_holding_expression(
     fhir_server_client,
     fhir_client,
     safe_db,
-    monkeypatch,
     check_constraint_fn,
-    legacy_behavior,
-    passing_expression,
 ):
-    monkeypatch.setattr(
-        fhir_server_client.server.app["settings"], "CONSTRAINT_LEGACY_BEHAVIOR", legacy_behavior
-    )
-
     resp = await check_constraint_fn(
-        fhir_server_client, fhir_client, make_constraint_questionnaire(passing_expression)
+        fhir_server_client, fhir_client, make_constraint_questionnaire("true")
     )
     assert resp.status == 200
+
+
+async def test_extract_collection_resolves_questionnaire_by_canonical_url(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        url="http://example.com/Questionnaire/by-url",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+
+    qr = {
+        "resourceType": "QuestionnaireResponse",
+        "status": "completed",
+        "questionnaire": q["url"],
+    }
+    resp = await fhir_server_client.post("/Questionnaire/$extract", json=qr)
+    assert resp.status == 200
+    assert len(await resp.json()) == 1
+
+
+async def test_extract_refuses_a_violated_constraint_before_running_the_mappers(
+    fhir_server_client, fhir_client, safe_db
+):
+    questionnaire = make_constraint_questionnaire("false")
+    questionnaire["extension"].append(
+        make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("refused-patient"))
+    )
+
+    resp = await fhir_server_client.post(
+        "/Questionnaire/$extract", json=make_questionnaire_parameters(questionnaire)
+    )
+    assert resp.status == 422
+    assert (await resp.json())["issue"][0]["code"] == "constraint"
+
+    written = await fhir_client.resources("Patient").search(_id="refused-patient").fetch_all()
+    assert written == []
+
+
+async def test_extract_runs_every_mapper_in_extension_order(
+    fhir_server_client, fhir_client, safe_db
+):
+    await save_jute_structure_map(fhir_client, "ordered-sm", "from-structure-map")
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[
+            make_target_structure_map_ext("StructureMap/ordered-sm"),
+            make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("from-embedded-1")),
+            make_questionnaire_embedded_mapper_ext(make_embedded_jute_mapping("from-embedded-2")),
+        ],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    assert await extracted_patient_ids(resp) == [
+        "from-structure-map",
+        "from-embedded-1",
+        "from-embedded-2",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        (
+            "/QuestionnaireResponse/$constraint-check",
+            {"resourceType": "Parameters", "parameter": []},
+        ),
+        (
+            "/Questionnaire/$extract",
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "Questionnaire",
+                        "resource": {"resourceType": "Questionnaire", "status": "active"},
+                    }
+                ],
+            },
+        ),
+        ("/Questionnaire/$extract", {"resourceType": "Patient"}),
+        ("/QuestionnaireResponse/$extract", {"resourceType": "Parameters", "parameter": []}),
+        (
+            "/QuestionnaireResponse/$constraint-check",
+            {
+                "resourceType": "Parameters",
+                "parameter": [
+                    {
+                        "name": "Questionnaire",
+                        "resource": {"resourceType": "Questionnaire", "status": "active"},
+                    }
+                ],
+            },
+        ),
+    ],
+)
+async def test_incomplete_input_is_a_missing_parameter(fhir_server_client, path, body):
+    resp = await fhir_server_client.post(path, json=body)
+    assert resp.status == 422
+    assert (await resp.json())["issue"][0]["code"] == "missing-parameter"
+
+
+async def test_extract_resolves_a_versioned_structure_map_canonical(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = await save_jute_structure_map(fhir_client, "versioned-sm", "from-versioned-sm")
+    structure_map["version"] = "1.0.0"
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext(f"{structure_map['url']}|1.0.0")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 200
+    assert await extracted_patient_ids(resp) == ["from-versioned-sm"]
+
+
+async def test_extract_refuses_a_structure_map_without_a_jute_body(
+    fhir_server_client, fhir_client, safe_db
+):
+    structure_map = fhir_client.resource(
+        "StructureMap",
+        id="plain-sm",
+        url="http://example.com/StructureMap/plain-sm",
+        name="plain-sm",
+        status="active",
+        group=[
+            {
+                "name": "main",
+                "typeMode": "none",
+                "input": [{"name": "source", "mode": "source"}],
+                "rule": [{"name": "noop", "source": [{"context": "source"}]}],
+            }
+        ],
+    )
+    await structure_map.save()
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[{"linkId": "q1", "type": "display"}],
+        extension=[make_target_structure_map_ext("StructureMap/plain-sm")],
+    )
+    await q.save()
+
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed"}
+
+    resp = await fhir_server_client.post(f"/Questionnaire/{q.id}/$extract", json=qr)
+    assert resp.status == 422
+    assert "jute body" in (await resp.json())["issue"][0]["diagnostics"]
+
+
+async def test_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = {"resourceType": "QuestionnaireResponse", "status": "completed", "questionnaire": q.id}
+
+    resp = await fhir_server_client.post(
+        "/QuestionnaireResponse/$extract", json=make_sdc_extract_parameters(qr)
+    )
+    assert resp.status == 200
+
+    return_bundle = find_parameter_resource(await resp.json(), "return")
+    assert [entry["request"]["url"] for entry in return_bundle["entry"]] == [
+        "Patient/embedded-jute-patient"
+    ]
+
+    patients = await fhir_client.resources("Patient").search(_id="embedded-jute-patient").fetch()
+    assert patients == []
+
+
+async def test_stored_questionnaire_response_extract_returns_the_bundle_to_submit(
+    fhir_server_client, fhir_client, safe_db
+):
+    q = fhir_client.resource(
+        "Questionnaire",
+        status="active",
+        item=[],
+        extension=[make_questionnaire_embedded_mapper_ext(_EMBEDDED_JUTE_MAPPING)],
+    )
+    await q.save()
+    qr = fhir_client.resource("QuestionnaireResponse", status="completed", questionnaire=q.id)
+    await qr.save()
+
+    resp = await fhir_server_client.post(f"/QuestionnaireResponse/{qr.id}/$extract")
+    assert resp.status == 200
+    assert len(find_parameter_resource(await resp.json(), "return")["entry"]) == 1
