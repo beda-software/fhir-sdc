@@ -109,8 +109,9 @@ async def _handle_item(client, item, env, context):  # noqa: PLR0912
     root_item = init_item()
 
     initial_expression = get_initial_expression(item_exts)
+    initial_selected_answers = get_initial_selected_answers(item)
+    answers = []
     if initial_expression:
-        answers = []
         data = await resolve_expression(
             client,
             context,
@@ -121,19 +122,17 @@ async def _handle_item(client, item, env, context):  # noqa: PLR0912
         if data:
             type_ = get_type(item, data)
             display_path = next(iter(get_choice_column_paths(item_exts)), None)
-            if is_repeating:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
-                    for d in data
-                ]
-            else:
-                answers = [
-                    {make_value_key(type_): normalize_answer_value(type_, data[0], display_path)}
-                ]
-        if answers:
-            root_item["answer"] = answers
+            answers = [
+                {make_value_key(type_): normalize_answer_value(type_, d, display_path)}
+                for d in data
+            ]
     elif "initial" in item:
-        root_item["answer"] = item["initial"]
+        answers = item["initial"]
+    elif initial_selected_answers:
+        answers = initial_selected_answers
+
+    if answers:
+        root_item["answer"] = answers if is_repeating else answers[:1]
 
     if "item" in item:
         populated_items = []
@@ -143,3 +142,11 @@ async def _handle_item(client, item, env, context):  # noqa: PLR0912
         root_item["item"] = populated_items
 
     return [root_item]
+
+
+def get_initial_selected_answers(item: dict) -> list[dict]:
+    return [
+        {key: value for key, value in option.items() if key.startswith("value")}
+        for option in item.get("answerOption", [])
+        if option.get("initialSelected")
+    ]
