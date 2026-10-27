@@ -3,6 +3,7 @@ from fhirpy.base.exceptions import OperationOutcome
 from fhirpy.base.utils import get_by_path
 
 from tests.factories import (
+    create_mapping,
     create_questionnaire,
     find_parameter_resource,
     make_item_constraint_ext,
@@ -17,35 +18,23 @@ from tests.factories import (
 
 @pytest.mark.asyncio
 async def test_extract_with_fhirpathmapping(fhir_client, safe_db):
-    a = fhir_client.resource(
-        "Attribute",
-        type={"resourceType": "Entity", "id": "code"},
-        path=["type"],
-        resource={"resourceType": "Entity", "id": "Mapping"},
-    )
-    await a.save()
-    m = fhir_client.resource(
-        "Mapping",
-        **{
-            "type": "FHIRPath",
-            "body": {
-                "resourceType": "Bundle",
-                "type": "transaction",
-                "entry": [
-                    {
-                        "request": {"url": "/Patient", "method": "POST"},
-                        "resource": {
-                            "resourceType": "Patient",
-                            "deceasedBoolean": False,
-                            "id": """{{ QuestionnaireResponse.item.where(linkId='patientId').answer.valueString }}""",
-                        },
-                    }
-                ],
-            },
+    m = await create_mapping(
+        fhir_client,
+        {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [
+                {
+                    "request": {"url": "/Patient", "method": "POST"},
+                    "resource": {
+                        "resourceType": "Patient",
+                        "deceasedBoolean": False,
+                        "id": """{{ QuestionnaireResponse.item.where(linkId='patientId').answer.valueString }}""",
+                    },
+                }
+            ],
         },
     )
-
-    await m.save()
 
     q = await create_questionnaire(
         fhir_client,

@@ -53,6 +53,19 @@ async def create_questionnaire(fhir_client, questionnaire):
     return q
 
 
+async def create_mapping(fhir_client, body):
+    attribute = fhir_client.resource(
+        "Attribute",
+        type={"resourceType": "Entity", "id": "code"},
+        path=["type"],
+        resource={"resourceType": "Entity", "id": "Mapping"},
+    )
+    await attribute.save()
+    mapping = fhir_client.resource("Mapping", type="FHIRPath", body=body)
+    await mapping.save()
+    return mapping
+
+
 async def create_address_questionnaire(fhir_client):
     return await create_questionnaire(
         fhir_client,
