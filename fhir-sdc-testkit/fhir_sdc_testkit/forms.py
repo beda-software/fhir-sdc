@@ -21,15 +21,15 @@ class ItemPath(NamedTuple):
 
 async def populate_and_extract(
     fhir_client: AsyncFHIRClient,
-    questionnaire_id: str,
+    questionnaire: r4b.Questionnaire | str,
     *,
     parameters: r4b.Parameters,
     answers: Answers,
     submit: bool = False,
 ) -> tuple[r4b.QuestionnaireResponse, dict[str, Any] | None]:
     """The filled QuestionnaireResponse and its extracted bundle; `submit` saves both, as a form does."""
-    questionnaire = await fhir_client.get(r4b.Questionnaire, questionnaire_id)
-    populated = await populate(fhir_client, questionnaire_id, parameters=parameters)
+    questionnaire = await fetch_questionnaire(fhir_client, questionnaire)
+    populated = await populate(fhir_client, questionnaire, parameters=parameters)
     response = fill_questionnaire_response(questionnaire, populated, answers)
     if submit:
         # A Mapping may reference the response by id, so it is saved before extraction.
@@ -41,13 +41,46 @@ async def populate_and_extract(
 
 
 async def populate(
-    fhir_client: AsyncFHIRClient, questionnaire_id: str, *, parameters: r4b.Parameters
+    fhir_client: AsyncFHIRClient,
+    questionnaire: r4b.Questionnaire | str,
+    *,
+    parameters: r4b.Parameters,
 ) -> r4b.QuestionnaireResponse:
-    """SDC `Questionnaire/{id}/$populate`: the populated response, not saved."""
+    """SDC `Questionnaire/$populate`: the populated response, not saved."""
+    resource = await fetch_questionnaire(fhir_client, questionnaire)
+    populate_parameters = [
+        r4b.ParametersParameter(name="questionnaire", resource=resource),
+        *(parameters.parameter or []),
+    ]
     populated = await fhir_client.execute(
-        f"Questionnaire/{questionnaire_id}/$populate", data=parameters.model_dump()
+        "Questionnaire/$populate", data=r4b.Parameters(parameter=populate_parameters).model_dump()
     )
     return get_populated_response(populated)
+
+
+async def fetch_questionnaire(
+    fhir_client: AsyncFHIRClient, questionnaire: r4b.Questionnaire | str
+) -> r4b.Questionnaire:
+    """A resource as given, or one found by canonical (`url|version` or `url`), then by id."""
+    if isinstance(questionnaire, r4b.Questionnaire):
+        return questionnaire
+
+    url, _, version = questionnaire.partition("|")
+    search = {"url": url, "version": version} if version else {"url": url}
+    matches = await fhir_client.resources(r4b.Questionnaire).search(**search).limit(2).fetch()
+    if len(matches) > 1:
+        raise LookupError(f"Questionnaire {questionnaire!r} matches several versions")
+
+    if matches:
+        return matches[0]
+
+    found = (
+        await fhir_client.resources(r4b.Questionnaire).search(_id=url.rsplit("/", 1)[-1]).first()
+    )
+    if found is None:
+        raise LookupError(f"Questionnaire {questionnaire!r} is not found")
+
+    return found
 
 
 def get_populated_response(populated: Mapping[str, Any]) -> r4b.QuestionnaireResponse:
@@ -67,9 +100,7 @@ def fill_questionnaire_response(
     """Set each answer at its linkId's nesting in the Questionnaire, replacing a populated one."""
     response = populated.model_copy(deep=True, update={"status": "completed"})
     children = get_or_create_children(response)
-    fill_items(
-        questionnaire.item or [], children, answers, scope=f"Questionnaire/{questionnaire.id}"
-    )
+    fill_items(questionnaire.item or [], children, answers, scope="the Questionnaire")
     sort_items(questionnaire.item or [], children)
     return response
 

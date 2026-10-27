@@ -56,6 +56,12 @@ response is the saved one — saved first, since a Mapping may reference it by i
 
 `populate` and `extract` run the two operations on their own and save nothing.
 
+### The Questionnaire
+
+`populate_and_extract` and `populate` take an `r4b.Questionnaire`, saved or not (an assembled one, for example), or a
+string, found by canonical (`url|version` or `url`) and then by id. A string matching several versions or nothing
+raises `LookupError`. `$populate` and `$extract` always receive the resource itself.
+
 ### Answers
 
 Keys are `linkId`s, addressed flatly — groups in between are created for you:
@@ -108,6 +114,22 @@ with pytest.raises(OperationOutcome) as refused:
     await populate_and_extract(fhir_client, "patient-intake", parameters=parameters, answers=answers)
 assert refused.value.resource["issue"][0]["code"] == "postal-code-required"
 ```
+
+## Permissions
+
+The client's credentials need these requests, relative to its base URL:
+
+| Request                                         | When                                    |
+| ----------------------------------------------- | --------------------------------------- |
+| `GET Questionnaire?url=…`, `GET Questionnaire?_id=…` | the Questionnaire is passed as a string |
+| `POST Questionnaire/$populate`                  | `populate`, `populate_and_extract`      |
+| `POST QuestionnaireResponse/$extract`           | `extract`, `populate_and_extract`       |
+| `POST QuestionnaireResponse`                    | `populate_and_extract` with `submit`    |
+| `POST /` (the extracted transaction or batch)   | `populate_and_extract` with `submit`    |
+
+With `submit`, the bundle's entries also need the access their own requests do, such as `POST Patient`. The
+operations may need more: fhir-sdc runs them with the caller's credentials, reading the `subject` and `Reference`
+context values, x-fhir-query expressions, source queries (as a `POST /` batch) and, in `$extract`, the Mappings.
 
 ## Development
 
