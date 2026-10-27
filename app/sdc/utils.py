@@ -148,6 +148,17 @@ def is_sdc_api(parameters: dict | None) -> bool:
     return any(p.get("name") in ("context", "subject") for p in parameters.get("parameter", []))
 
 
+def find_subject_reference(parameters: dict) -> dict | None:
+    return next(
+        (
+            p["valueReference"]
+            for p in parameters.get("parameter", [])
+            if p.get("name") == "subject" and "valueReference" in p
+        ),
+        None,
+    )
+
+
 async def parse_parameters(
     client: AsyncFHIRClient, resource: dict
 ) -> tuple[dict | None, dict | None, dict[str, Any]]:

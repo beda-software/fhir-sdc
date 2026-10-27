@@ -2080,6 +2080,7 @@ async def test_initial_expression_populate_sdc_api(fhir_client, safe_db):
                     "resourceType": "QuestionnaireResponse",
                     "status": "in-progress",
                     "questionnaire": q.id,
+                    "subject": patient_ref,
                     "item": [
                         {
                             "linkId": "patientGiven",
