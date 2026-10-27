@@ -51,6 +51,97 @@ async def test_initial_populate(fhir_client, safe_db):
 
 
 @pytest.mark.asyncio
+async def test_initial_selected_populate(fhir_client, safe_db):
+    """The option marked initialSelected becomes the answer."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "choice",
+                    "linkId": "color",
+                    "answerOption": [
+                        {"valueCoding": red},
+                        {"valueCoding": green, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [{"linkId": "color", "answer": [{"valueCoding": green}]}]
+
+
+@pytest.mark.asyncio
+async def test_initial_values_are_cut_to_first_for_single_item_populate(fhir_client, safe_db):
+    """A non-repeating item keeps only the first of several initial values."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "string",
+                    "linkId": "name",
+                    "initial": [{"valueString": "first"}, {"valueString": "second"}],
+                },
+                {
+                    "type": "choice",
+                    "linkId": "color",
+                    "answerOption": [
+                        {"valueCoding": red, "initialSelected": True},
+                        {"valueCoding": green, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [
+        {"linkId": "name", "answer": [{"valueString": "first"}]},
+        {"linkId": "color", "answer": [{"valueCoding": red}]},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_initial_selected_repeats_populate(fhir_client, safe_db):
+    """Options marked initialSelected become the answers of a repeating item."""
+    red = {"system": "http://example.com", "code": "red"}
+    green = {"system": "http://example.com", "code": "green"}
+    blue = {"system": "http://example.com", "code": "blue"}
+    q = await create_questionnaire(
+        fhir_client,
+        {
+            "status": "active",
+            "item": [
+                {
+                    "type": "choice",
+                    "linkId": "colors",
+                    "repeats": True,
+                    "answerOption": [
+                        {"valueCoding": red, "initialSelected": True},
+                        {"valueCoding": green},
+                        {"valueCoding": blue, "initialSelected": True},
+                    ],
+                },
+            ],
+        },
+    )
+
+    p = await q.execute("$populate", data=make_parameters())
+    assert p["item"] == [
+        {"linkId": "colors", "answer": [{"valueCoding": red}, {"valueCoding": blue}]},
+    ]
+
+
+@pytest.mark.asyncio
 async def test_initial_expression_all_answer_types_populate(fhir_client, safe_db):
     """
     Cover all get_type() branches: string, integer, decimal, date, dateTime, time,
