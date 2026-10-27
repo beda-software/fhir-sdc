@@ -17,6 +17,7 @@ from tests.factories import (
     make_initial_expression_ext,
     make_item_constraint_ext,
     make_launch_context_ext,
+    make_questionnaire,
     make_questionnaire_mapper_ext,
 )
 
@@ -76,24 +77,25 @@ async def test_populated_and_typed_answers_reach_the_mapper(
     assert created.name[0].given == ["Leo"]
 
 
-async def test_unsubmitted_extraction_returns_the_bundle_and_saves_nothing(
+async def test_unsaved_questionnaire_is_extracted_and_nothing_is_saved(
     fhir_client, typed_fhir_client, subject, safe_db
 ):
     mapping = await create_mapping(
         fhir_client, build_patient_bundle(name=[{"family": build_answer_template("family")}])
     )
-    questionnaire = await create_questionnaire(
-        fhir_client,
-        {
-            "status": "active",
-            "extension": [make_questionnaire_mapper_ext(mapping.id)],
-            "item": [{"linkId": "family", "type": "string"}],
-        },
+    questionnaire = r4b.Questionnaire.model_validate(
+        make_questionnaire(
+            {
+                "status": "active",
+                "extension": [make_questionnaire_mapper_ext(mapping.id)],
+                "item": [{"linkId": "family", "type": "string"}],
+            }
+        )
     )
 
     response, bundle = await populate_and_extract(
         typed_fhir_client,
-        questionnaire.id,
+        questionnaire,
         parameters=launch_context({}, subject=subject),
         answers={"family": [answer(valueString="Test")]},
     )
@@ -132,6 +134,38 @@ async def test_populate_returns_the_populated_response_unsaved(
     )
     assert populated.id is None
     assert populated.item[0].answer[0].valueString == "Leo"
+
+
+async def test_questionnaire_is_found_by_canonical(
+    fhir_client, typed_fhir_client, subject, safe_db
+):
+    url = "https://example.com/Questionnaire/intake"
+    for version in ["1", "2"]:
+        await create_questionnaire(
+            fhir_client,
+            {
+                "status": "active",
+                "url": url,
+                "version": version,
+                "item": [
+                    {
+                        "linkId": "version",
+                        "type": "string",
+                        "extension": [make_initial_expression_ext(f"'{version}'")],
+                    }
+                ],
+            },
+        )
+    parameters = launch_context({}, subject=subject)
+
+    populated = await populate(typed_fhir_client, f"{url}|2", parameters=parameters)
+    assert populated.item[0].answer[0].valueString == "2"
+
+    with pytest.raises(LookupError, match="several versions"):
+        await populate(typed_fhir_client, url, parameters=parameters)
+
+    with pytest.raises(LookupError, match="not found"):
+        await populate(typed_fhir_client, f"{url}|3", parameters=parameters)
 
 
 async def test_repeating_group_occurrences_are_saved(
