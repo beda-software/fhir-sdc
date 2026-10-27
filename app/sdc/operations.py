@@ -9,7 +9,13 @@ from .context import load_questionnaire_context
 from .exception import MissingParamOperationOutcome
 from .extract import build_extract_bundle
 from .populate import populate
-from .utils import is_sdc_api, parse_parameters, resolve_questionnaire, resolve_questionnaire_by_id
+from .utils import (
+    find_subject_reference,
+    is_sdc_api,
+    parse_parameters,
+    resolve_questionnaire,
+    resolve_questionnaire_by_id,
+)
 
 
 @dataclass
@@ -34,6 +40,7 @@ async def run_populate(
         require_param(questionnaire, "Questionnaire"),
         variables,
         sdc_api=is_sdc_api(parameters),
+        subject=find_subject_reference(parameters),
     )
 
 

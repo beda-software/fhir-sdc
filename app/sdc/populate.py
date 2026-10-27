@@ -23,6 +23,7 @@ async def populate(
     variables: dict[str, Any],
     *,
     sdc_api: bool = False,
+    subject: dict | None = None,
 ) -> dict:
     populated_response = {
         "resourceType": "QuestionnaireResponse",
@@ -30,6 +31,8 @@ async def populate(
         "questionnaire": questionnaire.get("id"),
         "item": [],
     }
+    if subject:
+        populated_response["subject"] = subject
     env = await load_questionnaire_context(client, questionnaire, populated_response, variables)
     exts = questionnaire.get("extension", [])
     for variable in get_variable(exts):
