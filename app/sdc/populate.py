@@ -28,7 +28,7 @@ async def populate(
     populated_response = {
         "resourceType": "QuestionnaireResponse",
         "status": "in-progress",
-        "questionnaire": questionnaire.get("id"),
+        "questionnaire": questionnaire.get("url") or questionnaire.get("id"),
         "item": [],
     }
     if subject:
